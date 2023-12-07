@@ -29,9 +29,9 @@ jobs:
       with:
         channel: 'stable'
       # Access to private repo
-    - uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    # - uses: webfactory/ssh-agent@v0.8.0
+    #  with:
+    #    ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
     - run: dart --version
     - run: flutter --version
     - run: dart pub global activate dev_build
