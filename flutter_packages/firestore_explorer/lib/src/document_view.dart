@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tekaly_firestore_explorer/src/import_common.dart';
 import 'package:tekartik_firebase_ui_firestore/firebase_ui_firestore.dart';
 
@@ -152,7 +153,11 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
                   dense: !showContent,
                   title: Text(name),
                   subtitle: subtitle != null ? Text(subtitle) : null,
-                  onTap: () {}),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: subtitle ?? ''));
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(const SnackBar(content: Text('Copied')));
+                  }),
               if (field is CvListField)
                 ...listField.v!.indexed.map(((e) {
                   var index = e.$1;
