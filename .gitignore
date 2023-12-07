@@ -1,0 +1,7 @@
+# Alex
+.local/
+.idea/
+*.iml
+.vscode/
+
+

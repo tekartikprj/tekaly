@@ -1,0 +1,1 @@
+## Experimental auto firestore explorer.
