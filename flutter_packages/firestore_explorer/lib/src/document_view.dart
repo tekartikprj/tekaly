@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tekaly_firestore_explorer/src/import_common.dart';
+import 'package:tekaly_firestore_explorer/src/utils.dart';
 import 'package:tekartik_firebase_ui_firestore/firebase_ui_firestore.dart';
 
+import 'document_clipboard_controller.dart';
 import 'document_edit.dart';
 import 'document_view_controller.dart';
 import 'import_firebase.dart';
@@ -250,7 +252,18 @@ class _FsDocumentViewScreenState extends State<FsDocumentViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Document view')),
+      appBar: AppBar(
+        title: const Text('Document view'),
+        actions: [
+          IconButton(
+              onPressed: () async {
+                var doc = await controller.stream.first;
+                gDocumentClipboardController.addDoc(doc);
+                snack('Copied $doc');
+              },
+              icon: const Icon(Icons.copy))
+        ],
+      ),
       body: ListView(
         children: [
           Padding(
@@ -262,8 +275,10 @@ class _FsDocumentViewScreenState extends State<FsDocumentViewScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          goToFsDocumentEditScreen(context, firestore: firestore, doc: doc);
+        onPressed: () async {
+          await goToFsDocumentEditScreen(context,
+              firestore: firestore, doc: doc);
+          (controller as FsDocumentViewControllerBase).reload();
         },
         child: const Icon(Icons.edit),
       ),
@@ -361,10 +376,12 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
                 );
               }),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          goToFsDocumentEditScreen(context,
+        onPressed: () async {
+          await goToFsDocumentEditScreen(context,
               firestore: firestore,
               doc: widget.query.collectionReference.doc(cvDocumentIdNew));
+          // reload if needed
+          setState(() {});
         },
         child: const Icon(Icons.add),
       ),

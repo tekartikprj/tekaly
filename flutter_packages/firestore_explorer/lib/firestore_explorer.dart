@@ -1,3 +1,7 @@
+export 'package:cv/cv.dart';
+export 'package:tekartik_app_cv_firestore/app_cv_firestore.dart';
+export 'package:tekartik_firebase_firestore/firestore.dart';
+
 export 'src/document_edit.dart'
     show goToFsDocumentEditScreen, FsDocumentEdit, FsDocumentEditScreen;
 export 'src/document_edit_controller.dart' show FsDocumentEditController;

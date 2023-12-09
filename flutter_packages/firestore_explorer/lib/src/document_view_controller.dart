@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:rxdart/rxdart.dart';
+
 import 'import_firebase.dart';
 
 const safePrefix = '79s9wGFU2PU2Xp1xigDx';
@@ -23,6 +25,8 @@ extension DocumentViewCvModelListFieldExt<T extends CvModel>
   CvField<T> shadowModelField(T value) =>
       CvModelField.builder(name, builder: create)..v = value;
 }
+
+var forceNoTrackChanges = false;
 
 abstract class FsDocumentListFieldItemViewController<
     T extends CvFirestoreDocument> {
@@ -181,6 +185,22 @@ class FsDocumentListFieldItemViewControllerBase<T extends CvFirestoreDocument>
 
 class FsDocumentViewControllerBase<T extends CvFirestoreDocument>
     implements FsDocumentViewController<T> {
+  bool get supportTrackChanges =>
+      firestore.service.supportsTrackChanges && !forceNoTrackChanges;
+  StreamSubscription? _docSubscription;
+  void _onListen() {
+    _docSubscription ??= _stream.listen((event) {
+      _docSubject.add(event);
+    });
+  }
+
+  void _onCancel() {
+    _docSubscription?.cancel();
+    _docSubscription = null;
+  }
+
+  late final _docSubject =
+      BehaviorSubject<T>(onListen: _onListen, onCancel: _onCancel);
   @override
   final Firestore firestore;
   @override
@@ -200,39 +220,30 @@ class FsDocumentViewControllerBase<T extends CvFirestoreDocument>
 
   FsDocumentViewControllerBase({required this.firestore, required this.docRef});
 
-  StreamController<T>? _controller;
-  StreamSubscription<T>? _subscription;
-
-  StreamController<T> get streamController =>
-      _controller ??= StreamController<T>.broadcast(onListen: () {
-        if (isRoot) {
-          _controller!.add(CvFirestoreMapDocument() as T);
-        } else {
-          _subscription = _stream.listen((event) {
-            _controller!.add(event);
-          });
-        }
-      }, onCancel: () {
-        _subscription?.cancel();
-        _subscription = null;
-      });
-
   Stream<T> get _stream async* {
-    if (firestore.service.supportsTrackChanges) {
+    if (supportTrackChanges) {
       yield* docRef.onSnapshot(firestore);
     } else {
       yield await docRef.get(firestore);
     }
   }
 
+  /// Manual reload if not supporting track changes
+  void reload() async {
+    if (!supportTrackChanges) {
+      var reading = await docRef.get(firestore);
+      _docSubject.add(reading);
+    }
+  }
+
   @override
-  Stream<T> get stream => streamController.stream;
+  Stream<T> get stream => _docSubject.stream;
 
   // T newDocument() => doc.cv();
 
   @override
   void close() {
-    _controller?.close();
+    _docSubject.close();
   }
 }
 

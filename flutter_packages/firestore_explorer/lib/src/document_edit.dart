@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:tekaly_firestore_explorer/src/document_clipboard_controller.dart';
+import 'package:tekaly_firestore_explorer/src/utils.dart';
 
 import 'document_edit_controller.dart';
 import 'document_edit_ui_controller.dart';
@@ -131,14 +133,11 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                         labelText: field.name,
                       ),
                       onSubmitted: (value) {
-                        field.value = value;
                         setState(() {
                           inEdit.value = false;
                         });
                       },
-                      onChanged: (value) {
-                        field.value = value;
-                      });
+                      onChanged: editSaveField);
                 }
                 String subtitleText;
 
@@ -257,8 +256,16 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
     );
   }
 
+  void editSaveField(String? value) {
+    field.fromBasicTypeValue(value);
+  }
+
   void _edit() {
-    if (field.type == String) {
+    if (field.type == String ||
+        field.type == int ||
+        field.type == double ||
+        field.type == num ||
+        field.type == bool) {
       _editText();
     } else if (field is CvModelField) {
       // devPrint('Creating model field');
@@ -318,7 +325,25 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Document edit')),
+      appBar: AppBar(
+        title: const Text('Document edit'),
+        actions: [
+          IconButton(
+              onPressed: () async {
+                var doc = gDocumentClipboardController.doc;
+                snack('doc: $doc');
+                if (doc != null) {
+                  var existing = await controller.futureEditedDocument;
+
+                  snack('existing: $existing');
+                  setState(() {
+                    existing.copyFrom(doc);
+                  });
+                }
+              },
+              icon: const Icon(Icons.paste))
+        ],
+      ),
       body: ListView(
         children: [
           Column(
@@ -345,7 +370,7 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
           // devPrint('onSave');
           var fsDoc = controller.editedDocument;
           if (isNew) {
@@ -357,17 +382,19 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
             }
 
             if (id.isEmpty) {
-              localDocRef.parent.add(firestore, fsDoc);
+              await localDocRef.parent.add(firestore, fsDoc);
             } else {
-              localDocRef.set(firestore, fsDoc);
+              await localDocRef.set(firestore, fsDoc);
             }
           } else {
             var localDocRef = docRef;
-            localDocRef.set(firestore, fsDoc);
+            await localDocRef.set(firestore, fsDoc);
             // devPrint(controller.editedDocument);
             // devPrint(controller.stream);
           }
-          Navigator.of(context).pop();
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
         },
         child: const Icon(Icons.save),
       ),

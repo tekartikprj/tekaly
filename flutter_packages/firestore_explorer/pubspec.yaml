@@ -1,6 +1,6 @@
 name: tekaly_firestore_explorer
 description: "Basic firestore/cv explorer helper"
-version: 0.0.1
+version: 0.0.2
 publish_to: none
 
 environment:
@@ -8,6 +8,14 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  cv: '>=0.2.19-4'
+  rxdart:
+  tekartik_app_rx_utils:
+    git:
+      url: https://github.com/tekartik/app_flutter_utils.dart
+      ref: dart3a
+      path: app_rx_utils
+    version: '>=0.1.0'
   flutter:
     sdk: flutter
   tekartik_app_cv_firestore:
