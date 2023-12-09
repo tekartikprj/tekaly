@@ -6,7 +6,7 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:tekartik_platform_browser/context_browser.dart';
 import 'download_image.dart';
 
-void downloadImage(DownloadImageInfo imageInfo) {
+Future<void> downloadImage(DownloadImageInfo imageInfo) async {
   // if (true) {
   if (platformContextBrowser.browser!.isSafari &&
       platformContextBrowser.browser!.version < Version(13, 0, 0)) {
