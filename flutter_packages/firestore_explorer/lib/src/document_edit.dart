@@ -77,6 +77,7 @@ class _FsDocumentEditState extends State<FsDocumentEdit> {
 
 class FsDocumentFieldEdit extends StatefulWidget {
   final FsDocumentFieldEditController controller;
+
   const FsDocumentFieldEdit({super.key, required this.controller});
 
   @override
@@ -86,6 +87,7 @@ class FsDocumentFieldEdit extends StatefulWidget {
 class _FsDocumentFieldEditState extends State<FsDocumentFieldEdit>
     with DocumentValueEditStateMixin<FsDocumentFieldEdit> {
   FsDocumentFieldEditController get controller => widget.controller;
+
   @override
   CvField get field => controller.field;
 
@@ -110,9 +112,13 @@ Future<void> goToFsDocumentEditScreen(BuildContext context,
 
 mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
   final inEdit = ValueNotifier<bool>(false);
+
   FsDocumentFieldEditController get fieldController;
+
   CvField get field => fieldController.field;
+
   int get level => fieldController.level;
+
   CvListField get listField => field as CvListField;
   TextEditingController? textEditingController;
 
@@ -298,6 +304,7 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
 class FsDocumentEditScreen extends StatefulWidget {
   final Firestore firestore;
   final CvDocumentReference doc;
+
   const FsDocumentEditScreen(
       {super.key, required this.doc, required this.firestore});
 
@@ -307,7 +314,9 @@ class FsDocumentEditScreen extends StatefulWidget {
 
 class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
   Firestore get firestore => widget.firestore;
+
   CvDocumentReference get docRef => widget.doc;
+
   bool get isNew => controller.docRef.isNew;
 
   TextEditingController? idController;
@@ -322,6 +331,7 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
 
   late final controller =
       FsDocumentEditUiController(firestore: firestore, docRef: docRef);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -364,7 +374,10 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
                     ],
                   ),
                 ),
-              FsDocumentEdit(controller: controller)
+              FsDocumentEdit(controller: controller),
+              const SizedBox(
+                height: 80,
+              ),
             ],
           )
         ],
@@ -404,6 +417,7 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
 
 class FsDocumentListFieldItemEdit extends StatefulWidget {
   final FsDocumentListFieldItemEditController controller;
+
   const FsDocumentListFieldItemEdit({super.key, required this.controller});
 
   @override
