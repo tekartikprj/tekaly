@@ -50,7 +50,7 @@ class _FsDocumentEditState extends State<FsDocumentEdit> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(widget.controller.docRef.path),
-              Text('${getTypeName(widget.controller.docRef.type)}'),
+              Text(getTypeName(widget.controller.docRef.type)),
               FutureBuilder(
                   future: controller.futureEditedDocument,
                   builder: (_, snapshot) {
