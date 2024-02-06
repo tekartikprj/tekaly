@@ -15,9 +15,11 @@ export 'src/document_view.dart'
         FsDocumentListScreen,
         FsDocumentViewScreen;
 export 'src/document_view_controller.dart'
+    show FsDocumentViewController, FieldReference;
+export 'src/mapping.dart'
     show
-        FsDocumentViewController,
+        documentViewAddTypeName,
+        documentViewAddTypeNames,
         documentViewReferenceMap,
-        FieldReference,
         documentViewAddCollections,
         documentViewAddDocuments;

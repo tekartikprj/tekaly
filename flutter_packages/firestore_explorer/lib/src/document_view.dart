@@ -8,6 +8,7 @@ import 'document_clipboard_controller.dart';
 import 'document_edit.dart';
 import 'document_view_controller.dart';
 import 'import_firebase.dart';
+import 'mapping.dart';
 
 class FsRootView extends StatefulWidget {
   final Firestore firestore;
@@ -48,7 +49,7 @@ class _FsDocumentViewState extends State<FsDocumentView> {
       children: [
         Row(
           children: [
-            Text('${widget.controller.docRef.type}'),
+            Text(getTypeName(widget.controller.docRef.type)),
           ],
         ),
         Text(widget.controller.docRef.path.nonEmpty() ?? '/'),
@@ -340,7 +341,7 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
           title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Document list ${query.type}'),
+          Text('Document list ${getTypeName(query.type)}'),
           Text(
             query.collectionReference.path,
             style: const TextStyle(fontSize: 10),

@@ -17,6 +17,7 @@ Future<void> run() async {
   firestore = newFirestoreMemory();
   var app1 = app1Ref.cv()..name.v = 'test';
   await app1Ref.set(firestore, app1);
+  documentViewAddTypeNames({FsApp: 'FsApp'});
   documentViewAddCollections([apps]);
   documentViewAddDocuments([apps.doc('app1'), apps.doc('app2')]);
   runApp(const MyApp());
