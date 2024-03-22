@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 export 'download_image_io.dart'
-    if (dart.library.html) 'download_image_web.dart'; // ignore: uri_does_not_exist
+    if (dart.library.js_interop) 'download_image_web.dart'; // ignore: uri_does_not_exist
 
 class DownloadImageInfo {
   /// Must have the proper extension
