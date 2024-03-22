@@ -1,19 +1,11 @@
-A bare-bones Dart web app.
+File download for web helper
+### Setup
 
-Uses [`package:web`](https://pub.dev/packages/web)
-to interop with JS and the DOM.
-
-## Running and building
-
-To run the app, use these commands:
+```yaml
+  tekaly_file_download_web:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/file_download_web
+      ref: dart3a
+    version: '>=0.1.0'
 ```
-dart pub global activate webdev
-webdev serve
-```
-
-To build a production version ready for deployment, use these commands:
-```
-webdev build
-```
-
-For more details, see https://dart.dev/web/get-started

@@ -8,7 +8,14 @@ updates:
     directory: "flutter_packages/firestore_explorer"
     schedule:
       interval: "monthly"
-
+  - package-ecosystem: "pub"
+    directory: "flutter_packages/file_download"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/file_download_web"
+    schedule:
+      interval: "monthly"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -11,6 +11,7 @@ dependencies:
   web: '>=0.5.0'
   path:
   pub_semver:
+  test:
   tekartik_platform_browser:
     git:
       url: https://github.com/tekartik/platform.dart
