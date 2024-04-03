@@ -336,6 +336,7 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
     var fixedDocuments =
         documentViewListDocuments(query.collectionReference.path);
     //devPrint('query: $query ($fixedDocuments)');
+    var fixedDocumentsIds = fixedDocuments.map((e) => e.id).toSet();
     return Scaffold(
       appBar: AppBar(
           title: Column(
@@ -369,6 +370,10 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
                   itemBuilder: (BuildContext context, DocumentSnapshot doc) {
                     var model = doc.cvType(query.type);
 
+                    // Exclude already added documents
+                    if (fixedDocumentsIds.contains(model.id)) {
+                      return Container();
+                    }
                     return DocumentListItem(
                         model: model,
                         firestore: firestore,

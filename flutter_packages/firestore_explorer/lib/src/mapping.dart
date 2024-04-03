@@ -48,6 +48,9 @@ void documentViewAddCollection(CvCollectionReference coll) {
     keyPath = genericPath;
   }
   var list = _documentViewCollectionMap[keyPath] ??= <CvCollectionReference>[];
+  if (list.contains(coll)) {
+    return;
+  }
   list.add(coll);
 }
 
@@ -55,6 +58,9 @@ void documentViewAddDocument(CvDocumentReference doc) {
   var genericPath = firestorePathGetGenericPath(doc.path);
   var keyPath = firestoreDocPathGetParent(genericPath);
   var list = _documentViewDocumentMap[keyPath] ??= <CvDocumentReference>[];
+  if (list.contains(doc)) {
+    return;
+  }
   list.add(doc);
 }
 
