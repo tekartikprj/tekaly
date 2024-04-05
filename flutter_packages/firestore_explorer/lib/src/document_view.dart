@@ -92,7 +92,7 @@ class FsCollectionListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-        title: Text(collRef.type.toString()),
+        title: Text(getTypeName(collRef.type)),
         subtitle: Text(collRef.id),
         onTap: () {
           goToFsDocumentListScreen(context,
@@ -118,7 +118,7 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
   Widget buildMixin(BuildContext context, {Widget? leading}) {
     var isListField = field is CvListField;
     var showContent = field is! CvModelField && !isListField;
-    String? subtitle = field.type.toString();
+    String? subtitle = getTypeName(field.type);
     var name = field.name;
     String? valueLabel;
 

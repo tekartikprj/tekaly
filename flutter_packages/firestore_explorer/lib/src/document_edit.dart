@@ -149,9 +149,9 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                 String subtitleText;
 
                 if (field is CvModelField) {
-                  subtitleText = field.type.toString();
+                  subtitleText = getTypeName(field.type);
                 } else if (field is CvListField) {
-                  subtitleText = field.type.toString();
+                  subtitleText = getTypeName(field.type);
                 } else {
                   subtitleText = field.value.toString();
                 }
