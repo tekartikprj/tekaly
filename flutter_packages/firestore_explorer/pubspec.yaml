@@ -1,10 +1,10 @@
 name: tekaly_firestore_explorer
 description: "Basic firestore/cv explorer helper"
-version: 0.1.0
+version: 0.2.0
 publish_to: none
 
 environment:
-  sdk: '>=3.2.2 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
   flutter: ">=1.17.0"
 
 dependencies:

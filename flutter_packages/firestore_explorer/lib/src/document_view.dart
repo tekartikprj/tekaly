@@ -349,38 +349,24 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
           )
         ],
       )),
-      body: fixedDocuments.isNotEmpty
-          ? ListView(
+      body: (fixedDocuments.isEmpty)
+          ? buildItemList(fixedDocumentsIds)
+          : ListView(
               children: [
-                ...fixedDocuments.map((docRef) {
-                  return DocumentListItem(
-                      model: docRef.cv(), firestore: firestore, docRef: docRef);
-                })
+                ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ...fixedDocuments.map((docRef) {
+                      return DocumentListItem(
+                          model: docRef.cv(),
+                          firestore: firestore,
+                          docRef: docRef);
+                    })
+                  ],
+                ),
+                buildItemList(fixedDocumentsIds, shrinkWrap: true),
               ],
-            )
-          : FutureBuilder(
-              future: query.rawASync(firestore),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Container();
-                }
-                var rawQuery = snapshot.data!;
-                return FirestoreListView(
-                  query: rawQuery,
-                  itemBuilder: (BuildContext context, DocumentSnapshot doc) {
-                    var model = doc.cvType(query.type);
-
-                    // Exclude already added documents
-                    if (fixedDocumentsIds.contains(model.id)) {
-                      return Container();
-                    }
-                    return DocumentListItem(
-                        model: model,
-                        firestore: firestore,
-                        docRef: query.collectionReference.doc(model.id));
-                  },
-                );
-              }),
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await goToFsDocumentEditScreen(context,
@@ -392,6 +378,34 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  FutureBuilder<Query> buildItemList(Set<String> fixedDocumentsIds,
+      {bool shrinkWrap = false}) {
+    return FutureBuilder(
+        future: query.rawASync(firestore),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return Container();
+          }
+          var rawQuery = snapshot.data!;
+          return FirestoreListView(
+            shrinkWrap: shrinkWrap,
+            query: rawQuery,
+            itemBuilder: (BuildContext context, DocumentSnapshot doc) {
+              var model = doc.cvType(query.type);
+
+              // Exclude already added documents
+              if (fixedDocumentsIds.contains(model.id)) {
+                return Container();
+              }
+              return DocumentListItem(
+                  model: model,
+                  firestore: firestore,
+                  docRef: query.collectionReference.doc(model.id));
+            },
+          );
+        });
   }
 }
 

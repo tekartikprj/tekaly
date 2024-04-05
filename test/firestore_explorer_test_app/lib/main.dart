@@ -1,8 +1,14 @@
+// ignore_for_file: depend_on_referenced_packages
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
-
+import 'package:sembast_web/sembast_web.dart';
+import 'package:sembast/sembast_io.dart';
 import 'models.dart';
+import 'package:path/path.dart';
+import 'package:tekartik_firebase_local/firebase_local.dart';
 
 var apps = CvCollectionReference<FsApp>('apps');
 var app1Ref = apps.doc('app1');
@@ -13,8 +19,15 @@ Future<void> main() async {
 }
 
 Future<void> run() async {
+  WidgetsFlutterBinding.ensureInitialized();
   initFsBuilders();
-  firestore = newFirestoreMemory();
+  var sembastFactory = kIsWeb
+      ? databaseFactoryWeb
+      : createDatabaseFactoryIo(
+          rootPath: normalize(absolute('.local', 'tfeta')));
+  firestore = newFirestoreServiceSembast(databaseFactory: sembastFactory)
+      .firestore(newFirebaseAppLocal());
+  //.debugQuickLoggerWrapper();
   var app1 = app1Ref.cv()..name.v = 'test';
   await app1Ref.set(firestore, app1);
   documentViewAddTypeNames({FsApp: 'FsApp'});
