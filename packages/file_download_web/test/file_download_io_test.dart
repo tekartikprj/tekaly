@@ -13,7 +13,9 @@ import 'file_download_test.dart';
 void main() {
   test('downloadFile', () async {
     var file = File(join('.local', 'download', 'test.txt'));
-    await file.delete(recursive: true);
+    if (file.existsSync()) {
+      await file.delete(recursive: true);
+    }
     expect(file.existsSync(), isFalse);
     await downloadFile(textFileInfo);
     expect(file.existsSync(), isTrue);
