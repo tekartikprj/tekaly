@@ -26,9 +26,16 @@ Map<Type, List<FieldReference>> documentViewReferenceMap = {};
 Map<String, List<CvCollectionReference>> _documentViewCollectionMap = {};
 Map<String, List<CvDocumentReference>> _documentViewDocumentMap = {};
 
+var documentViewFirestoreRootKeyPath = '';
+
 void documentViewAddRootCollections(List<CvCollectionReference> list) {
-  var keyPath = '';
+  var keyPath = documentViewFirestoreRootKeyPath;
   _documentViewCollectionMap[keyPath] = list;
+}
+
+void documentViewClearData() {
+  _documentViewCollectionMap.clear();
+  _documentViewDocumentMap.clear();
 }
 
 void documentViewAddCollections(List<CvCollectionReference> list) {
@@ -70,6 +77,7 @@ void documentViewAddDocuments(List<CvDocumentReference> list) {
   }
 }
 
+/// Path is a document path
 List<CvCollectionReference> documentViewListCollections(String path) {
   var genericPath = firestorePathGetGenericPath(path);
   var list = _documentViewCollectionMap[genericPath];
@@ -81,6 +89,29 @@ List<CvCollectionReference> documentViewListCollections(String path) {
       .toList();
 }
 
+/// Path is a collection path
+CvCollectionReference documentViewGetCollection(String path) {
+  return documentViewGetCollectionOrNull(path) ?? CvCollectionReference(path);
+}
+
+/// Path is a collection path
+CvCollectionReference? documentViewGetCollectionOrNull(String path) {
+  var parentPath =
+      firestoreCollPathGetParent(path) ?? documentViewFirestoreRootKeyPath;
+  var collId = firestorePathGetId(path);
+  var genericPath = firestorePathGetGenericPath(parentPath);
+  var list = _documentViewCollectionMap[genericPath];
+  if (list != null) {
+    for (var coll in list) {
+      if (coll.id == collId) {
+        return coll.withPath(path);
+      }
+    }
+  }
+  return null;
+}
+
+/// List the known reference documents at a given path
 List<CvDocumentReference> documentViewListDocuments(String path) {
   var genericPath = firestorePathGetGenericPath(path);
   var list = _documentViewDocumentMap[genericPath];
@@ -90,4 +121,36 @@ List<CvDocumentReference> documentViewListDocuments(String path) {
   return list
       .map((e) => e.withPath(firestorePathGetChild(path, e.id)))
       .toList();
+}
+
+CvDocumentReference documentViewGetDocument(String path) {
+  return documentViewGetDocumentOrNull(path) ??
+      CvDocumentReference<CvFirestoreDocument>(path);
+}
+
+CvDocumentReference? documentViewGetDocumentOrNull(String path) {
+  var parent = firestoreDocPathGetParent(path);
+  var docId = firestorePathGetId(path);
+  var genericPath = firestorePathGetGenericPath(parent);
+  var docList = _documentViewDocumentMap[genericPath];
+
+  if (docList != null) {
+    for (var doc in docList) {
+      if (doc.id == docId) {
+        return doc.withPath(path);
+      }
+    }
+  }
+
+  var coll = documentViewGetCollectionOrNull(parent);
+  return coll?.doc(docId).withPath(path);
+}
+
+void documentViewInit() {
+  cvFirestoreAddBuilder<CvFirestoreDocument>((_) => CvFirestoreMapDocument());
+  cvAddConstructor(CvFirestoreMapDocument.new);
+  documentViewAddTypeNames({
+    CvFirestoreDocument: 'CvFirestoreDocument',
+    CvFirestoreMapDocument: 'CvFirestoreMapDocument'
+  });
 }

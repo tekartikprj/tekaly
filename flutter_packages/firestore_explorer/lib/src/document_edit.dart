@@ -104,6 +104,7 @@ class _FsDocumentFieldEditState extends State<FsDocumentFieldEdit>
 
 Future<void> goToFsDocumentEditScreen(BuildContext context,
     {required Firestore firestore, required CvDocumentReference doc}) async {
+  documentViewInit();
   await Navigator.of(context).push<Object?>(MaterialPageRoute(
       builder: (_) => FsDocumentEditScreen(
             doc: doc,

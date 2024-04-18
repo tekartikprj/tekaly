@@ -11,7 +11,8 @@ import 'package:path/path.dart';
 import 'package:tekartik_firebase_local/firebase_local.dart';
 
 var apps = CvCollectionReference<FsApp>('apps');
-var app1Ref = apps.doc('app1');
+var infos = apps.any.collection<CvFirestoreDocument>('infos');
+var appInfo1Ref = infos.cast<FsAppInfo>().doc('app');
 late Firestore firestore;
 
 Future<void> main() async {
@@ -24,15 +25,16 @@ Future<void> run() async {
   var sembastFactory = kIsWeb
       ? databaseFactoryWeb
       : createDatabaseFactoryIo(
-          rootPath: normalize(absolute('.local', 'tfeta')));
+          rootPath:
+              normalize(absolute('.local', 'tk_firestore_explorer_test_app')));
   firestore = newFirestoreServiceSembast(databaseFactory: sembastFactory)
       .firestore(newFirebaseAppLocal());
   //.debugQuickLoggerWrapper();
-  var app1 = app1Ref.cv()..name.v = 'test';
-  await app1Ref.set(firestore, app1);
-  documentViewAddTypeNames({FsApp: 'FsApp'});
-  documentViewAddCollections([apps]);
-  documentViewAddDocuments([apps.doc('app1'), apps.doc('app2')]);
+  var app1 = apps.doc('app1').cv()..name.v = 'test';
+  await firestore.cvSet(app1);
+  documentViewAddTypeNames({FsApp: 'FsApp', FsAppInfo: 'FsAppInfo'});
+  documentViewAddCollections([apps, infos]);
+  documentViewAddDocuments([apps.doc('app1'), apps.doc('app2'), appInfo1Ref]);
   runApp(const MyApp());
 }
 
@@ -125,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
             title: const Text('apps/app1'),
             onTap: () async {
               await goToFsDocumentViewScreen(context,
-                  firestore: firestore, doc: app1Ref);
+                  firestore: firestore, doc: apps.doc('app1'));
             },
           ),
         ],
