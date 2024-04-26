@@ -20,6 +20,8 @@ String filenameMimeType(String filename) {
       return 'application/yaml';
     case '.mp4':
       return 'video/mp4';
+    case '.ics':
+      return 'text/calendar';
     default:
       return 'application/octet-stream';
   }
