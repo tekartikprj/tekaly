@@ -1,3 +1,4 @@
+import 'package:cv/utils/value_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tekaly_firestore_explorer/src/import_common.dart';
@@ -22,6 +23,7 @@ class _FsRootViewState extends State<FsRootView> {
   @override
   Widget build(BuildContext context) {
     var collections = documentViewListCollections('');
+    // devPrint('collections: $collections');
     return Column(children: [
       ...collections.map((e) => FsCollectionListItem(
             firestore: widget.firestore,
@@ -64,6 +66,7 @@ class _FsDocumentViewState extends State<FsDocumentView> {
               }
               var doc = snapshot.data!;
               var collections = documentViewListCollections(doc.path);
+              // devPrint('collections2: $collections');
               return Column(children: [
                 ...controller
                     .fieldsViews(doc)
@@ -118,12 +121,21 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
   Widget buildMixin(BuildContext context, {Widget? leading}) {
     var isListField = field is CvListField;
     var showContent = field is! CvModelField && !isListField;
-    String? subtitle = getTypeName(field.type);
+    var typeName = field.getTypeName();
+    String? subtitle = typeName;
     var name = field.name;
     String? valueLabel;
+    var value = field.value;
+    var valueType = value.runtimeType;
 
+    //print('$field ${field.type} [${field.value} ${field.value.runtimeType}]');
     if (name == cvFieldNameNone) {
-      name = subtitle;
+      if (valueType.isBasicType) {
+        name = value.toString();
+      } else {
+        name = subtitle;
+      }
+
       subtitle = null;
     } else {
       if (showContent) {
@@ -135,7 +147,7 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
         subtitle = valueLabel;
       }
       if (field is CvListField) {
-        subtitle = '${field.type}';
+        subtitle = typeName;
       } else {
         if (field.hasValue) {
           valueLabel = field.value.toString();

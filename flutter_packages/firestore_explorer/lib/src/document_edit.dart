@@ -1,3 +1,4 @@
+import 'package:cv/utils/value_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:tekaly_firestore_explorer/src/document_clipboard_controller.dart';
 import 'package:tekaly_firestore_explorer/src/mapping.dart';
@@ -133,28 +134,40 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
               valueListenable: inEdit,
               builder: (context, snapshot, _) {
                 if (snapshot) {
-                  return TextField(
-                      controller: textEditingController ??=
-                          TextEditingController(
-                              text: field.value?.toString() ?? ''),
-                      decoration: buildInputDecoration(
-                        labelText: field.name,
-                      ),
-                      onSubmitted: (value) {
-                        setState(() {
-                          inEdit.value = false;
-                        });
-                      },
-                      onChanged: editSaveField);
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                        controller: textEditingController ??=
+                            TextEditingController(
+                                text: field.value?.toString() ?? ''),
+                        decoration: buildInputDecoration(
+                          labelText: field.name,
+                        ),
+                        onSubmitted: (value) {
+                          setState(() {
+                            inEdit.value = false;
+                          });
+                        },
+                        onChanged: editSaveField),
+                  );
                 }
-                String subtitleText;
+                String? subtitleText;
+                var value = field.value;
+                var valueType = value.runtimeType;
+                var typeName = field.getTypeName();
 
+                var titleText = field.name;
                 if (field is CvModelField) {
-                  subtitleText = getTypeName(field.type);
+                  subtitleText = typeName;
                 } else if (field is CvListField) {
-                  subtitleText = getTypeName(field.type);
+                  subtitleText = typeName;
                 } else {
-                  subtitleText = field.value.toString();
+                  if (valueType.isBasicType) {
+                    titleText = value.toString();
+                  } else {
+                    subtitleText = typeName;
+                  }
+                  //subtitleText = field.value.toString();
                 }
 
                 return Column(
@@ -188,8 +201,9 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                               ),
                           ],
                         ),
-                        title: Text(field.name),
-                        subtitle: Text(subtitleText),
+                        title: Text(titleText),
+                        subtitle:
+                            subtitleText == null ? null : Text(subtitleText),
                         onTap: () {
                           _edit();
 
@@ -236,6 +250,10 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                                   setState(() {
                                     field.v!.add(field.create({}));
                                   });
+                                } else if (field is CvListField) {
+                                  setState(() {
+                                    field.v!.add(field.createDefaultValue());
+                                  });
                                 }
                               },
                               title: const Text('Add'),
@@ -269,11 +287,7 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
   }
 
   void _edit() {
-    if (field.type == String ||
-        field.type == int ||
-        field.type == double ||
-        field.type == num ||
-        field.type == bool) {
+    if (field.isBasicType) {
       _editText();
     } else if (field is CvModelField) {
       // devPrint('Creating model field');
@@ -283,16 +297,24 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
           field.v = (field as CvModelField).create({});
         }
       });
-    } else if (field is CvModelListField) {
+    } else if (field is CvListField) {
       // devPrint('Creating model list field');
 
       setState(() {
         if (!field.hasValue) {
-          field.v = (field as CvModelListField).createList();
+          field.v = (field as CvListField).createList();
         }
       });
     } else {
-      // devPrint('Unknown field type');
+      if (field.name == cvFieldNameNone &&
+          (field.value?.runtimeType.isBasicType ?? false)) {
+        setState(() {
+          field.v = field.value;
+        });
+      } else {
+        // ignore: avoid_print
+        print('Unknown field $field');
+      }
     }
     // devPrint(field.type);
   }

@@ -1,6 +1,12 @@
 import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 
-Map<Type, String> _typeNames = {};
+Map<Type, String> _typeNames = {
+  String: 'String',
+  int: 'int',
+  double: 'double',
+  bool: 'bool',
+  num: 'num'
+};
 
 void documentViewAddTypeName(Type type, String name) {
   addTypeName(type, name);
@@ -14,10 +20,47 @@ void addTypeName(Type type, String name) {
   _typeNames[type] = name;
 }
 
-String getTypeName(Type type) {
+String getTypeName(Type type) => _getTypeName(type);
+
+String _getTypeName(Type type) {
   var name = _typeNames[type];
-  name ??= type.toString();
+  name ??= '[$type]';
   return name;
+}
+
+extension CvListFieldLocalExt<T> on CvListField<T> {
+  String getItemTypeName() {
+    return _getTypeName(itemType);
+  }
+
+  T createDefaultValue() {
+    if (itemType == String) {
+      return '' as T;
+    } else if (itemType == int) {
+      return 0 as T;
+    } else if (itemType == double) {
+      return 0.0 as T;
+    } else if (itemType == bool) {
+      return false as T;
+    } else if (itemType == num) {
+      return 0 as T;
+    }
+    throw UnsupportedError('Unsupported type $itemType');
+  }
+}
+
+extension CvFieldLocalExt on CvField {
+  String getTypeName() {
+    var self = this;
+    if (self.isBasicType) {
+      return _getTypeName(self.type);
+    } else if (self is CvModelField) {
+      return _getTypeName(self.type);
+    } else if (self is CvListField) {
+      return 'List<${self.getItemTypeName()}>';
+    }
+    return _getTypeName(type);
+  }
 }
 
 Map<Type, List<FieldReference>> documentViewReferenceMap = {};

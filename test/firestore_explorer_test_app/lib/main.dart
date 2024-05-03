@@ -13,6 +13,7 @@ import 'package:tekartik_firebase_local/firebase_local.dart';
 var apps = CvCollectionReference<FsApp>('apps');
 var infos = apps.any.collection<CvFirestoreDocument>('infos');
 var appInfo1Ref = infos.cast<FsAppInfo>().doc('app');
+var noNameAppInfo1Ref = infos.cast<FsNoNameAppInfo>().doc('noNameApp');
 late Firestore firestore;
 
 Future<void> main() async {
@@ -32,9 +33,15 @@ Future<void> run() async {
   //.debugQuickLoggerWrapper();
   var app1 = apps.doc('app1').cv()..name.v = 'test';
   await firestore.cvSet(app1);
-  documentViewAddTypeNames({FsApp: 'FsApp', FsAppInfo: 'FsAppInfo'});
+  documentViewAddTypeNames({
+    FsApp: 'FsApp',
+    FsAppInfo: 'FsAppInfo',
+    CvAppInfoSub1: 'CvAppInfoSub1',
+    CvAppInfoSub2: 'CvAppInfoSub2'
+  });
   documentViewAddCollections([apps, infos]);
-  documentViewAddDocuments([apps.doc('app1'), apps.doc('app2'), appInfo1Ref]);
+  documentViewAddDocuments(
+      [apps.doc('app1'), apps.doc('app2'), appInfo1Ref, noNameAppInfo1Ref]);
   runApp(const MyApp());
 }
 
