@@ -245,6 +245,11 @@ class FsDocumentViewControllerBase<T extends CvFirestoreDocument>
   void close() {
     _docSubject.close();
   }
+
+  @override
+  Future<void> delete() async {
+    await docRef.delete(firestore);
+  }
 }
 
 class FieldReference {
@@ -268,6 +273,8 @@ abstract class FsDocumentViewController<T extends CvFirestoreDocument> {
       _FsDocumentViewController(firestore: firestore, docRef: docRef);
   Stream<T> get stream;
   void close();
+
+  Future<void> delete();
 }
 
 class _FsDocumentViewController<T extends CvFirestoreDocument>

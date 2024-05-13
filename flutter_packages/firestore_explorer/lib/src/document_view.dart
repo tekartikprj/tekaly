@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tekaly_firestore_explorer/src/import_common.dart';
 import 'package:tekaly_firestore_explorer/src/utils.dart';
+import 'package:tekartik_app_flutter_widget/mini_ui.dart';
 
 import 'document_clipboard_controller.dart';
 import 'document_edit.dart';
@@ -270,6 +271,20 @@ class _FsDocumentViewScreenState extends State<FsDocumentViewScreen> {
       appBar: AppBar(
         title: const Text('Document view'),
         actions: [
+          IconButton(
+              onPressed: () async {
+                var ok = await muiConfirm(context, message: 'Delete document?');
+                if (ok) {
+                  await controller.delete();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                }
+                var doc = await controller.stream.first;
+                gDocumentClipboardController.addDoc(doc);
+                snack('Copied $doc');
+              },
+              icon: const Icon(Icons.delete)),
           IconButton(
               onPressed: () async {
                 var doc = await controller.stream.first;
