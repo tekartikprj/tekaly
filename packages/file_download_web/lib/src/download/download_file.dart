@@ -1,31 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:path/path.dart';
+import 'package:tekaly_file_download_web/src/mime_type.dart';
 
 export 'download_file_stub.dart'
     if (dart.library.js_interop) 'download_file_web.dart'; // ignore: uri_does_not_exist
-
-String filenameMimeType(String filename) {
-  switch (extension(basename(filename.toLowerCase()))) {
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpg';
-    case '.txt':
-      return 'text/plain';
-    case '.json':
-      return 'application/json';
-    case '.yaml':
-      return 'application/yaml';
-    case '.mp4':
-      return 'video/mp4';
-    case '.ics':
-      return 'text/calendar';
-    default:
-      return 'application/octet-stream';
-  }
-}
 
 class DownloadFileInfo {
   /// Must have the proper extension

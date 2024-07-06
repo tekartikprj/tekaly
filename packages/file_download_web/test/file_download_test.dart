@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:tekaly_file_download_web/file_download.dart';
+import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
 var textFileInfo =
@@ -8,5 +9,8 @@ var textFileInfo =
 void main() {
   test('downloadFile', () async {
     await downloadFile(textFileInfo);
+  });
+  test('mimeType', () {
+    expect(filenameMimeType('test.txt'), 'text/plain');
   });
 }
