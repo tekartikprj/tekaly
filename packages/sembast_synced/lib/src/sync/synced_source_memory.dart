@@ -18,6 +18,9 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   final _sourceRecordsBySyncId = <String, SyncedSourceRecord>{};
   final _sourceRecordsByStoreAndKey = <_Key, SyncedSourceRecord>{};
 
+  @override
+  void close() {}
+
   Iterable<SyncedSourceRecord> get sorterSourceRecords =>
       _sourceRecordsBySyncId.values.toList()
         ..sort((r1, r2) => r1.syncChangeId.v!.compareTo(r2.syncChangeId.v!));

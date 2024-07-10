@@ -85,6 +85,11 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record) {
     throw UnimplementedError('SyncedSource.putSourceRecord');
   }
+
+  @override
+  void close() {
+    throw UnimplementedError('SyncedSource.close');
+  }
 }
 
 abstract class SyncedSource {
@@ -115,6 +120,9 @@ abstract class SyncedSource {
   /// On firestore if onSnapshot is supported this is unnecessary
   /// Default implementation will check every hour.
   Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay});
+
+  /// Close the source.
+  void close();
 }
 
 extension SyncedSourceExt on SyncedSource {

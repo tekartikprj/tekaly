@@ -6,7 +6,7 @@ import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 // ignore: depend_on_referenced_packages
 import 'package:test/test.dart';
 
-import 'sync/synced_db_source_sync_test.dart';
+import 'sync/synced_db_synchronizer_test.dart';
 
 void main() {
   // debugWebServices = devWarning(true);

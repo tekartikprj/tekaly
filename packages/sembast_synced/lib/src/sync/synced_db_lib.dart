@@ -5,7 +5,7 @@ export 'model/source_record.dart';
 export 'synced_db.dart';
 export 'synced_db_app_sync.dart';
 export 'synced_db_export.dart';
-export 'synced_db_source_sync.dart';
+export 'synced_db_synchronizer.dart';
 export 'synced_source.dart';
 export 'synced_source_export.dart';
 export 'synced_source_firestore.dart';

@@ -24,8 +24,16 @@ class SyncedSourceFirestore
   /// True when used without auth during development
   final bool noAuth;
 
+  @override
+  void close() {
+    // Nothing to close
+  }
   SyncedSourceFirestore(
-      {required this.firestore, @required this.rootPath, this.noAuth = false}) {
+      {required this.firestore,
+
+      /// Document path
+      @required this.rootPath,
+      this.noAuth = false}) {
     dataCollection = firestore.collection(getPath('data'));
     metaCollection = firestore.collection(getPath('meta'));
     metaInfoReference = metaCollection.doc('info');

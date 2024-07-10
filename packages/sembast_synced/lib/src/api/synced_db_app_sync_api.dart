@@ -12,7 +12,7 @@ class SyncedDbAppSyncApi with SyncedDbAppSyncMixin implements SyncedDbAppSync {
 
   @override
   Future<void> sync() async {
-    var sync = SyncedDbSourceSync(db: db, source: sourceApi);
+    var sync = SyncedDbSynchronizer(db: db, source: sourceApi);
     var stat = await sync.sync();
     print(stat);
   }

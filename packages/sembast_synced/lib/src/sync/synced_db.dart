@@ -1,8 +1,8 @@
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_memory.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
+import 'package:tekartik_common_utils/common_utils_import.dart';
 
-import 'import_common.dart';
 import 'model/db_sync_meta.dart';
 import 'model/db_sync_record.dart';
 
@@ -12,7 +12,7 @@ mixin SyncedDbMixin implements SyncedDb {
   late final List<String> syncedStoreNames;
 }
 
-var syncedDbDebug = false;
+var syncedDbDebug = false; // devWarning(true);
 
 var _buildersInitialized = false;
 
@@ -145,6 +145,10 @@ abstract class SyncedDb {
           name: name,
           databaseFactory: databaseFactory,
           syncedStoreNames: syncedStoreNames);
+  factory SyncedDb.fromOpenedDb(
+          {Database? openedDatabase, required List<String> syncedStoreNames}) =>
+      _SyncedDbImpl(
+          openedDatabase: openedDatabase, syncedStoreNames: syncedStoreNames);
 
   Future<Database> get rawDatabase;
 
@@ -160,11 +164,13 @@ abstract class SyncedDb {
 }
 
 extension SyncedDbExtension on SyncedDb {
+  static final _dirtyFinder =
+      Finder(filter: Filter.equals(recordDirtyFieldKey, true));
+
   /// Get dirty record
   Future<List<DbSyncRecord>> txnGetDirtySyncRecords(
       DatabaseClient client) async {
-    return (await dbSyncRecordStoreRef.find(client,
-            finder: Finder(filter: Filter.equals(recordDirtyFieldKey, true))))
+    return (await dbSyncRecordStoreRef.find(client, finder: _dirtyFinder))
         .toList();
   }
 
@@ -254,6 +260,14 @@ extension SyncedDbExtension on SyncedDb {
     yield* dbSyncMetaInfoRef.onRecord(db);
   }
 
+  Stream<bool> onDirty() async* {
+    var db = await database;
+    yield* dbSyncRecordStoreRef
+        .query(finder: _dirtyFinder)
+        .onCount(db)
+        .map((count) => count > 0);
+  }
+
   /// Internal and test only.
   @protected
   Future<void> setSyncMetaInfo(
@@ -300,14 +314,18 @@ class _SyncedDbImpl extends SyncedDbBase
   String name;
   static String nameDefault = 'synced.db';
 
+  final Database? openedDatabase;
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
   @visibleForTesting
   _SyncedDbImpl(
-      {required DatabaseFactory databaseFactory,
+      {DatabaseFactory? databaseFactory,
+      this.openedDatabase,
       required List<String> syncedStoreNames,
       String? name})
       : name = name ?? nameDefault {
-    this.databaseFactory = databaseFactory;
+    if (databaseFactory != null) {
+      this.databaseFactory = databaseFactory;
+    }
     this.syncedStoreNames = syncedStoreNames;
   }
 
@@ -319,7 +337,9 @@ class _SyncedDbImpl extends SyncedDbBase
       cvIntRecordFactory.store<DbSyncRecord>('syncRecord');
 
   @override
-  late final rawDatabase = databaseFactory.openDatabase(name);
+  late final rawDatabase = openedDatabase != null
+      ? Future.value(openedDatabase)
+      : databaseFactory.openDatabase(name);
 }
 
 DbSyncRecord syncRecordFrom(RecordRef<String, Map<String, Object?>> record) {

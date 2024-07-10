@@ -32,6 +32,8 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   final ApiService apiService;
   final String target;
 
+  @override
+  void close() {}
   SyncedSourceApi({required this.apiService, required this.target}) {
     initApiBuilders();
   }

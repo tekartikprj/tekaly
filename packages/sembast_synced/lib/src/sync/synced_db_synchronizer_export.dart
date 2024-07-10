@@ -3,7 +3,7 @@ import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 
 import 'synced_db.dart';
-import 'synced_db_synchronizer.dart';
+import 'synced_db_down_synchronizer.dart';
 import 'synced_source_export.dart';
 
 /// Sync from export

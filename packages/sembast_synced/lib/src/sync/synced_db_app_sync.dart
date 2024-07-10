@@ -5,7 +5,7 @@ import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_export.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_db_source_sync.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_synchronizer.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_source_export.dart';
 import 'package:tekartik_app_http/app_http.dart';
 
@@ -127,7 +127,7 @@ class SyncedDbAppSyncFirestore
 
   @override
   Future<void> sync() async {
-    var sync = SyncedDbSourceSync(db: db, source: sourceFirestore);
+    var sync = SyncedDbSynchronizer(db: db, source: sourceFirestore);
     var stat = await sync.syncDown();
     print(stat);
   }

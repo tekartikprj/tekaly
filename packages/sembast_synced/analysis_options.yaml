@@ -15,9 +15,9 @@ include: package:tekartik_lints/strict.yaml
 
 # Uncomment the following section to specify additional rules.
 
-# linter:
-#   rules:
-#     - camel_case_types
+linter:
+  rules:
+    # public_member_api_docs: true
 
 # analyzer:
 #   exclude:

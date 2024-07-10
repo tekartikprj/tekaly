@@ -7,7 +7,10 @@ export 'src/sync/synced_db_lib.dart'
         //CvMetaInfoRecord,
         SyncedSource,
         SyncedSourceMemory,
-        SyncedDbSourceSync;
+        // Compat
+        SyncedDbSourceSync,
+        SyncedDbSynchronizer,
+        debugSyncedDbSynchronizer;
 //DbSyncMetaInfo;
 //        SyncedSourceRecord,
 //SyncedSyncStat

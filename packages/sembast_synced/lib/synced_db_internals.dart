@@ -5,7 +5,7 @@ export 'src/sync/synced_db_lib.dart'
         SyncedDbMixin,
         SyncedDbExtension,
         CvMetaInfoRecord,
-        SyncedDbSourceSync,
+        SyncedDbSynchronizer,
         DbSyncMetaInfo,
         SyncedSourceRecord,
         SyncedSyncStat,

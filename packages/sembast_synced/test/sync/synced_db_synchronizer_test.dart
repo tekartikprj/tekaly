@@ -1,6 +1,7 @@
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_sembast_synced/src/api/import_common.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:test/test.dart';
@@ -30,15 +31,65 @@ class SyncTestsContext {
 
 void syncTests(Future<SyncTestsContext> Function() setupContext) {
   cvAddConstructor(DbEntity.new);
-  group('synced_db_source_sync_firestore_test', () {
-    late SyncedDbSourceSync sync;
+  group('auto_synced_db_source_sync_firestore_test', () {
+    late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
     setUp(() async {
       var context = await setupContext();
       source = context.source;
       syncedDb = context.syncedDb;
-      sync = SyncedDbSourceSync(db: syncedDb, source: source);
+      //debugSyncedSync = true;
+      sync = SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
+    });
+    tearDown(() async {
+      await sync.close();
+      source.close();
+      await syncedDb.close();
+    });
+    test('auto syncNone', () async {
+      var meta = await syncedDb.getSyncMetaInfo();
+      expect(meta, isNull);
+      print('meta: $meta');
+      var db = await syncedDb.database;
+
+      try {
+        meta = (await syncedDb.dbSyncMetaInfoRef
+            .onRecord(db)
+            .firstWhere((meta) => meta != null)
+            .timeout(Duration(milliseconds: 1000)));
+        fail('should fail');
+      } on TimeoutException catch (_) {}
+    });
+    test('autoSyncOneFromLocal', () async {
+      var meta = await syncedDb.getSyncMetaInfo();
+      expect(meta, isNull);
+      print('meta: $meta');
+      var db = await syncedDb.database;
+      await (dbEntityStoreRef.record('a1').cv()
+            ..name.v = 'test1'
+            ..timestamp.v = Timestamp(1, 1000))
+          .put(db);
+      meta = (await syncedDb.dbSyncMetaInfoRef
+          .onRecord(db)
+          .firstWhere((meta) => meta != null))!;
+      expect(meta.lastChangeId.v, 1);
+    });
+  });
+  group('synced_db_source_sync_firestore_test', () {
+    late SyncedDbSynchronizer sync;
+    late SyncedSource source;
+    late SyncedDb syncedDb;
+    setUp(() async {
+      var context = await setupContext();
+      source = context.source;
+      syncedDb = context.syncedDb;
+      sync = SyncedDbSynchronizer(db: syncedDb, source: source);
+    });
+    tearDown(() {
+      source.close();
+      syncedDb.close();
+      sync.close();
     });
     test('syncNone', () async {
       var stat = await sync.sync();
@@ -513,6 +564,14 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
 
        */
+    });
+    test('syncTwiceOneFromLocal', () async {
+      var db = await syncedDb.database;
+      await (dbEntityStoreRef.record('r1').cv()).put(db);
+      var stat = await sync.sync();
+      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      stat = await sync.sync();
+      expect(stat, SyncedSyncStat());
     });
   });
 }
