@@ -1,0 +1,39 @@
+import 'dart:io';
+
+import 'package:path/path.dart';
+import 'package:sembast/utils/database_utils.dart';
+import 'package:sembast/utils/sembast_import_export.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_export.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_source_export.dart';
+
+import 'import_common.dart';
+
+extension SyncedDbExportIoExt on SyncedDb {
+  Future<void> exportDatabase(
+      {required SyncedDb db, required String assetsFolder}) async {
+    await Directory(assetsFolder).create(recursive: true);
+    var file = File(join(assetsFolder, syncedDbExportFilename));
+    var fileMeta = File(join(assetsFolder, syncedDbExportMetaFilename));
+
+    var sdb = await db.database;
+    var lines = await exportDatabaseLines(sdb,
+        storeNames: getNonEmptyStoreNames(sdb).toList()
+          ..removeWhere(
+              (element) => [dbSyncRecordStoreRef.name].contains(element)));
+    //print(jsonPretty(map));
+    // ignore: invalid_use_of_visible_for_testing_member
+    var syncMeta = (await db.getSyncMetaInfo());
+    print('syncMeta: $syncMeta');
+    if (syncMeta != null) {
+      await file
+          .writeAsString('${exportLinesToJsonStringList(lines).join('\n')}\n');
+      var exportMeta = SyncedDbExportMeta()
+        ..sourceVersion.setValue(syncMeta.sourceVersion.v)
+        ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())
+        ..lastChangeId.setValue(syncMeta.lastChangeId.v);
+      //print(jsonPretty(exportMeta.toModel()));
+      await fileMeta.writeAsString(jsonEncode(exportMeta.toMap()));
+    }
+  }
+}

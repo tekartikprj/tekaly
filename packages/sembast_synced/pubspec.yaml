@@ -1,0 +1,134 @@
+name: tekaly_sembast_synced
+description: Sembast synchronized database.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+# Add regular dependencies here.
+dependencies:
+  cv:
+  sembast:
+  tekartik_app_cv_sembast:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      ref: dart3a
+      path: app_cv_sembast
+    version: '>=0.5.3'
+  tekartik_app_cv_firestore:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      ref: dart3a
+      path: app_cv_firestore
+    version: '>=0.1.0'
+  tekartik_firebase_firestore_rest:
+    git:
+      url: https://github.com/tekartik/firebase_rest.dart
+      path: firestore_rest
+      ref: dart3a
+    version: '>=0.8.0'
+  tekartik_firebase_storage_rest:
+    git:
+      url: https://github.com/tekartik/firebase_rest.dart
+      path: storage_rest
+      ref: dart3a
+    version: '>=0.8.0'
+  tekartik_firebase_firestore:
+    git:
+      url: https://github.com/tekartik/firebase_firestore.dart
+      path: firestore
+      ref: dart3a
+    version: '>=0.8.0'
+  tekartik_firebase_storage:
+    git:
+      url: https://github.com/tekartik/firebase_storage.dart
+      path: storage
+      ref: dart3a
+    version: '>=0.8.0'
+  tekartik_firebase_storage_fs:
+    git:
+      url: https://github.com/tekartik/firebase_storage.dart
+      path: storage_fs
+      ref: dart3a
+    version: '>=0.4.0'
+  tekartik_firebase_auth:
+    git:
+      url: https://github.com/tekartik/firebase_auth.dart
+      path: auth
+      ref: dart3a
+    version: '>=0.8.0'
+  tekartik_firebase_auth_local:
+    git:
+      url: https://github.com/tekartik/firebase_auth.dart
+      path: auth_local
+      ref: dart3a
+    version: '>=0.3.8'
+  tekartik_firebase_firestore_sembast:
+    git:
+      url: https://github.com/tekartik/firebase_firestore.dart
+      path: firestore_sembast
+      ref: dart3a
+    version: '>=0.8.0'
+  tekartik_app_http:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      ref: dart3a
+      path: app_http
+    version: '>=0.1.0'
+  tekartik_firebase_auth_rest:
+    git:
+      url: https://github.com/tekartik/firebase_rest.dart
+      path: auth_rest
+      ref: dart3a
+    version: '>=0.3.8'
+  tekartik_app_crypto:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      ref: dart3a
+      path: app_crypto
+  tekartik_firebase_functions:
+    git:
+      url: https://github.com/tekartik/firebase_functions.dart
+      path: firebase_functions
+      ref: dart3a
+    version: '>=0.2.1'
+  tekartik_firebase_functions_http:
+    git:
+      url: https://github.com/tekartik/firebase_functions.dart
+      path: firebase_functions_http
+      ref: dart3a
+    version: '>=0.2.1'
+  tekartik_app_sembast:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      ref: dart3a
+      path: app_sembast
+    version: '>=0.1.0'
+  meta:
+  synchronized:
+  path:
+  http:
+  tekartik_http:
+    git:
+      url: https://github.com/tekartik/http.dart
+      ref: dart3a
+      path: http
+  tekartik_firebase_rest:
+    git:
+      url: https://github.com/tekartik/firebase_rest.dart
+      ref: dart3a
+      path: firebase_rest
+  tekartik_common_utils:
+    git:
+      url: https://github.com/tekartik/common_utils.dart
+      ref: dart3a
+
+dev_dependencies:
+  lints: '>=2.0.0'
+  tekartik_firebase_local:
+    git:
+      url: https://github.com/tekartik/firebase.dart
+      ref: dart3a
+      path: firebase_local
+  test: '>=1.21.0'

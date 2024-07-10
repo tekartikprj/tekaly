@@ -3,22 +3,29 @@
 version: 2
 
 enable-beta-ecosystems: true
+
 updates:
   - package-ecosystem: "pub"
-    directory: "flutter_packages/firestore_explorer"
+    directory: "flutter_packages/file_download"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
-    directory: "flutter_packages/file_download"
+    directory: "flutter_packages/firestore_explorer"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
     directory: "packages/file_download_web"
     schedule:
       interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/sembast_synced"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "test/firestore_explorer_test_app"
+    schedule:
+      interval: "monthly"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    labels:
-      - autosubmit
