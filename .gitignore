@@ -4,4 +4,6 @@
 *.iml
 .vscode/
 
+# Build
+build/
 
