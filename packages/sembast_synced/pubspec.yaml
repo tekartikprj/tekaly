@@ -123,12 +123,11 @@ dependencies:
     git:
       url: https://github.com/tekartik/common_utils.dart
       ref: dart3a
-
-dev_dependencies:
-  lints: '>=2.0.0'
   tekartik_firebase_local:
     git:
       url: https://github.com/tekartik/firebase.dart
       ref: dart3a
       path: firebase_local
+dev_dependencies:
+  lints: '>=2.0.0'
   test: '>=1.21.0'

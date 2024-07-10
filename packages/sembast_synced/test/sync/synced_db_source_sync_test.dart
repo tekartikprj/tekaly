@@ -1,8 +1,8 @@
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
+import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:test/test.dart';
 
 import 'synced_db_test.dart';

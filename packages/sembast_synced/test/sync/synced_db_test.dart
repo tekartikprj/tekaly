@@ -1,9 +1,9 @@
 import 'package:sembast/sembast.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
+import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:test/test.dart';
 
 /// Entity in the database.

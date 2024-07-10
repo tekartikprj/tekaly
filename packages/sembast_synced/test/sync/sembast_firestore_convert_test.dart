@@ -1,6 +1,6 @@
 import 'package:sembast/timestamp.dart' as sembast;
-import 'package:tekartik_firebase_firestore/firestore.dart' as firestore;
 import 'package:tekaly_sembast_synced/src/sync/sembast_firestore_converter.dart';
+import 'package:tekartik_firebase_firestore/firestore.dart' as firestore;
 import 'package:test/test.dart';
 
 void main() {

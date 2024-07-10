@@ -1,14 +1,13 @@
 import 'package:sembast/timestamp.dart';
-import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
-import 'package:tekartik_firebase_firestore/firestore_logger.dart';
-import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
-
-// ignore: depend_on_referenced_packages
-import 'package:tekartik_firebase_local/firebase_local.dart';
 import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart'
     show syncTimestampKey;
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
+import 'package:tekartik_firebase_firestore/firestore_logger.dart';
+import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
+// ignore: depend_on_referenced_packages
+import 'package:tekartik_firebase_local/firebase_local.dart';
 import 'package:test/test.dart';
 
 import 'synced_source_test.dart';

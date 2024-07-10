@@ -1,6 +1,6 @@
 import 'package:sembast/timestamp.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
+import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 import 'db_sync_record.dart';
 
