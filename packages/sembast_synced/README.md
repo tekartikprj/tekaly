@@ -4,6 +4,7 @@ Sembast synced is a package that allows to sync a sembast database with a remote
 - firestore database
 - export/import to/from a file
 - predefined api
+- only allow syncing stores with String key and Map content.
 
 ## Setup
 
