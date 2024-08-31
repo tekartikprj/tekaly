@@ -92,6 +92,7 @@ class SyncedSourceFirestore
     var map = _prepareRecordMap(record);
 
     // Warning this does not work in non authenticated mode
+    // and even rest auth (not service account).
     await firestore.runTransaction((txn) async {
       var meta = await txnGetMetaInfo(txn);
 
