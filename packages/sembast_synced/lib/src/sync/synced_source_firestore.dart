@@ -65,7 +65,12 @@ class SyncedSourceFirestore
     var id = record.syncId.v!;
     record.syncId.clear();
     var map = mapSembastToFirestore(record.toMap());
-    await dataCollection.doc(id).set(map);
+    try {
+      await dataCollection.doc(id).set(map);
+    } catch (e) {
+      print('Error $e while putting record at ${dataCollection.doc(id)}');
+      rethrow;
+    }
   }
 
   @override
@@ -218,7 +223,13 @@ class SyncedSourceFirestore
     if (limit != null) {
       query = query.limit(limit);
     }
-    var querySnapshot = await query.get();
+    fb.QuerySnapshot querySnapshot;
+    try {
+      querySnapshot = await query.get();
+    } catch (e) {
+      print('Error $e while getting record list at $query');
+      rethrow;
+    }
     /*
     return sourceRecordFromSnapshots(querySnapshot.docs)
         .cast<SyncedSourceRecord>();
