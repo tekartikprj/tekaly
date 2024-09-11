@@ -15,6 +15,9 @@ import 'synced_source.dart';
 class SyncedSourceFirestore
     with SyncedSourceDefaultMixin
     implements SyncedSource {
+  static const dataCollectionId = 'data';
+  static const metaCollectionId = 'meta';
+  static const metaInfoDocumentId = 'info';
   final fb.Firestore firestore;
   final String? rootPath;
   late fb.CollectionReference dataCollection;
@@ -34,9 +37,9 @@ class SyncedSourceFirestore
       /// Document path
       @required this.rootPath,
       this.noAuth = false}) {
-    dataCollection = firestore.collection(getPath('data'));
-    metaCollection = firestore.collection(getPath('meta'));
-    metaInfoReference = metaCollection.doc('info');
+    dataCollection = firestore.collection(getPath(dataCollectionId));
+    metaCollection = firestore.collection(getPath(metaCollectionId));
+    metaInfoReference = metaCollection.doc(metaInfoDocumentId);
 
     cvFirestoreAddBuilder<SyncedSourceRecord>((_) => SyncedSourceRecord());
     cvFirestoreAddBuilder<CvMetaInfoRecord>((_) => CvMetaInfoRecord());
