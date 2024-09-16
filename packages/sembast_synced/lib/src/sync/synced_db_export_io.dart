@@ -6,6 +6,7 @@ import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_source_export.dart';
+import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 import 'import_common.dart';
 
