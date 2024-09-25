@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   pub_semver:
-  file_picker:
+  file_picker: '>=8.1.2'
   tekartik_platform_browser:
     git:
       url: https://github.com/tekartik/platform.dart

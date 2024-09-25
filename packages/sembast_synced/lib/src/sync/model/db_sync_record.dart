@@ -1,4 +1,3 @@
-import 'package:sembast/sembast.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 

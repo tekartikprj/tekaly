@@ -3,13 +3,12 @@ import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart'
     show syncTimestampKey;
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
-import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
-import 'package:tekartik_firebase_firestore/firestore_logger.dart';
-import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
+import 'package:tekartik_firebase_firestore/firestore_logger.dart' as fb;
+import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart'
+    as fb;
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_firebase_local/firebase_local.dart';
 import 'package:test/test.dart';
-
 import 'synced_source_test.dart';
 
 var firebase = FirebaseLocal();
@@ -20,11 +19,11 @@ SyncedSourceFirestore newInMemorySyncedSourceFirestore() {
   fb.Firestore firestore;
   SyncedSourceFirestore source;
 
-  firestore = newFirestoreServiceMemory().firestore(firebase.app());
+  firestore = fb.newFirestoreServiceMemory().firestore(firebase.app());
   if (debugFirestore) {
-    firestore = FirestoreLogger(
+    firestore = fb.FirestoreLogger(
         firestore: firestore,
-        options: FirestoreLoggerOptions.all(log: (event) {
+        options: fb.FirestoreLoggerOptions.all(log: (event) {
           print(event);
         }));
   }

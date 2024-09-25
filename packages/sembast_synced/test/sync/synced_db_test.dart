@@ -1,4 +1,3 @@
-import 'package:sembast/sembast.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart';
