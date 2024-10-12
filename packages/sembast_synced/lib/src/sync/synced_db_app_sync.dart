@@ -1,5 +1,4 @@
 import 'package:cv/cv.dart';
-import 'package:http/http.dart';
 import 'package:sembast/sembast_memory.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
@@ -32,6 +31,7 @@ typedef SyncedDbAppSyncFetchExport = Future<String> Function(int changeId);
 class SyncedDbHttpExportFetcher implements SyncedDbAppSyncExportFetcher {
   late HttpClientFactory httpClientFactory;
   final Uri baseUri;
+
   @override
   SyncedDbAppSyncFetchExport get fetchExport => _fetchExport;
 
@@ -39,7 +39,9 @@ class SyncedDbHttpExportFetcher implements SyncedDbAppSyncExportFetcher {
   SyncedDbAppSyncFetchExportMeta get fetchExportMeta => _fetchExportMeta;
 
   Client? _client;
+
   Client get client => _client ??= httpClientFactory.newClient();
+
   SyncedDbHttpExportFetcher(
       {required this.baseUri, HttpClientFactory? httpClientFactory}) {
     this.httpClientFactory = httpClientFactory ?? httpClientFactoryUniversal;
@@ -47,6 +49,7 @@ class SyncedDbHttpExportFetcher implements SyncedDbAppSyncExportFetcher {
 
   Uri get exportMetaUri => baseUri.replace(
       pathSegments: [...baseUri.pathSegments, syncedDbExportMetaFilename]);
+
   Uri get exportUri => baseUri
       .replace(pathSegments: [...baseUri.pathSegments, syncedDbExportFilename]);
 

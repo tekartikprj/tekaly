@@ -1,5 +1,4 @@
 import 'package:cv/cv_json.dart';
-import 'package:http/http.dart';
 import 'package:http/retry.dart';
 import 'package:path/path.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
@@ -64,6 +63,7 @@ class SecureApiServiceBase implements ApiService {
   late Uri commandUri;
   final bool isLocal;
   late Client client;
+
   Client get secureClient => client;
   var retryCount = 0;
   final String functionName;
@@ -247,7 +247,7 @@ class SecureApiServiceBase implements ApiService {
     }
   }
 
-  /*
+/*
   Future<void> syncMemory(String siteId) async {
     var target = getSiteTarget(siteId);
     var dbName = getTargetDbName(target);
@@ -266,6 +266,7 @@ class ServiceResponse<T extends CvModel> {
   T? data;
   int statusCode;
   ApiErrorResponse? error;
+
   bool get isSuccessful => data != null;
 
   ServiceResponse({
