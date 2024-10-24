@@ -102,7 +102,7 @@ abstract class SyncedDbBase with SyncedDbMixin {
   @override
   List<CvStoreRef<String, DbStringRecordBase>> get syncStores =>
       syncedStoreNames
-          .map((e) => cvStringRecordFactory.store<DbStringRecordBase>(e))
+          .map((e) => cvStringStoreFactory.store<DbStringRecordBase>(e))
           .toList();
 
   var _closed = false;
@@ -117,8 +117,8 @@ abstract class SyncedDbBase with SyncedDbMixin {
 }
 
 abstract class SyncedDb {
-  // var dbSyncRecordStoreRef = cvIntRecordFactory.store<DbSyncRecord>('syncedR');
-  // var dbSyncMetaStoreRef = cvStringRecordFactory.store<DbSyncMetaInfo>('syncedM');
+  // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
+  // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
   CvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef;
 
   /// Synced store
@@ -330,10 +330,10 @@ class _SyncedDbImpl extends SyncedDbBase
 
   @override
   final dbSyncMetaStoreRef =
-      cvStringRecordFactory.store<DbSyncMetaInfo>('syncMeta');
+      cvStringStoreFactory.store<DbSyncMetaInfo>('syncMeta');
   @override
   final dbSyncRecordStoreRef =
-      cvIntRecordFactory.store<DbSyncRecord>('syncRecord');
+      cvIntStoreFactory.store<DbSyncRecord>('syncRecord');
 
   @override
   late final rawDatabase = openedDatabase != null

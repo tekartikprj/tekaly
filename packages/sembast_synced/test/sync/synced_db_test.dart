@@ -14,7 +14,7 @@ class DbEntity extends DbStringRecordBase {
   List<CvField> get fields => [name, timestamp];
 }
 
-var dbEntityStoreRef = cvStringRecordFactory.store<DbEntity>('entity');
+var dbEntityStoreRef = cvStringStoreFactory.store<DbEntity>('entity');
 String get dbEntityStoreName => dbEntityStoreRef.name;
 void main() {
   cvAddConstructor(DbEntity.new);
