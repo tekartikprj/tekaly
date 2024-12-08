@@ -12,6 +12,7 @@ import 'model/source_record.dart';
 import 'sembast_firestore_converter.dart';
 import 'synced_source.dart';
 
+/// Synced source firestore
 class SyncedSourceFirestore
     with SyncedSourceDefaultMixin
     implements SyncedSource {
@@ -31,6 +32,7 @@ class SyncedSourceFirestore
   void close() {
     // Nothing to close
   }
+
   SyncedSourceFirestore(
       {required this.firestore,
 

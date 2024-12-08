@@ -9,6 +9,8 @@ mixin SyncedDbMixin implements SyncedDb {
   late final DatabaseFactory databaseFactory;
   @override
   late final List<String> syncedStoreNames;
+  @override
+  late final List<String>? syncedExcludedStoreNames;
 }
 
 var syncedDbDebug = false; // devWarning(true);
@@ -41,24 +43,30 @@ abstract class SyncedDbBase with SyncedDbMixin {
 
   Future<void> onChanges(Transaction txn,
       List<RecordChange<String, Map<String, Object?>>> changes) async {
+    await onChangesAny(txn, changes);
+  }
+
+  // Type unsafe assuming string, map
+  Future<void> onChangesAny(Transaction txn, List<RecordChange> changes) async {
     for (var change in changes) {
+      var changeRef = change.ref;
       if (syncedDbDebug) {
         print('change: ${change.oldSnapshot} => ${change.newSnapshot}');
       }
       if (!trackChangesDisabled) {
         //if (change.isAdd) {
         // Need to read to handle put after delete
-        var existingSyncRecord = await getSyncRecord(txn, change.ref);
+        var existingSyncRecord = await getSyncRecordAny(txn, changeRef);
         if (existingSyncRecord == null) {
           if (change.isDelete) {
             await dbSyncRecordStoreRef.add(
                 txn,
-                (syncRecordFrom(change.ref)
+                (syncRecordFromAny(changeRef)
                   ..dirty.v = true
                   ..deleted.v = true));
           } else {
             await dbSyncRecordStoreRef.add(
-                txn, (syncRecordFrom(change.ref)..dirty.v = true));
+                txn, (syncRecordFromAny(changeRef)..dirty.v = true));
           }
         } else {
           if (change.isDelete) {
@@ -83,12 +91,16 @@ abstract class SyncedDbBase with SyncedDbMixin {
 
   @override
   Future<Database> get database async =>
-      _database ??= (await rawDatabase.then((value) {
+      _database ??= (await rawDatabase.then((db) {
         // Setup triggers
-        for (var store in syncStores) {
-          store.rawRef.addOnChangesListener(value, onChanges);
+        for (var store in _syncStores) {
+          store.rawRef.addOnChangesListener(db, onChanges);
         }
-        return value;
+        if (_syncStores.isEmpty) {
+          db.addAllStoresOnChangesListener(onChangesAny,
+              excludedStoreNames: syncedExcludedStoreNames);
+        }
+        return db;
       }))!;
 
   @override
@@ -99,8 +111,12 @@ abstract class SyncedDbBase with SyncedDbMixin {
     dbSyncMetaStoreRef.name
   ];
 
-  @override
-  List<CvStoreRef<String, DbStringRecordBase>> get syncStores =>
+  /// Deprecated
+  @Deprecated('do not use')
+  List<CvStoreRef<String, DbStringRecordBase>> get syncStores => _syncStores;
+
+  /// Expplicit sync stores
+  List<CvStoreRef<String, DbStringRecordBase>> get _syncStores =>
       syncedStoreNames
           .map((e) => cvStringStoreFactory.store<DbStringRecordBase>(e))
           .toList();
@@ -116,21 +132,30 @@ abstract class SyncedDbBase with SyncedDbMixin {
   }
 }
 
+/// Synced db
 abstract class SyncedDb {
+  /// Default name
+  static String nameDefault = 'synced.db';
   // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
   CvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef;
 
   /// Synced store
-  List<CvStoreRef<String, DbStringRecordBase>> get syncStores;
+  // List<CvStoreRef<String, DbStringRecordBase>> get syncStores;
 
-  List<String> get syncedStoreNames;
+  List<String>? get syncedStoreNames;
+
+  /// USed if synced store names is empty, to excluded some stores
+  List<String>? get syncedExcludedStoreNames;
 
   CvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef;
 
   CvRecordRef<String, DbSyncMetaInfo> get dbSyncMetaInfoRef;
 
   Lock get syncTransactionLock;
+
+  /// True when first synchronization is done (even without data, i.e. last ChangeId can be null)
+  Future<void> initialSynchronizationDone();
 
   /// Good for in memory manipulation of incomping data and unit test !
   factory SyncedDb.newInMemory({required List<String> syncedStoreNames}) =>
@@ -139,16 +164,32 @@ abstract class SyncedDb {
   factory SyncedDb(
           {String? name,
           required DatabaseFactory databaseFactory,
-          required List<String> syncedStoreNames}) =>
+          List<String>? syncedExcludedStoreNames,
+          List<String>? syncedStoreNames}) =>
       _SyncedDbImpl(
           name: name,
           databaseFactory: databaseFactory,
+          syncedExcludedStoreNames: syncedExcludedStoreNames,
           syncedStoreNames: syncedStoreNames);
   factory SyncedDb.fromOpenedDb(
-          {Database? openedDatabase, required List<String> syncedStoreNames}) =>
+          {Database? openedDatabase,
+          required List<String> syncedStoreNames,
+          List<String>? syncedExcludedStoreNames}) =>
       _SyncedDbImpl(
-          openedDatabase: openedDatabase, syncedStoreNames: syncedStoreNames);
+          openedDatabase: openedDatabase,
+          syncedStoreNames: syncedStoreNames,
+          syncedExcludedStoreNames: syncedExcludedStoreNames);
 
+  static SyncedDb openDatabase(
+          {String? name,
+          required DatabaseFactory databaseFactory,
+          List<String>? syncedExcludedStoreNames,
+          List<String>? syncedStoreNames}) =>
+      SyncedDb(
+          name: name,
+          databaseFactory: databaseFactory,
+          syncedExcludedStoreNames: syncedExcludedStoreNames,
+          syncedStoreNames: syncedStoreNames);
   Future<Database> get rawDatabase;
 
   Future<Database> get database;
@@ -242,6 +283,15 @@ extension SyncedDbExtension on SyncedDb {
                     Filter.equals(dbSyncRecordModel.key.k, record.key)));
   }
 
+  Future<DbSyncRecord?> getSyncRecordAny(
+      DatabaseClient client, RecordRef record) async {
+    return await dbSyncRecordStoreRef.findFirst(client,
+        finder: Finder(
+            filter:
+                Filter.equals(dbSyncRecordModel.store.k, record.store.name) &
+                    Filter.equals(dbSyncRecordModel.key.k, record.key)));
+  }
+
   Future<DbSyncMetaInfo?> getSyncMetaInfo({DatabaseClient? client}) async {
     client ??= await database;
     var localMetaSyncInfo = await dbSyncMetaInfoRef.get(client);
@@ -302,7 +352,8 @@ class _SyncedDbInMemory extends _SyncedDbImpl {
 
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
   @visibleForTesting
-  _SyncedDbInMemory({required super.syncedStoreNames})
+  _SyncedDbInMemory(
+      {required super.syncedStoreNames, super.syncedExcludedStoreNames})
       : super(databaseFactory: inMemoryDatabaseFactory);
 }
 
@@ -311,7 +362,6 @@ class _SyncedDbImpl extends SyncedDbBase
     with SyncedDbMixin
     implements SyncedDb {
   String name;
-  static String nameDefault = 'synced.db';
 
   final Database? openedDatabase;
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
@@ -319,13 +369,22 @@ class _SyncedDbImpl extends SyncedDbBase
   _SyncedDbImpl(
       {DatabaseFactory? databaseFactory,
       this.openedDatabase,
-      required List<String> syncedStoreNames,
+      List<String>? syncedStoreNames,
+      required List<String>? syncedExcludedStoreNames,
       String? name})
-      : name = name ?? nameDefault {
+      : name = name ?? SyncedDb.nameDefault {
     if (databaseFactory != null) {
       this.databaseFactory = databaseFactory;
     }
-    this.syncedStoreNames = syncedStoreNames;
+    this.syncedStoreNames = syncedStoreNames ?? <String>[];
+
+    if (this.syncedStoreNames.isEmpty) {
+      var excluded = syncedExcludedStoreNames?.toSet() ?? <String>{};
+      excluded.addAll(syncedDbSystemStoreNames);
+      this.syncedExcludedStoreNames = excluded.toList();
+    } else {
+      this.syncedExcludedStoreNames = syncedExcludedStoreNames;
+    }
   }
 
   @override
@@ -334,6 +393,12 @@ class _SyncedDbImpl extends SyncedDbBase
   @override
   final dbSyncRecordStoreRef =
       cvIntStoreFactory.store<DbSyncRecord>('syncRecord');
+
+  /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
+  @override
+  Future<void> initialSynchronizationDone() async {
+    await onSyncMetaInfo().firstWhere((meta) => meta?.lastChangeId != null);
+  }
 
   @override
   late final rawDatabase = openedDatabase != null
@@ -344,5 +409,11 @@ class _SyncedDbImpl extends SyncedDbBase
 DbSyncRecord syncRecordFrom(RecordRef<String, Map<String, Object?>> record) {
   return DbSyncRecord()
     ..key.v = record.key
+    ..store.v = record.store.name;
+}
+
+DbSyncRecord syncRecordFromAny(RecordRef record) {
+  return DbSyncRecord()
+    ..key.v = record.key as String
     ..store.v = record.store.name;
 }

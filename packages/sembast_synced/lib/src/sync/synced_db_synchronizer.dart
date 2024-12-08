@@ -159,8 +159,12 @@ class SyncedDbSynchronizer {
           streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
         var remote = event.$1;
         var local = event.$2;
+        var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
+        var localLastChangeId = local?.lastChangeId.v ?? 0;
         // devPrint('remote $remote, local: $local');
-        if ((remote?.lastChangeId.v ?? 0) != (local?.lastChangeId.v ?? 0)) {
+        if (remoteLastChangeId != remoteLastChangeId) {
+          lazySync();
+        } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
           lazySync();
         }
       });
@@ -194,6 +198,7 @@ class SyncedDbSynchronizer {
     return await doSync();
   }
 
+  /// Perform sync up and down
   @visibleForTesting
   Future<SyncedSyncStat> doSync() async {
     // devPrint('_start sync');
@@ -307,11 +312,14 @@ class SyncedDbSynchronizer {
   }
 
   CvMetaInfoRecord? lastSyncMetaInfo;
+
+  /// Sync down
   Future<SyncedSyncStat> syncDown() async {
     var db = await this.db.database;
     var stat = SyncedSyncStat();
 
     var localMetaSyncInfo = (await this.db.dbSyncMetaInfoRef.get(db));
+    var hasInitialLastChangeId = localMetaSyncInfo?.lastChangeId.v != null;
     var initialLastChangeId = localMetaSyncInfo?.lastChangeId.v ?? 0;
     var fullSync = initialLastChangeId == 0;
 
@@ -465,14 +473,23 @@ class SyncedDbSynchronizer {
           newLastChangeId = max(newLastChangeId, sourceMetaLastChangeNum);
         }
       }
+      Future<void> saveMetaInfo() async {
+        var metaInfo = this.db.dbSyncMetaInfoRef.cv()
+          ..lastChangeId.v = newLastChangeId
+          ..lastTimestamp.v = newLastTimestamp
+          ..sourceVersion.setValue(initialSourceMeta?.version.v);
+        await metaInfo.put(txn);
+        print('Setting meta Info $metaInfo');
+      }
+
       if (newLastChangeId != initialLastChangeId ||
           (initialSourceMeta?.version.v !=
               localMetaSyncInfo?.sourceVersion.v)) {
-        await (this.db.dbSyncMetaInfoRef.cv()
-              ..lastChangeId.v = newLastChangeId
-              ..lastTimestamp.v = newLastTimestamp
-              ..sourceVersion.setValue(initialSourceMeta?.version.v))
-            .put(txn);
+        await saveMetaInfo();
+      } else if (newLastChangeId == 0 &&
+          initialLastChangeId == 0 &&
+          !hasInitialLastChangeId) {
+        await saveMetaInfo();
       }
     });
 
