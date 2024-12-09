@@ -98,6 +98,8 @@ class SyncedDbSynchronizer {
   // Default to 100 down
   int? stepLimitDown;
 
+  final _firstSyncDoneCompleter = Completer<void>.sync();
+  Future<void> firstSyncDownDone() => _firstSyncDoneCompleter.future;
   final bool autoSync;
 
   Future<List<SyncedSyncSourceRecord>> getLocalDirtySourceRecords() async {
@@ -162,7 +164,7 @@ class SyncedDbSynchronizer {
         var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
         var localLastChangeId = local?.lastChangeId.v ?? 0;
         // devPrint('remote $remote, local: $local');
-        if (remoteLastChangeId != remoteLastChangeId) {
+        if (remoteLastChangeId != localLastChangeId) {
           lazySync();
         } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
           lazySync();
@@ -189,11 +191,12 @@ class SyncedDbSynchronizer {
     return await doSync();
   });
 
-  /// Trigger a laze sync
+  /// Trigger a lazy sync
   Future<SyncedSyncStat> lazySync() async {
-    return _lazyLauncher.launch();
+    return await _lazyLauncher.launch();
   }
 
+  /// Sync up and down
   Future<SyncedSyncStat> sync() async {
     return await doSync();
   }
@@ -493,10 +496,17 @@ class SyncedDbSynchronizer {
       }
     });
 
+    if (!_firstSyncDoneCompleter.isCompleted) {
+      _firstSyncDoneCompleter.complete();
+    }
     if (debugSyncedSync) {
       print('syncDown: $stat');
     }
     return stat;
+  }
+
+  Future<void> lazyWaitSync() async {
+    return await _lazyLauncher.wait();
   }
 }
 
@@ -541,7 +551,7 @@ class LazyLauncher<T> {
 
   LazyLauncher(this._launcher);
 
-  /// Fait for last trigger to terminate.
+  /// Fait for last trigger to terminate. (working?)
   Future<void> wait() async {
     return await _lock.synchronized(() async {});
   }

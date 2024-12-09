@@ -53,6 +53,14 @@ abstract class AutoSynchronizedFirestoreSyncedDb {
 
   /// Close the db
   Future<void> close();
+
+  Future<void> synchronize();
+
+  /// Lazy synchronize if needed (timing undefined)
+  Future<void> lazySynchronize();
+
+  /// Wait for current lazy synchronization to be done
+  /// Future<void> waitSynchronized();
 }
 
 class _AutoSynchronizedFirestoreSyncedDb
@@ -91,4 +99,16 @@ class _AutoSynchronizedFirestoreSyncedDb
             firestore: options.firestore, rootPath: 'test/local'),
         autoSync: true);
   }();
+
+  @override
+  Future<void> lazySynchronize() async {
+    await ready;
+    await synchronizer.lazySync();
+  }
+
+  @override
+  Future<void> synchronize() async {
+    await ready;
+    await synchronizer.sync();
+  }
 }

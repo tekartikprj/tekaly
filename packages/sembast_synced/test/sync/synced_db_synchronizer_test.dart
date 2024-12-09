@@ -31,7 +31,7 @@ class SyncTestsContext {
 
 void syncTests(Future<SyncTestsContext> Function() setupContext) {
   cvAddConstructor(DbEntity.new);
-  group('auto_synced_db_source_sync_firestore_test', () {
+  group('non_auto_synced_db_source_sync_firestore_test', () {
     late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
@@ -40,7 +40,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       source = context.source;
       syncedDb = context.syncedDb;
       //debugSyncedSync = true;
-      sync = SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
+      sync = SyncedDbSynchronizer(db: syncedDb, source: source);
     });
     tearDown(() async {
       await sync.close();
@@ -60,6 +60,27 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             .timeout(Duration(milliseconds: 1000)));
         fail('should fail');
       } on TimeoutException catch (_) {}
+    });
+  });
+  group('auto_synced_db_source_sync_firestore_test', () {
+    late SyncedDbSynchronizer sync;
+    late SyncedSource source;
+    late SyncedDb syncedDb;
+    setUp(() async {
+      var context = await setupContext();
+      source = context.source;
+      syncedDb = context.syncedDb;
+      //debugSyncedSync = true;
+      sync = SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
+    });
+    tearDown(() async {
+      await sync.close();
+      source.close();
+      await syncedDb.close();
+    });
+
+    test('auto sync done', () async {
+      await syncedDb.initialSynchronizationDone();
     });
     test('autoSyncOneFromLocal', () async {
       var meta = await syncedDb.getSyncMetaInfo();
