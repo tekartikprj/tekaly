@@ -11,6 +11,12 @@ mixin SyncedDbMixin implements SyncedDb {
   late final List<String> syncedStoreNames;
   @override
   late final List<String>? syncedExcludedStoreNames;
+
+  /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
+  @override
+  Future<void> initialSynchronizationDone() async {
+    await onSyncMetaInfo().firstWhere((meta) => meta?.lastChangeId != null);
+  }
 }
 
 var syncedDbDebug = false; // devWarning(true);
@@ -154,7 +160,7 @@ abstract class SyncedDb {
 
   Lock get syncTransactionLock;
 
-  /// True when first synchronization is done (even without data, i.e. last ChangeId can be null)
+  /// True when first synchronization is done (even without data, i.e. last ChangeId can be null but should be 0)
   Future<void> initialSynchronizationDone();
 
   /// Good for in memory manipulation of incomping data and unit test !
@@ -358,9 +364,7 @@ class _SyncedDbInMemory extends _SyncedDbImpl {
 }
 
 /// Default implementation
-class _SyncedDbImpl extends SyncedDbBase
-    with SyncedDbMixin
-    implements SyncedDb {
+class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
   String name;
 
   final Database? openedDatabase;
@@ -393,12 +397,6 @@ class _SyncedDbImpl extends SyncedDbBase
   @override
   final dbSyncRecordStoreRef =
       cvIntStoreFactory.store<DbSyncRecord>('syncRecord');
-
-  /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
-  @override
-  Future<void> initialSynchronizationDone() async {
-    await onSyncMetaInfo().firstWhere((meta) => meta?.lastChangeId != null);
-  }
 
   @override
   late final rawDatabase = openedDatabase != null
