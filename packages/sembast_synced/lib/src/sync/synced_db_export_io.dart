@@ -11,20 +11,19 @@ import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'import_common.dart';
 
 extension SyncedDbExportIoExt on SyncedDb {
-  Future<void> exportDatabase(
-      {required SyncedDb db, required String assetsFolder}) async {
+  Future<void> exportDatabase({required String assetsFolder}) async {
     await Directory(assetsFolder).create(recursive: true);
     var file = File(join(assetsFolder, syncedDbExportFilename));
     var fileMeta = File(join(assetsFolder, syncedDbExportMetaFilename));
 
-    var sdb = await db.database;
+    var sdb = await database;
     var lines = await exportDatabaseLines(sdb,
         storeNames: getNonEmptyStoreNames(sdb).toList()
           ..removeWhere(
               (element) => [dbSyncRecordStoreRef.name].contains(element)));
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member
-    var syncMeta = (await db.getSyncMetaInfo());
+    var syncMeta = (await getSyncMetaInfo());
     print('syncMeta: $syncMeta');
     if (syncMeta != null) {
       await file
