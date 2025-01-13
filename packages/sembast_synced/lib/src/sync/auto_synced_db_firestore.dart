@@ -37,6 +37,7 @@ class AutoSynchronizedFirestoreSyncedDbOptions {
 
 /// Auto synchronized firestore synced db
 abstract class AutoSynchronizedFirestoreSyncedDb {
+  SyncedDb get syncedDb;
   final AutoSynchronizedFirestoreSyncedDbOptions options;
 
   Database get database;
@@ -65,6 +66,7 @@ abstract class AutoSynchronizedFirestoreSyncedDb {
 
 class _AutoSynchronizedFirestoreSyncedDb
     implements AutoSynchronizedFirestoreSyncedDb {
+  @override
   late final SyncedDb syncedDb;
   late final SyncedDbSynchronizer synchronizer;
 
