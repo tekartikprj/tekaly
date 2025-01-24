@@ -20,7 +20,9 @@ extension SyncedDbExportStorageExt on SyncedDb {
   /// * `export_meta<suffix>.json`
   /// * `export_<changeId>.jsonl`
   Future<void> exportDatabaseToStorage(
-      {required SyncedDbStorageExportContext exportContext}) async {
+      {required SyncedDbStorageExportContext exportContext,
+      bool? metaOnly}) async {
+    metaOnly ??= false;
     var exportInfo = await exportInMemory();
 
     var exportContent = exportLinesToJsonlString(exportInfo.data);
@@ -32,11 +34,13 @@ extension SyncedDbExportStorageExt on SyncedDb {
     var changeId = exportInfo.metaInfo.lastChangeId.v!;
     var suffix = exportContext.metaBasenameSuffix;
 
-    /// Write content
-    await storage
-        .bucket(bucket)
-        .file(url.join(rootPath, getExportFileName(changeId)))
-        .writeAsString(exportContent);
+    if (!metaOnly) {
+      /// Write content
+      await storage
+          .bucket(bucket)
+          .file(url.join(rootPath, getExportFileName(changeId)))
+          .writeAsString(exportContent);
+    }
 
     /// Write meta
     await storage
