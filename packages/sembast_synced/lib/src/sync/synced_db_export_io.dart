@@ -8,6 +8,7 @@ import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 import 'import_common.dart';
 
+/// Io export extension
 extension SyncedDbExportIoExt on SyncedDb {
   Future<void> exportDatabase(
       {

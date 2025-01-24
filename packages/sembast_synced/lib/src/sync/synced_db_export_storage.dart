@@ -40,7 +40,7 @@ extension SyncedDbExportStorageExt on SyncedDb {
 
     /// Write meta
     await storage
-        .bucket()
+        .bucket(bucket)
         .file(url.join(rootPath, getExportMetaFileName(suffix: suffix)))
         .writeAsString(exportMeta);
   }

@@ -36,5 +36,17 @@ void main() {
         '["my_key",{"test":123}]\n'
         '{"store":"syncMeta"}\n'
         '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n');
+    await syncedDb.close();
+    syncedDb = SyncedDb.newInMemory();
+    db = await syncedDb.database;
+    expect(
+        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+        isNull);
+    expect((await syncedDb.getSyncMetaInfo()), isNull);
+    await syncedDb.importDatabaseFromFiles(dir: dir);
+    expect((await syncedDb.getSyncMetaInfo())!.lastChangeId.v, 1);
+    expect(
+        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+        {'test': 123});
   });
 }

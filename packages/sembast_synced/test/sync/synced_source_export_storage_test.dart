@@ -54,9 +54,9 @@ void main() {
     var synchronizer = SyncedDbSynchronizer(
         db: syncedDb, source: newInMemorySyncedSourceMemory());
     await synchronizer.sync();
-    await syncedDb.exportDatabaseToStorage(
-        exportContext:
-            SyncedDbStorageExportContext(storage: storage, rootPath: rootPath));
+    var importExportContext =
+        SyncedDbStorageExportContext(storage: storage, rootPath: rootPath);
+    await syncedDb.exportDatabaseToStorage(exportContext: importExportContext);
     var meta =
         await storage.bucket().file('my_test/export_meta.json').readAsString();
 
@@ -72,5 +72,19 @@ void main() {
         '["my_key",{"test":123}]\n'
         '{"store":"syncMeta"}\n'
         '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n');
+
+    await syncedDb.close();
+    syncedDb = SyncedDb.newInMemory();
+    db = await syncedDb.database;
+    expect(
+        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+        isNull);
+    expect((await syncedDb.getSyncMetaInfo()), isNull);
+    await syncedDb.importDatabaseFromStorage(
+        importContext: importExportContext);
+    expect((await syncedDb.getSyncMetaInfo())!.lastChangeId.v, 1);
+    expect(
+        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+        {'test': 123});
   });
 }

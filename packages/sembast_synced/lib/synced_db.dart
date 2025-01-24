@@ -1,5 +1,6 @@
 export 'src/sync/synced_db_export.dart'
     show SyncedDbExportInfo, SyncedDbExportExt;
+export 'src/sync/synced_db_import.dart' show SyncedDbImportExt;
 export 'src/sync/synced_db_lib.dart'
     show
         SyncedDb,
@@ -13,7 +14,6 @@ export 'src/sync/synced_db_lib.dart'
         SyncedDbSourceSync,
         SyncedDbSynchronizer,
         debugSyncedDbSynchronizer;
-
 //DbSyncMetaInfo;
 //        SyncedSourceRecord,
 //SyncedSyncStat
