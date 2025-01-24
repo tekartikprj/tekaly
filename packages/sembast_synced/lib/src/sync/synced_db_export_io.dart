@@ -11,10 +11,17 @@ import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'import_common.dart';
 
 extension SyncedDbExportIoExt on SyncedDb {
-  Future<void> exportDatabase({required String assetsFolder}) async {
-    await Directory(assetsFolder).create(recursive: true);
-    var file = File(join(assetsFolder, syncedDbExportFilename));
-    var fileMeta = File(join(assetsFolder, syncedDbExportMetaFilename));
+  Future<void> exportDatabase(
+      {
+      /// Deprecated use dir
+      String? assetsFolder,
+
+      /// Destination folder (create export.jsonl and export_meta.json)
+      String? dir}) async {
+    dir ??= assetsFolder!;
+    await Directory(dir).create(recursive: true);
+    var file = File(join(dir, syncedDbExportFilename));
+    var fileMeta = File(join(dir, syncedDbExportMetaFilename));
 
     var sdb = await database;
     var lines = await exportDatabaseLines(sdb,

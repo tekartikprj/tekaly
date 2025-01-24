@@ -158,15 +158,17 @@ abstract class SyncedDb {
 
   CvRecordRef<String, DbSyncMetaInfo> get dbSyncMetaInfoRef;
 
+  @protected
   Lock get syncTransactionLock;
 
   /// True when first synchronization is done (even without data, i.e. last ChangeId can be null but should be 0)
   Future<void> initialSynchronizationDone();
 
   /// Good for in memory manipulation of incomping data and unit test !
-  factory SyncedDb.newInMemory({required List<String> syncedStoreNames}) =>
+  factory SyncedDb.newInMemory({List<String>? syncedStoreNames}) =>
       _SyncedDbInMemory(syncedStoreNames: syncedStoreNames);
 
+  /// Constructor
   factory SyncedDb(
           {String? name,
           required DatabaseFactory databaseFactory,

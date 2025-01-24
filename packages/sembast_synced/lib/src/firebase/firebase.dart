@@ -41,3 +41,31 @@ class AppFirebaseContext {
 FirebaseContext? firebaseSimContext;
 FirebaseContext? firebaseContextOrNull;
 FirebaseContext get firebaseContext => firebaseContextOrNull!;
+
+class SyncedDbStorageImportContext {}
+
+/// Export context
+typedef SyncedDbStorageExportContext = SyncedDbStorageImportExportContext;
+
+/// Context for importing data from storage
+class SyncedDbStorageImportExportContext
+    implements SyncedDbStorageImportContext {
+  /// Storage
+  final FirebaseStorage storage;
+
+  /// Optional bucket name
+  final String? bucketName;
+
+  /// Root path
+  final String rootPath;
+
+  /// Optional meta basename suffix
+  final String? metaBasenameSuffix;
+
+  /// Constructor
+  SyncedDbStorageImportExportContext(
+      {required this.storage,
+      this.bucketName,
+      required this.rootPath,
+      this.metaBasenameSuffix});
+}

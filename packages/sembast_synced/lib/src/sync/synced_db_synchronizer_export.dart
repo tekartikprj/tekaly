@@ -6,11 +6,15 @@ import 'synced_db.dart';
 import 'synced_db_down_synchronizer.dart';
 import 'synced_source_export.dart';
 
+/// Compat
+@Deprecated('Use SyncedDbSynchronizerFromExport instead')
+typedef SyncedDbSynchronizerExport = SyncedDbSynchronizerFromExport;
+
 /// Sync from export
-class SyncedDbSynchronizerExport
+class SyncedDbSynchronizerFromExport
     with SyncedDbDownSynchronizerMixin
     implements SyncedDbDownSynchronizer {
-  SyncedDbSynchronizerExport(SyncedDb db,
+  SyncedDbSynchronizerFromExport(SyncedDb db,
       {required this.fetchExport, required this.fetchExportMeta}) {
     this.db = db;
   }

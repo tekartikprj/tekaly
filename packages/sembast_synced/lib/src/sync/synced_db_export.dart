@@ -1,6 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
+import 'package:tekaly_sembast_synced/src/sync/model/db_sync_meta.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_source_export.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
@@ -29,7 +30,7 @@ class SyncedDbExportInfo {
 
 /// Export helper
 extension SyncedDbExportExt on SyncedDb {
-  /// Export to memory
+  /// Export to memory removing meta
   Future<SyncedDbExportInfo> exportInMemory() async {
     var sdb = await database;
     var lines = await exportDatabaseLines(sdb,
@@ -38,7 +39,8 @@ extension SyncedDbExportExt on SyncedDb {
               (element) => [dbSyncRecordStoreRef.name].contains(element)));
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member
-    var syncMeta = (await getSyncMetaInfo())!;
+    var syncMeta =
+        (await getSyncMetaInfo()) ?? (DbSyncMetaInfo()..lastChangeId.v = 0);
     print('syncMeta: $syncMeta');
     var exportMeta = SyncedDbExportMeta()
       ..sourceVersion.setValue(syncMeta.sourceVersion.v)
