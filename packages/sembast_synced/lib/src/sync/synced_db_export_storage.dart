@@ -28,8 +28,10 @@ extension SyncedDbExportStorageExt on SyncedDb {
   /// * `export_<changeId>.jsonl`
   Future<SyncedDbExportResult> exportDatabaseToStorage(
       {required SyncedDbStorageExportContext exportContext,
-      bool? metaOnly}) async {
+      bool? metaOnly,
+      bool? noMeta}) async {
     metaOnly ??= false;
+    noMeta ??= false;
     var exportInfo = await exportInMemory();
     int? exportSize;
 
@@ -52,11 +54,13 @@ extension SyncedDbExportStorageExt on SyncedDb {
           .writeAsString(exportContent);
     }
 
-    /// Write meta
-    await storage
-        .bucket(bucket)
-        .file(url.join(rootPath, getExportMetaFileName(suffix: suffix)))
-        .writeAsString(exportMeta);
+    if (!noMeta) {
+      /// Write meta
+      await storage
+          .bucket(bucket)
+          .file(url.join(rootPath, getExportMetaFileName(suffix: suffix)))
+          .writeAsString(exportMeta);
+    }
     return SyncedDbExportResult(exportSize: exportSize);
   }
 }
