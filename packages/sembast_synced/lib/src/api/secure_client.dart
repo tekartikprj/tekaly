@@ -6,6 +6,7 @@ import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
 
 import 'package:tekaly_sembast_synced/src/firebase/firebase_sim.dart';
 import 'package:tekaly_sembast_synced/src/server/server_app.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_http/app_http.dart' as universal;
 import 'package:tekartik_firebase_firestore/firestore.dart';
 import 'package:tekartik_firebase_functions_http/ff_server.dart';
@@ -143,12 +144,20 @@ class SecureApiServiceBase implements ApiService {
           return false;
       }
       retryCount++;
-      print('retry: ${response.statusCode}');
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('retry: ${response.statusCode}');
+      }
       return true;
     }, whenError: (error, stackTrace) {
-      print('retry error?: error');
-      print(error);
-      print(stackTrace);
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('retry error?: error');
+        // ignore: avoid_print
+        print(error);
+        // ignore: avoid_print
+        print(stackTrace);
+      }
       return true;
     });
   }
@@ -171,7 +180,9 @@ class SecureApiServiceBase implements ApiService {
       }
     } catch (e, st) {
       if (isDebug) {
+        // ignore: avoid_print
         print(e);
+        // ignore: avoid_print
         print(st);
       }
       if (e is ApiException) {
@@ -238,6 +249,7 @@ class SecureApiServiceBase implements ApiService {
       try {
         errorResponse = body.cv<ApiErrorResponse>();
       } catch (e) {
+        // ignore: avoid_print
         print(e);
       }
       return ServiceResponse(

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:sembast/timestamp.dart';
 import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart'
     show syncTimestampKey;

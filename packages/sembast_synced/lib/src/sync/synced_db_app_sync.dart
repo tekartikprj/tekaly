@@ -107,8 +107,10 @@ class SyncedDbAppSyncExport
     var newLastChangeId = newMeta.lastChangeId.v!;
     if ((meta?.sourceVersion.v != newMeta.sourceVersion.v) ||
         (newMeta.lastChangeId.v! > (meta?.lastChangeId.v ?? 0))) {
-      print('importing data $newMeta');
-
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('importing data $newMeta');
+      }
       var data = await fetcher.fetchExport(newLastChangeId);
       var sourceDb =
           await importDatabaseAny(data, newDatabaseFactoryMemory(), 'export');
@@ -132,6 +134,9 @@ class SyncedDbAppSyncFirestore
   Future<void> sync() async {
     var sync = SyncedDbSynchronizer(db: db, source: sourceFirestore);
     var stat = await sync.syncDown();
-    print(stat);
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print(stat);
+    }
   }
 }

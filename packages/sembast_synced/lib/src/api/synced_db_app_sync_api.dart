@@ -1,6 +1,5 @@
 import 'package:tekaly_sembast_synced/src/api/synced_source_api.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_db_app_sync.dart';
-import 'package:tekaly_sembast_synced/synced_db.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 
 /// Sync from firestore
 class SyncedDbAppSyncApi with SyncedDbAppSyncMixin implements SyncedDbAppSync {
@@ -14,6 +13,9 @@ class SyncedDbAppSyncApi with SyncedDbAppSyncMixin implements SyncedDbAppSync {
   Future<void> sync() async {
     var sync = SyncedDbSynchronizer(db: db, source: sourceApi);
     var stat = await sync.sync();
-    print(stat);
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print(stat);
+    }
   }
 }

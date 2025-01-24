@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/api/import_common.dart';
@@ -57,7 +59,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         meta = (await syncedDb.dbSyncMetaInfoRef
             .onRecord(db)
             .firstWhere((meta) => meta != null)
-            .timeout(Duration(milliseconds: 1000)));
+            .timeout(const Duration(milliseconds: 1000)));
         fail('should fail');
       } on TimeoutException catch (_) {}
     });

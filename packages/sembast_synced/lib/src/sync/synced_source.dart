@@ -34,7 +34,7 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
 
   @override
   Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay}) {
-    checkDelay ??= Duration(minutes: 60);
+    checkDelay ??= const Duration(minutes: 60);
     late StreamController<CvMetaInfoRecord?> controller;
     controller = StreamController<CvMetaInfoRecord?>(onListen: () async {
       while (true) {

@@ -1,9 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
-import 'package:tekaly_sembast_synced/src/sync/model/db_sync_meta.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_source_export.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 var syncedDbExportFilename = 'export.jsonl';
@@ -41,7 +39,11 @@ extension SyncedDbExportExt on SyncedDb {
     // ignore: invalid_use_of_visible_for_testing_member
     var syncMeta =
         (await getSyncMetaInfo()) ?? (DbSyncMetaInfo()..lastChangeId.v = 0);
-    print('syncMeta: $syncMeta');
+
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('syncMeta: $syncMeta');
+    }
     var exportMeta = SyncedDbExportMeta()
       ..sourceVersion.setValue(syncMeta.sourceVersion.v)
       ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())

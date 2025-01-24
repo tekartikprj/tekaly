@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:test/test.dart';
 
@@ -109,7 +111,7 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
         ..store.v = 'test'
         ..key.v = '2'));
     list = await source.getSourceRecordList(includeDeleted: true);
-    print(list);
+    //print(list);
     expect(list.list.map((e) => e.syncId.v),
         [record?.syncId.v, record2?.syncId.v]);
   });

@@ -114,16 +114,22 @@ class SyncedDbSynchronizer {
         // Check and fix deleted
         if (dirtySyncRecord.deleted.v ?? false) {
           if (snapshot != null) {
-            print(
-                'Found a record. Weird, deleted flag set for $snapshot - deleting record');
+            if (debugSyncedSync) {
+              // ignore: avoid_print
+              print(
+                  'Found a record. Weird, deleted flag set for $snapshot - deleting record');
+            }
             await dataRecordRef.delete(txn);
           } else {
             // Ok
           }
         } else {
           if (snapshot == null) {
-            print(
-                'Cannot find modified record. Weird, missing the deleted flag for $snapshot - setting the deleted flag');
+            if (debugSyncedSync) {
+              // ignore: avoid_print
+              print(
+                  'Cannot find modified record. Weird, missing the deleted flag for $snapshot - setting the deleted flag');
+            }
             // important to set for later
             dirtySyncRecord.deleted.v = true;
             await db.txnPutSyncRecord(txn, dirtySyncRecord);
@@ -210,7 +216,10 @@ class SyncedDbSynchronizer {
     stat.add(upStat);
     var downStat = await syncDown();
     stat.add(downStat);
-    print('_end sync $stat');
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('_end sync $stat');
+    }
     return stat;
   }
 
@@ -265,6 +274,7 @@ class SyncedDbSynchronizer {
       }
     }
     if (debugSyncedSync) {
+      // ignore: avoid_print
       print('syncUp: $stat');
     }
     return stat;
@@ -329,6 +339,7 @@ class SyncedDbSynchronizer {
     var newLastChangeId = initialLastChangeId;
     Timestamp? newLastTimestamp;
     if (debugSyncedSync) {
+      // ignore: avoid_print
       print('localMetaSyncInfo: $localMetaSyncInfo');
     }
 
@@ -350,6 +361,7 @@ class SyncedDbSynchronizer {
     var sourceMetaLastChangeNum = initialSourceMeta?.lastChangeId.v;
     var sourceMeta = initialSourceMeta;
     if (debugSyncedSync) {
+      // ignore: avoid_print
       print('sourceMeta: $sourceMeta');
     }
 
@@ -372,6 +384,7 @@ class SyncedDbSynchronizer {
     int? afterChangeId;
     if (fullSync) {
       if (debugSyncedSync) {
+        // ignore: avoid_print
         print(
             'fullSync: $fullSync ($initialLastChangeId < ${sourceMeta?.lastChangeId.v}): last fetch: $fetchLastChangeId');
       }
@@ -385,6 +398,7 @@ class SyncedDbSynchronizer {
         stepLimit: stepLimitDown,
         includeDeleted: includeDeleted);
     if (debugSyncedSync) {
+      // ignore: avoid_print
       print(
           'fetching ${dirtyRemoteSourceRecords.length} records after $fetchLastChangeId (${dirtyRemoteSourceRecords.lastChangeId})');
     }
@@ -417,7 +431,10 @@ class SyncedDbSynchronizer {
             remoteRecordData?.key.v == null ||
             remoteRecord.syncTimestamp.v == null ||
             remoteRecord.syncChangeId.v == null) {
-          print('invalid dirty: $remoteRecord');
+          if (debugSyncedSync) {
+            // ignore: avoid_print
+            print('invalid dirty: $remoteRecord');
+          }
           continue;
         }
 
@@ -460,6 +477,7 @@ class SyncedDbSynchronizer {
       if (fullSync) {
         for (var localDbSync in localMap!.values) {
           if (debugSyncedSync) {
+            // ignore: avoid_print
             print('deleting: $localDbSync');
           }
           await _deleteLocalRecord(txn, localDbSync);
@@ -482,7 +500,10 @@ class SyncedDbSynchronizer {
           ..lastTimestamp.v = newLastTimestamp
           ..sourceVersion.setValue(initialSourceMeta?.version.v);
         await metaInfo.put(txn);
-        print('Setting meta Info $metaInfo');
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('Setting meta Info $metaInfo');
+        }
       }
 
       if (newLastChangeId != initialLastChangeId ||
@@ -500,6 +521,7 @@ class SyncedDbSynchronizer {
       _firstSyncDoneCompleter.complete();
     }
     if (debugSyncedSync) {
+      // ignore: avoid_print
       print('syncDown: $stat');
     }
     return stat;

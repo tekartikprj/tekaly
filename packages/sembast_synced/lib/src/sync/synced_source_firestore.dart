@@ -1,4 +1,6 @@
 import 'package:path/path.dart';
+import 'package:tekaly_sembast_synced/src/api/import_common.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
@@ -6,11 +8,7 @@ import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
 import 'package:tekartik_firebase_firestore/utils/auto_id_generator.dart' as fb;
 import 'package:tekartik_firebase_firestore/utils/track_changes_support.dart';
 
-import 'model/db_sync_record.dart';
-import 'model/source_meta_info.dart';
-import 'model/source_record.dart';
 import 'sembast_firestore_converter.dart';
-import 'synced_source.dart';
 
 /// Synced source firestore
 class SyncedSourceFirestore
@@ -73,7 +71,11 @@ class SyncedSourceFirestore
     try {
       await dataCollection.doc(id).set(map);
     } catch (e) {
-      print('Error $e while putting record at ${dataCollection.doc(id)}');
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('Error $e while putting record at ${dataCollection.doc(id)}');
+      }
+
       rethrow;
     }
   }
@@ -188,7 +190,11 @@ class SyncedSourceFirestore
             record.recordKey == sourceRef.key) {
           return record;
         }
-        print('getSourceRecord Invalid record $record for ref $sourceRef');
+
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('getSourceRecord Invalid record $record for ref $sourceRef');
+        }
       }
     }
     var querySnapshot = await dataCollection
@@ -232,7 +238,10 @@ class SyncedSourceFirestore
     try {
       querySnapshot = await query.get();
     } catch (e) {
-      print('Error $e while getting record list at $query');
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('Error $e while getting record list at $query');
+      }
       rethrow;
     }
     /*
@@ -259,7 +268,7 @@ class SyncedSourceFirestore
     return metaInfoReference
         .onSnapshotSupport(
             options: TrackChangesPullOptions(
-                refreshDelay: checkDelay ?? Duration(minutes: 60)))
+                refreshDelay: checkDelay ?? const Duration(minutes: 60)))
         .map((snapshot) {
       if (snapshot.exists) {
         return cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
