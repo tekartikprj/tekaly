@@ -14,18 +14,25 @@ String getExportFileName(int changeId) => 'export_$changeId.jsonl';
 String getExportMetaFileName({String? suffix}) =>
     'export_meta${suffix ?? ''}.json';
 
+/// Export result (only if metaOnly is false)
+class SyncedDbExportResult {
+  final int? exportSize;
+
+  SyncedDbExportResult({required this.exportSize});
+}
+
 /// Expor helper
 extension SyncedDbExportStorageExt on SyncedDb {
   /// Export
   /// * `export_meta<suffix>.json`
   /// * `export_<changeId>.jsonl`
-  Future<void> exportDatabaseToStorage(
+  Future<SyncedDbExportResult> exportDatabaseToStorage(
       {required SyncedDbStorageExportContext exportContext,
       bool? metaOnly}) async {
     metaOnly ??= false;
     var exportInfo = await exportInMemory();
+    int? exportSize;
 
-    var exportContent = exportLinesToJsonlString(exportInfo.data);
     var exportMeta = exportInfo.metaInfo.toJson();
 
     var storage = exportContext.storage;
@@ -35,6 +42,9 @@ extension SyncedDbExportStorageExt on SyncedDb {
     var suffix = exportContext.metaBasenameSuffix;
 
     if (!metaOnly) {
+      var exportContent = exportLinesToJsonlString(exportInfo.data);
+      exportSize = exportContent.length;
+
       /// Write content
       await storage
           .bucket(bucket)
@@ -47,5 +57,6 @@ extension SyncedDbExportStorageExt on SyncedDb {
         .bucket(bucket)
         .file(url.join(rootPath, getExportMetaFileName(suffix: suffix)))
         .writeAsString(exportMeta);
+    return SyncedDbExportResult(exportSize: exportSize);
   }
 }

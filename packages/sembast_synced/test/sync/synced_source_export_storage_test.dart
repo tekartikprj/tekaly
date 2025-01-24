@@ -56,7 +56,9 @@ void main() {
     await synchronizer.sync();
     var importExportContext =
         SyncedDbStorageExportContext(storage: storage, rootPath: rootPath);
-    await syncedDb.exportDatabaseToStorage(exportContext: importExportContext);
+    var result = await syncedDb.exportDatabaseToStorage(
+        exportContext: importExportContext);
+    expect(result.exportSize, 188);
     var meta =
         await storage.bucket().file('my_test/export_meta.json').readAsString();
 
