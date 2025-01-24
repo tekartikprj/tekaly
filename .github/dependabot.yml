@@ -22,6 +22,14 @@ updates:
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
+    directory: "packages/tekaly_assets"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/tekaly_stat"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
     directory: "test/firestore_explorer_test_app"
     schedule:
       interval: "monthly"

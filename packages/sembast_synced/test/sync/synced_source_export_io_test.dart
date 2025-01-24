@@ -1,10 +1,11 @@
 import 'dart:io';
 
+import 'package:fs_shim/utils/io/read_write.dart';
 import 'package:path/path.dart';
 import 'package:sembast/sembast.dart';
 import 'package:tekaly_sembast_synced/synced_db_io.dart';
 import 'package:test/test.dart';
-import 'package:fs_shim/utils/io/read_write.dart';
+
 import 'synced_source_test.dart';
 
 void main() {

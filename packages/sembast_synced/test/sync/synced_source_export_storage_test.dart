@@ -1,8 +1,8 @@
 import 'package:sembast/sembast.dart';
 import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekaly_sembast_synced/synced_db_storage.dart';
-import 'package:test/test.dart';
 import 'package:tekartik_firebase_storage_fs/storage_fs.dart';
+import 'package:test/test.dart';
 
 import 'synced_source_test.dart';
 

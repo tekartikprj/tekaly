@@ -17,8 +17,8 @@ String getExportMetaFileName({String? suffix}) =>
 /// Expor helper
 extension SyncedDbExportStorageExt on SyncedDb {
   /// Export
-  /// * export_meta<suffix>.json
-  /// * export_<changeId>.jsonl
+  /// * `export_meta<suffix>.json`
+  /// * `export_<changeId>.jsonl`
   Future<void> exportDatabaseToStorage(
       {required SyncedDbStorageExportContext exportContext}) async {
     var exportInfo = await exportInMemory();
