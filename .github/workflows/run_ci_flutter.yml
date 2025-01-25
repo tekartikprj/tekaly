@@ -32,7 +32,6 @@ jobs:
           channel: ${{ matrix.flutter }}
       - run: dart --version
       - run: flutter --version
-      - run: flutter upgrade
       # Setup sqlite3 lib (linux)
       - name: Install libsqlite3-dev
         run: |
