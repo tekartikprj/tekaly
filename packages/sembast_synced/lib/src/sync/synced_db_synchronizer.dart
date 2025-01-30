@@ -88,8 +88,7 @@ class SyncedSyncSourceRecord {
 /// Compat
 typedef SyncedDbSourceSync = SyncedDbSynchronizer;
 
-/// Get dirty record source
-
+/// Synced db synchronized
 class SyncedDbSynchronizer {
   final SyncedDb db;
   final SyncedSource source;
@@ -97,7 +96,7 @@ class SyncedDbSynchronizer {
   int? stepLimitUp;
   // Default to 100 down
   int? stepLimitDown;
-
+  final _syncLock = Lock();
   final _firstSyncDoneCompleter = Completer<void>.sync();
   Future<void> firstSyncDownDone() => _firstSyncDoneCompleter.future;
   final bool autoSync;
@@ -194,7 +193,7 @@ class SyncedDbSynchronizer {
   }
 
   late final _lazyLauncher = LazyLauncher<SyncedSyncStat>(() async {
-    return await doSync();
+    return await sync();
   });
 
   /// Trigger a lazy sync
@@ -203,18 +202,18 @@ class SyncedDbSynchronizer {
   }
 
   /// Sync up and down
-  Future<SyncedSyncStat> sync() async {
-    return await doSync();
+  Future<SyncedSyncStat> sync() {
+    return _syncLock.synchronized(() {
+      return _sync();
+    });
   }
 
-  /// Perform sync up and down
-  @visibleForTesting
-  Future<SyncedSyncStat> doSync() async {
-    // devPrint('_start sync');
+  /// Sync up and down
+  Future<SyncedSyncStat> _sync() async {
     var stat = SyncedSyncStat();
-    var upStat = await syncUp();
+    var upStat = await _syncUp();
     stat.add(upStat);
-    var downStat = await syncDown();
+    var downStat = await _syncDown();
     stat.add(downStat);
     if (debugSyncedSync) {
       // ignore: avoid_print
@@ -223,8 +222,22 @@ class SyncedDbSynchronizer {
     return stat;
   }
 
+  /// Perform sync up and down
+  @Deprecated('Use sync')
+  Future<SyncedSyncStat> doSync() async {
+    // devPrint('_start sync');
+    return await sync();
+  }
+
   /// Sync dirty records up
   Future<SyncedSyncStat> syncUp({bool fullSync = false}) async {
+    return _syncLock.synchronized(() {
+      return _syncUp(fullSync: fullSync);
+    });
+  }
+
+  /// Sync dirty records up
+  Future<SyncedSyncStat> _syncUp({bool fullSync = false}) async {
     var stat = SyncedSyncStat();
 
     var dirtySourceRecords = await getLocalDirtySourceRecords();
@@ -320,7 +333,8 @@ class SyncedDbSynchronizer {
 
   /// Use it internally to cache the source meta info.
   Future<CvMetaInfoRecord?> getSourceMetaInfo() async {
-    lastSyncMetaInfo = await source.getMetaInfo();
+    var sourceMetaInfo = await source.getMetaInfo();
+    lastSyncMetaInfo = sourceMetaInfo;
     return lastSyncMetaInfo;
   }
 
@@ -328,15 +342,75 @@ class SyncedDbSynchronizer {
 
   /// Sync down
   Future<SyncedSyncStat> syncDown() async {
-    var db = await this.db.database;
-    var stat = SyncedSyncStat();
+    return _syncLock.synchronized(() {
+      return _syncDown();
+    });
+  }
 
+  /*
+  Future<_SyncDownInfo> _getSyncDownInfo(CvMetaInfoRecord sourceMeta) async {
     var localMetaSyncInfo = (await this.db.dbSyncMetaInfoRef.get(db));
     var hasInitialLastChangeId = localMetaSyncInfo?.lastChangeId.v != null;
     var initialLastChangeId = localMetaSyncInfo?.lastChangeId.v ?? 0;
     var fullSync = initialLastChangeId == 0;
 
     var newLastChangeId = initialLastChangeId;
+    Timestamp? newLastTimestamp;
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('localMetaSyncInfo: $localMetaSyncInfo');
+    }
+
+    var fetchLastChangeId = initialLastChangeId;
+
+    /// Read with deleted
+    final initialSourceMeta = await getSourceMetaInfo();
+
+    var needReFetch = false;
+    var newSourceVersion = false;
+
+    if ((initialSourceMeta?.version.v ?? 0) !=
+        (localMetaSyncInfo?.sourceVersion.v ?? 0)) {
+      newSourceVersion = true;
+      fullSync = true;
+      fetchLastChangeId = 0;
+    }
+    // If reading records is empty, we can use this number.
+    var sourceMetaLastChangeNum = initialSourceMeta?.lastChangeId.v;
+    var sourceMeta = initialSourceMeta;
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('sourceMeta: $sourceMeta');
+    }
+
+    /// Full sync min incremental change does not match
+    if (initialLastChangeId < (sourceMeta?.minIncrementalChangeId.v ?? 0)) {
+      needReFetch = true;
+    }
+
+    /// Full sync new version!
+    if (initialLastChangeId != 0 && newSourceVersion) {
+      needReFetch = true;
+    }
+
+    if (needReFetch) {
+      fullSync = true;
+    }
+    return _SyncDownInfo();
+  }
+*/
+  /// Sync dirty records up
+  Future<SyncedSyncStat> _syncDown() async {
+    var db = await this.db.database;
+    var stat = SyncedSyncStat();
+
+    var localMetaSyncInfo = (await this.db.dbSyncMetaInfoRef.get(db));
+    var hasInitialLastChangeId = localMetaSyncInfo?.lastChangeId.v != null;
+    var initialLastChangeIdOrNull = localMetaSyncInfo?.lastChangeId.v;
+    var initialLastChangeId = initialLastChangeIdOrNull ?? -1;
+    var fullSync = initialLastChangeId == -1;
+
+    var newLastChangeId = initialLastChangeIdOrNull ?? 0;
     Timestamp? newLastTimestamp;
     if (debugSyncedSync) {
       // ignore: avoid_print

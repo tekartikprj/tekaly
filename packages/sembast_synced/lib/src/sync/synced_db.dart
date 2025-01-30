@@ -58,7 +58,8 @@ abstract class SyncedDbBase with SyncedDbMixin {
       var changeRef = change.ref;
       if (syncedDbDebug) {
         // ignore: avoid_print
-        print('change: ${change.oldSnapshot} => ${change.newSnapshot}');
+        print(
+            'change: ${change.oldSnapshot} => ${change.newSnapshot} $trackChangesDisabled');
       }
       if (!trackChangesDisabled) {
         //if (change.isAdd) {

@@ -29,6 +29,8 @@ class AutoSynchronizedFirestoreSyncedDbOptions {
       {Firestore? firestore,
       required this.databaseFactory,
       this.sembastDbName = 'synced.db',
+
+      /// Default ok for tests only
       this.rootDocumentPath = 'test/local',
       this.synchronizedStores,
       this.synchronizedExcludedStores})
@@ -38,10 +40,13 @@ class AutoSynchronizedFirestoreSyncedDbOptions {
 /// Auto synchronized firestore synced db
 abstract class AutoSynchronizedFirestoreSyncedDb {
   SyncedDb get syncedDb;
+
   final AutoSynchronizedFirestoreSyncedDbOptions options;
 
   Database get database;
+
   AutoSynchronizedFirestoreSyncedDb({required this.options});
+
   static Future<AutoSynchronizedFirestoreSyncedDb> open(
       {required AutoSynchronizedFirestoreSyncedDbOptions options}) async {
     var db = _AutoSynchronizedFirestoreSyncedDb(options: options);
@@ -98,7 +103,7 @@ class _AutoSynchronizedFirestoreSyncedDb
     synchronizer = SyncedDbSynchronizer(
         db: syncedDb,
         source: SyncedSourceFirestore(
-            firestore: options.firestore, rootPath: 'test/local'),
+            firestore: options.firestore, rootPath: options.rootDocumentPath),
         autoSync: true);
   }();
 

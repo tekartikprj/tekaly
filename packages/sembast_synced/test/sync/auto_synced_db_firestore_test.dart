@@ -11,9 +11,29 @@ Future<void> main() async {
     late AutoSynchronizedFirestoreSyncedDb syncedDb;
     setUp(() async {});
 
+    test('firestore location', () async {
+      var firestore = newFirestoreMemory(); // .debugQuickLoggerWrapper();
+      // print('app1: ${firestore.app.hashCode}');
+      var databaseFactory = newDatabaseFactoryMemory();
+      var rootPath = 'test/location';
+      var options = AutoSynchronizedFirestoreSyncedDbOptions(
+          firestore: firestore,
+          databaseFactory: databaseFactory,
+          rootDocumentPath: rootPath);
+      syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(options: options);
+      expect(syncedDb, isNotNull);
+      var db = syncedDb.database;
+      await syncedDb.initialSynchronizationDone();
+      await record.add(db, {'test': 1});
+      await syncedDb.synchronize();
+      await syncedDb.close();
+      expect((await firestore.doc('test/location/meta/info').get()).data,
+          {'lastChangeId': 1});
+    });
     test('add', () async {
       // debugSyncedSync = true;
-      var firestore = newFirestoreMemory(); //.debugQuickLoggerWrapper();
+      // syncedDbDebug = true;
+      var firestore = newFirestoreMemory(); // .debugQuickLoggerWrapper();
       var databaseFactory = newDatabaseFactoryMemory();
       var options = AutoSynchronizedFirestoreSyncedDbOptions(
           firestore: firestore, databaseFactory: databaseFactory);
@@ -29,6 +49,7 @@ Future<void> main() async {
       db = syncedDb.database;
       await syncedDb.initialSynchronizationDone();
       expect(await record.get(db), {'test': 1});
+      await syncedDb.close();
     });
   });
   group('auto', () {

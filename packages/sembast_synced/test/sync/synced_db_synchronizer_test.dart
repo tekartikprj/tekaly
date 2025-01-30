@@ -435,7 +435,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
       await syncedDb.clearAllSyncInfo(db);
       expect(await syncedDb.getSyncMetaInfoLastChangeId(), null);
-      var stat = await sync.doSync();
+      var stat = await sync.sync();
       expect(stat, SyncedSyncStat());
       expect(await syncedDb.getSyncMetaInfoLastChangeId(), 2);
     });
@@ -579,7 +579,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (dbEntityStoreRef.record('a3').cv()).put(db);
       sync.stepLimitUp = 2;
       sync.stepLimitDown = 2;
-      var stat = await sync.doSync();
+      var stat = await sync.sync();
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 3));
       /*
       await (dbEntityStoreRef.record('a1').cv()).put(db);
