@@ -5,7 +5,7 @@ import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
-import 'package:tekartik_firebase_firestore/utils/auto_id_generator.dart' as fb;
+//import 'package:tekartik_firebase_firestore/utils/auto_id_generator.dart' as fb;
 import 'package:tekartik_firebase_firestore/utils/track_changes_support.dart';
 
 import 'sembast_firestore_converter.dart';
@@ -14,6 +14,18 @@ import 'sembast_firestore_converter.dart';
 class SyncedSourceFirestore
     with SyncedSourceDefaultMixin
     implements SyncedSource {
+  /// Enforced synchronizer version, if any
+  int? _version;
+
+  /// Enforced synchronizer version, if any or version read
+  int? get version => _version;
+
+  /// Initial version
+  static const int version1 = 1;
+
+  /// Generated firestore key is `store|key` (pipe separated)
+  static const int version2 = 2;
+
   static const dataCollectionId = 'data';
   static const metaCollectionId = 'meta';
   static const metaInfoDocumentId = 'info';
@@ -80,6 +92,10 @@ class SyncedSourceFirestore
     }
   }
 
+  String _generateSyncId(SyncedSourceRecord record) {
+    return '${record.recordStore}|${record.recordKey}';
+  }
+
   @override
   Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record) async {
     fixAndCheckPutSyncedRecord(record);
@@ -96,7 +112,7 @@ class SyncedSourceFirestore
       ref = SyncedDataSourceRef(
           store: record.recordStore,
           key: record.recordKey,
-          syncId: fb.AutoIdGenerator.autoId());
+          syncId: _generateSyncId(record));
     } else {
       ref = SyncedDataSourceRef(
           store: ref.store, key: ref.key, syncId: existing.syncId.v);

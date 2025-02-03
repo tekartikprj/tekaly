@@ -55,6 +55,7 @@ void main() {
       expect(
           (await firestore.doc('meta/info').get()).data, {'lastChangeId': 1});
 
+      expect(sourceRecord.syncId.v, 'test|1');
       var map =
           (await firestore.doc('data/${sourceRecord.syncId.v}').get()).data;
       var syncTimestamp = map[syncTimestampKey];

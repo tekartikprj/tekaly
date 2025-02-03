@@ -16,6 +16,8 @@ import 'synced_db.dart';
 import 'synced_source.dart';
 
 var _debugSyncedSync = false;
+
+/// Debug Synced sync
 bool get debugSyncedSync => _debugSyncedSync;
 @Deprecated('Debug Synced sync')
 set debugSyncedSync(bool debugSyncedSync) => _debugSyncedSync = debugSyncedSync;
@@ -23,13 +25,21 @@ set debugSyncedSync(bool debugSyncedSync) => _debugSyncedSync = debugSyncedSync;
 set debugSyncedDbSynchronizer(bool debugSyncedSync) =>
     _debugSyncedSync = debugSyncedSync;
 
+/// Synced sync stat
 class SyncedSyncStat {
+  /// Local updated count
   int localUpdatedCount;
+
+  /// Remote updated count
   int remoteUpdatedCount;
+
+  /// Remote deleted count
   int remoteDeletedCount;
 
+  /// Local deleted count
   int localDeletedCount;
 
+  /// Default constructor
   SyncedSyncStat(
       {this.localUpdatedCount = 0,
       this.localDeletedCount = 0,
@@ -80,6 +90,7 @@ class SyncedSyncStat {
   }
 }
 
+/// Synced sync source record
 class SyncedSyncSourceRecord {
   SyncedSourceRecord? sourceRecord;
   DbSyncRecord? syncRecord;
@@ -90,17 +101,27 @@ typedef SyncedDbSourceSync = SyncedDbSynchronizer;
 
 /// Synced db synchronized
 class SyncedDbSynchronizer {
+  /// The database being synchronized
   final SyncedDb db;
+
+  /// The source being synchronized
   final SyncedSource source;
-  // Default to 10 up
+
+  /// Default to 10 up
   int? stepLimitUp;
-  // Default to 100 down
+
+  /// Default to 100 down
   int? stepLimitDown;
   final _syncLock = Lock();
   final _firstSyncDoneCompleter = Completer<void>.sync();
+
+  /// True when the first sync is done (could take forever the first time if offline)
   Future<void> firstSyncDownDone() => _firstSyncDoneCompleter.future;
+
+  /// Auto sync
   final bool autoSync;
 
+  /// Get local dirty source records
   Future<List<SyncedSyncSourceRecord>> getLocalDirtySourceRecords() async {
     var list = <SyncedSyncSourceRecord>[];
     await db.syncTransaction((txn) async {
@@ -158,9 +179,13 @@ class SyncedDbSynchronizer {
   // Auto sync subscription
   StreamSubscription? _autoSyncSourceSubscription;
   StreamSubscription? _autoSyncDbSubscription;
-  // Synchronizer
-  SyncedDbSynchronizer(
-      {required this.db, required this.source, this.autoSync = false}) {
+
+  /// Synchronizer
+  SyncedDbSynchronizer({
+    required this.db,
+    required this.source,
+    this.autoSync = false,
+  }) {
     if (autoSync) {
       _autoSyncSourceSubscription =
           streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
@@ -334,11 +359,14 @@ class SyncedDbSynchronizer {
   /// Use it internally to cache the source meta info.
   Future<CvMetaInfoRecord?> getSourceMetaInfo() async {
     var sourceMetaInfo = await source.getMetaInfo();
-    lastSyncMetaInfo = sourceMetaInfo;
+    _lastSyncMetaInfo = sourceMetaInfo;
     return lastSyncMetaInfo;
   }
 
-  CvMetaInfoRecord? lastSyncMetaInfo;
+  CvMetaInfoRecord? _lastSyncMetaInfo;
+
+  /// Last source meta info
+  CvMetaInfoRecord? get lastSyncMetaInfo => _lastSyncMetaInfo;
 
   /// Sync down
   Future<SyncedSyncStat> syncDown() async {
@@ -601,6 +629,7 @@ class SyncedDbSynchronizer {
     return stat;
   }
 
+  /// Wait for current sync to terminate
   Future<void> lazyWaitSync() async {
     return await _lazyLauncher.wait();
   }
@@ -637,6 +666,7 @@ class _LazyLauncherTrigger<T> {
   }
 }
 
+/// Lazy launcher
 class LazyLauncher<T> {
   final _lock = Lock();
   // ignore: unused_field
@@ -645,6 +675,7 @@ class LazyLauncher<T> {
   final Future<T> Function() _launcher;
   T? _lastValue;
 
+  /// Default constructor
   LazyLauncher(this._launcher);
 
   /// Fait for last trigger to terminate. (working?)
@@ -652,5 +683,6 @@ class LazyLauncher<T> {
     return await _lock.synchronized(() async {});
   }
 
+  /// Launch the operation
   Future<T> launch() => _LazyLauncherTrigger<T>(this).launch();
 }
