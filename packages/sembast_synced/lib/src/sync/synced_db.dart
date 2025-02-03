@@ -183,7 +183,7 @@ abstract class SyncedDb {
           syncedStoreNames: syncedStoreNames);
   factory SyncedDb.fromOpenedDb(
           {Database? openedDatabase,
-          required List<String> syncedStoreNames,
+          List<String>? syncedStoreNames,
           List<String>? syncedExcludedStoreNames}) =>
       _SyncedDbImpl(
           openedDatabase: openedDatabase,
