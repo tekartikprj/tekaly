@@ -4,8 +4,11 @@ import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
+import 'auto_synced_db.dart';
+
 /// Synced source firestore
-class AutoSynchronizedFirestoreSyncedDbOptions {
+class AutoSynchronizedFirestoreSyncedDbOptions
+    implements AutoSynchronizedSyncedDbOptions {
   /// Firestore instance
   final Firestore firestore;
 
