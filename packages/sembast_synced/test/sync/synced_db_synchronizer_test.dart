@@ -15,7 +15,7 @@ var syncedStoreNames = [dbEntityStoreName];
 void main() {
   group('synced_db_source_sync_memory_test', () {
     Future<SyncTestsContext> setupContext() async {
-//    setUp(() async {
+      //    setUp(() async {
       return SyncTestsContext()
         ..syncedDb = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames)
         ..source = newInMemorySyncedSourceMemory();
@@ -93,9 +93,10 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             ..name.v = 'test1'
             ..timestamp.v = Timestamp(1, 1000))
           .put(db);
-      meta = (await syncedDb.dbSyncMetaInfoRef
-          .onRecord(db)
-          .firstWhere((meta) => meta != null))!;
+      meta =
+          (await syncedDb.dbSyncMetaInfoRef
+              .onRecord(db)
+              .firstWhere((meta) => meta != null))!;
       expect(meta.lastChangeId.v, 1);
     });
   });
@@ -128,7 +129,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           .put(db);
       var syncRecords = await syncedDb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
-        {'store': 'entity', 'key': 'a1', 'dirty': true}
+        {'store': 'entity', 'key': 'a1', 'dirty': true},
       ]);
       var stat = await sync.syncUp();
       syncRecords = await syncedDb.getSyncRecords();
@@ -145,22 +146,26 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'syncTimestamp': syncRecord.syncTimestamp.v,
           'syncId': syncRecord.syncId.v,
           'syncChangeId': 1,
-        }
+        },
       ]);
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
-      var sourceRecord = (await source
-          .getSourceRecord(SyncedDataSourceRef(store: 'entity', key: 'a1')))!;
+      var sourceRecord =
+          (await source.getSourceRecord(
+            SyncedDataSourceRef(store: 'entity', key: 'a1'),
+          ))!;
       expect(
-          sourceRecord,
-          SyncedSourceRecord()
-            ..syncId.v = sourceRecord.syncId.v
-            ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-            ..syncChangeId.v = 1
-            ..record.v = (SyncedSourceRecordData()
-              ..store.v = dbEntityStoreRef.name
-              ..key.v = 'a1'
-              ..deleted.v = false
-              ..value.v = {'name': 'test1', 'timestamp': Timestamp(1, 1000)}));
+        sourceRecord,
+        SyncedSourceRecord()
+          ..syncId.v = sourceRecord.syncId.v
+          ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..syncChangeId.v = 1
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..deleted.v = false
+                ..value.v = {'name': 'test1', 'timestamp': Timestamp(1, 1000)}),
+      );
       var sourceMeta = (await source.getMetaInfo())!;
       expect(sourceMeta.toMap(), {'lastChangeId': 1});
       // Sync again
@@ -211,22 +216,26 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             'syncTimestamp': syncRecord.syncTimestamp.v,
             'syncId': syncRecord.syncId.v,
             'syncChangeId': 1,
-          }
+          },
         ]);
         expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
-        var sourceRecord = (await source
-            .getSourceRecord(SyncedDataSourceRef(store: 'entity', key: 'a1')))!;
+        var sourceRecord =
+            (await source.getSourceRecord(
+              SyncedDataSourceRef(store: 'entity', key: 'a1'),
+            ))!;
         expect(
-            sourceRecord,
-            SyncedSourceRecord()
-              ..syncId.v = sourceRecord.syncId.v
-              ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-              ..syncChangeId.v = 1
-              ..record.v = (SyncedSourceRecordData()
-                ..store.v = dbEntityStoreRef.name
-                ..key.v = 'a1'
-                ..deleted.v = false
-                ..value.v = {'name': 'test1'}));
+          sourceRecord,
+          SyncedSourceRecord()
+            ..syncId.v = sourceRecord.syncId.v
+            ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+            ..syncChangeId.v = 1
+            ..record.v =
+                (SyncedSourceRecordData()
+                  ..store.v = dbEntityStoreRef.name
+                  ..key.v = 'a1'
+                  ..deleted.v = false
+                  ..value.v = {'name': 'test1'}),
+        );
         var sourceMeta = (await source.getMetaInfo())!;
         expect(sourceMeta.toMap(), {'lastChangeId': 1});
       }
@@ -247,7 +256,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (dbEntityStoreRef.record('a1').cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedDb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
-        {'store': 'entity', 'key': 'a1', 'dirty': true}
+        {'store': 'entity', 'key': 'a1', 'dirty': true},
       ]);
       var stat = await sync.syncUp();
       syncRecords = await syncedDb.getSyncRecords();
@@ -264,22 +273,26 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'syncTimestamp': syncRecord.syncTimestamp.v,
           'syncId': syncRecord.syncId.v,
           'syncChangeId': 1,
-        }
+        },
       ]);
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
-      var sourceRecord = (await source
-          .getSourceRecord(SyncedDataSourceRef(store: storeName, key: 'a1')))!;
+      var sourceRecord =
+          (await source.getSourceRecord(
+            SyncedDataSourceRef(store: storeName, key: 'a1'),
+          ))!;
       expect(
-          sourceRecord,
-          SyncedSourceRecord()
-            ..syncId.v = sourceRecord.syncId.v
-            ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-            ..syncChangeId.v = 1
-            ..record.v = (SyncedSourceRecordData()
-              ..store.v = storeName
-              ..key.v = 'a1'
-              ..deleted.v = false
-              ..value.v = {'name': 'test1'}));
+        sourceRecord,
+        SyncedSourceRecord()
+          ..syncId.v = sourceRecord.syncId.v
+          ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..syncChangeId.v = 1
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = storeName
+                ..key.v = 'a1'
+                ..deleted.v = false
+                ..value.v = {'name': 'test1'}),
+      );
       var sourceMeta = (await source.getMetaInfo())!;
       expect(sourceMeta.toMap(), {'lastChangeId': 1});
       // Sync again
@@ -291,13 +304,20 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
 
     test('syncOneFromRemote', () async {
-      var sourceRecord = (await source.putSourceRecord(SyncedSourceRecord()
-        //..syncId.v = sourceRecord.syncId.v
-        // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..value.v = {'name': 'test1', 'timestamp': Timestamp(1, 1000)})))!;
+      var sourceRecord =
+          (await source.putSourceRecord(
+            SyncedSourceRecord()
+              //..syncId.v = sourceRecord.syncId.v
+              // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+              ..record.v =
+                  (SyncedSourceRecordData()
+                    ..store.v = dbEntityStoreRef.name
+                    ..key.v = 'a1'
+                    ..value.v = {
+                      'name': 'test1',
+                      'timestamp': Timestamp(1, 1000),
+                    }),
+          ))!;
       expect(sourceRecord.syncId.v, isNotNull);
       expect(sourceRecord.syncTimestamp.v, isNotNull);
 
@@ -311,15 +331,19 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
 
       var metaInfo = (await syncedDb.getSyncMetaInfo())!;
-      expect(metaInfo.toMap(),
-          {'lastChangeId': 1, 'lastTimestamp': metaInfo.lastTimestamp.v});
+      expect(metaInfo.toMap(), {
+        'lastChangeId': 1,
+        'lastTimestamp': metaInfo.lastTimestamp.v,
+      });
 
       /// again
       stat = await sync.syncDown();
       expect(stat, SyncedSyncStat());
 
-      sourceRecord = (await source.getSourceRecord(
-          SyncedDataSourceRef(store: dbEntityStoreRef.name, key: 'a1')))!;
+      sourceRecord =
+          (await source.getSourceRecord(
+            SyncedDataSourceRef(store: dbEntityStoreRef.name, key: 'a1'),
+          ))!;
 
       expect(await exportDatabaseLines(await syncedDb.database), [
         {'sembast_export': 1, 'version': 1},
@@ -328,18 +352,18 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'a1',
           {
             'name': 'test1',
-            'timestamp': {'@Timestamp': Timestamp(1, 1000).toIso8601String()}
-          }
+            'timestamp': {'@Timestamp': Timestamp(1, 1000).toIso8601String()},
+          },
         ],
         {'store': 'syncMeta'},
         [
           'info',
           {
             'lastTimestamp': {
-              '@Timestamp': metaInfo.lastTimestamp.v!.toIso8601String()
+              '@Timestamp': metaInfo.lastTimestamp.v!.toIso8601String(),
             },
-            'lastChangeId': 1
-          }
+            'lastChangeId': 1,
+          },
         ],
         {'store': 'syncRecord'},
         [
@@ -350,10 +374,10 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             'deleted': false,
             'syncId': sourceRecord.syncId.v!,
             'syncTimestamp': {
-              '@Timestamp': sourceRecord.syncTimestamp.v!.toIso8601String()
-            }
-          }
-        ]
+              '@Timestamp': sourceRecord.syncTimestamp.v!.toIso8601String(),
+            },
+          },
+        ],
       ]);
     });
 
@@ -377,23 +401,31 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('syncOneDeleteFromRemote', () async {
       // debugSyncedSync = devWarning(true);
       var db = await syncedDb.database;
-      (await source.putSourceRecord(SyncedSourceRecord()
-        //..syncId.v = sourceRecord.syncId.v
-        // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'dummy'
-          ..deleted.v = true)))!; // no value
-      var sourceRecord = (await source.putSourceRecord(SyncedSourceRecord()
-        //..syncId.v = sourceRecord.syncId.v
-        // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..deleted.v = true)))!; //
+      (await source.putSourceRecord(
+        SyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'dummy'
+                ..deleted.v = true),
+      ))!; // no value
+      var sourceRecord =
+          (await source.putSourceRecord(
+            SyncedSourceRecord()
+              //..syncId.v = sourceRecord.syncId.v
+              // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+              ..record.v =
+                  (SyncedSourceRecordData()
+                    ..store.v = dbEntityStoreRef.name
+                    ..key.v = 'a1'
+                    ..deleted.v = true),
+          ))!; //
       expect(
-          (await source.getSourceRecord(sourceRecord.ref))!.record.v!.deleted.v,
-          isTrue);
+        (await source.getSourceRecord(sourceRecord.ref))!.record.v!.deleted.v,
+        isTrue,
+      );
       expect(sourceRecord.syncId.v, isNotNull);
       expect(sourceRecord.syncTimestamp.v, isNotNull);
 
@@ -409,7 +441,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (ref.cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedDb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
-        {'store': 'entity', 'key': 'a1', 'dirty': true}
+        {'store': 'entity', 'key': 'a1', 'dirty': true},
       ]);
       //await syncedDb.clearSyncRecords(db);
       await syncedDb.setSyncMetaInfo(db, DbSyncMetaInfo()..lastChangeId.v = 1);
@@ -441,13 +473,17 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
 
     test('syncOneRawFromRemote', () async {
-      var sourceRecord = (await source.putSourceRecord(SyncedSourceRecord()
-        //..syncId.v = sourceRecord.syncId.v
-        // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..value.v = {'name': 'test1'})))!;
+      var sourceRecord =
+          (await source.putSourceRecord(
+            SyncedSourceRecord()
+              //..syncId.v = sourceRecord.syncId.v
+              // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+              ..record.v =
+                  (SyncedSourceRecordData()
+                    ..store.v = dbEntityStoreRef.name
+                    ..key.v = 'a1'
+                    ..value.v = {'name': 'test1'}),
+          ))!;
       expect(sourceRecord.syncId.v, isNotNull);
       expect(sourceRecord.syncTimestamp.v, isNotNull);
 
@@ -460,11 +496,14 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
 
-      expect((await dbEntityStoreRef.find(await syncedDb.database)),
-          [dbEntityStoreRef.record('a1').cv()..name.v = 'test1']);
+      expect((await dbEntityStoreRef.find(await syncedDb.database)), [
+        dbEntityStoreRef.record('a1').cv()..name.v = 'test1',
+      ]);
       var metaInfo = (await syncedDb.getSyncMetaInfo())!;
-      expect(metaInfo.toMap(),
-          {'lastChangeId': 1, 'lastTimestamp': metaInfo.lastTimestamp.v});
+      expect(metaInfo.toMap(), {
+        'lastChangeId': 1,
+        'lastTimestamp': metaInfo.lastTimestamp.v,
+      });
 
       /// again
       stat = await sync.syncDown();
@@ -485,26 +524,32 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
 
     test('syncUpdateFromRemote', () async {
-      await source.putSourceRecord(SyncedSourceRecord()
-        //..syncId.v = sourceRecord.syncId.v
-        // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..value.v = {'name': 'test1'}));
+      await source.putSourceRecord(
+        SyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..value.v = {'name': 'test1'}),
+      );
 
       /// Full sync
       var stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
 
       /// update
-      await source.putSourceRecord(SyncedSourceRecord()
-        //..syncId.v = sourceRecord.syncId.v
-        // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..value.v = {'name': 'test2'}));
+      await source.putSourceRecord(
+        SyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..value.v = {'name': 'test2'}),
+      );
       stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
     });
@@ -512,10 +557,11 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('putMetaInfo', () async {
       //if (source is SyncedSourceFirestore) {
       // debugSyncedSync = true;
-      var meta = CvMetaInfoRecord()
-        ..version.v = 1
-        ..lastChangeId.v = 2
-        ..minIncrementalChangeId.v = 3;
+      var meta =
+          CvMetaInfoRecord()
+            ..version.v = 1
+            ..lastChangeId.v = 2
+            ..minIncrementalChangeId.v = 3;
       var updatedMeta = await source.putMetaInfo(meta);
       expect(updatedMeta, meta);
       var readMeta = await source.getMetaInfo();
@@ -525,37 +571,50 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('newVersionSyncUpdateFromRemote', () async {
       //if (source is SyncedSourceFirestore) {
       // debugSyncedSync = true;
-      await source.putMetaInfo(CvMetaInfoRecord()
-        ..version.v = 1
-        ..lastChangeId.v = 1
-        ..minIncrementalChangeId.v = 0);
-      await source.putRawRecord(SyncedSourceRecord()
-        ..syncId.v = '1'
-        ..syncChangeId.v = 1
-        ..syncTimestamp.v = Timestamp(1, 0)
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..value.v = {'name': 'test1'}));
+      await source.putMetaInfo(
+        CvMetaInfoRecord()
+          ..version.v = 1
+          ..lastChangeId.v = 1
+          ..minIncrementalChangeId.v = 0,
+      );
+      await source.putRawRecord(
+        SyncedSourceRecord()
+          ..syncId.v = '1'
+          ..syncChangeId.v = 1
+          ..syncTimestamp.v = Timestamp(1, 0)
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..value.v = {'name': 'test1'}),
+      );
 
       var stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
 
       // We just change the version and the data
-      await source.putMetaInfo(CvMetaInfoRecord()
-        ..version.v = 2
-        ..lastChangeId.v = 1
-        ..minIncrementalChangeId.v = 0);
-      expect((await source.getMetaInfo())!.toMap(),
-          {'minIncrementalChangeId': 0, 'lastChangeId': 1, 'version': 2});
-      await source.putRawRecord(SyncedSourceRecord()
-        ..syncId.v = '1'
-        ..syncChangeId.v = 1
-        ..syncTimestamp.v = Timestamp(1, 0)
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = dbEntityStoreRef.name
-          ..key.v = 'a1'
-          ..value.v = {'name': 'test2'}));
+      await source.putMetaInfo(
+        CvMetaInfoRecord()
+          ..version.v = 2
+          ..lastChangeId.v = 1
+          ..minIncrementalChangeId.v = 0,
+      );
+      expect((await source.getMetaInfo())!.toMap(), {
+        'minIncrementalChangeId': 0,
+        'lastChangeId': 1,
+        'version': 2,
+      });
+      await source.putRawRecord(
+        SyncedSourceRecord()
+          ..syncId.v = '1'
+          ..syncChangeId.v = 1
+          ..syncTimestamp.v = Timestamp(1, 0)
+          ..record.v =
+              (SyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..value.v = {'name': 'test2'}),
+      );
       stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
     });

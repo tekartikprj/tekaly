@@ -13,8 +13,11 @@ typedef SyncedDbSynchronizerExport = SyncedDbSynchronizerFromExport;
 class SyncedDbSynchronizerFromExport
     with SyncedDbDownSynchronizerMixin
     implements SyncedDbDownSynchronizer {
-  SyncedDbSynchronizerFromExport(SyncedDb db,
-      {required this.fetchExport, required this.fetchExportMeta}) {
+  SyncedDbSynchronizerFromExport(
+    SyncedDb db, {
+    required this.fetchExport,
+    required this.fetchExportMeta,
+  }) {
     this.db = db;
   }
 
@@ -37,8 +40,11 @@ class SyncedDbSynchronizerFromExport
       }
 
       var data = await fetchExport(newLastChangeId);
-      var sourceDb =
-          await importDatabaseAny(data, newDatabaseFactoryMemory(), 'export');
+      var sourceDb = await importDatabaseAny(
+        data,
+        newDatabaseFactoryMemory(),
+        'export',
+      );
       await databaseMerge(await db.database, sourceDatabase: sourceDb);
       await sourceDb.close();
     }

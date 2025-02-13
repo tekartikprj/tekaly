@@ -24,10 +24,13 @@ SyncedSourceFirestore newInMemorySyncedSourceFirestore() {
   firestore = fb.newFirestoreServiceMemory().firestore(firebase.app());
   if (debugFirestore) {
     firestore = fb.FirestoreLogger(
-        firestore: firestore,
-        options: fb.FirestoreLoggerOptions.all(log: (event) {
+      firestore: firestore,
+      options: fb.FirestoreLoggerOptions.all(
+        log: (event) {
           print(event);
-        }));
+        },
+      ),
+    );
   }
   source = SyncedSourceFirestore(firestore: firestore, rootPath: null);
   return source;
@@ -47,13 +50,18 @@ void main() {
       firestore = source.firestore;
     });
     test('putRecord format', () async {
-      var sourceRecord = (await source.putSourceRecord(SyncedSourceRecord()
-        ..record.v = (SyncedSourceRecordData()
-          ..store.v = 'test'
-          ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
-          ..key.v = '1')))!;
-      expect(
-          (await firestore.doc('meta/info').get()).data, {'lastChangeId': 1});
+      var sourceRecord =
+          (await source.putSourceRecord(
+            SyncedSourceRecord()
+              ..record.v =
+                  (SyncedSourceRecordData()
+                    ..store.v = 'test'
+                    ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
+                    ..key.v = '1'),
+          ))!;
+      expect((await firestore.doc('meta/info').get()).data, {
+        'lastChangeId': 1,
+      });
 
       expect(sourceRecord.syncId.v, 'test|1');
       var map =
@@ -65,10 +73,10 @@ void main() {
           'store': 'test',
           'key': '1',
           'value': {'int': 1, 'timestamp': fb.Timestamp(2, 3000)},
-          'deleted': false
+          'deleted': false,
         },
         'syncTimestamp': syncTimestamp,
-        'syncChangeId': 1
+        'syncChangeId': 1,
       });
     });
   });

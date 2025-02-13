@@ -25,12 +25,13 @@ class _FsRootViewState extends State<FsRootView> {
   Widget build(BuildContext context) {
     var collections = documentViewListCollections('');
     // devPrint('collections: $collections');
-    return Column(children: [
-      ...collections.map((e) => FsCollectionListItem(
-            firestore: widget.firestore,
-            collRef: e,
-          )),
-    ]);
+    return Column(
+      children: [
+        ...collections.map(
+          (e) => FsCollectionListItem(firestore: widget.firestore, collRef: e),
+        ),
+      ],
+    );
   }
 }
 
@@ -50,34 +51,32 @@ class _FsDocumentViewState extends State<FsDocumentView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(getTypeName(widget.controller.docRef.type)),
-          ],
-        ),
+        Row(children: [Text(getTypeName(widget.controller.docRef.type))]),
         Text(widget.controller.docRef.path.nonEmpty() ?? '/'),
         StreamBuilder(
-            stream: controller.stream,
-            builder: (_, snapshot) {
-              if (!snapshot.hasData) {
-                return const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                );
-              }
-              var doc = snapshot.data!;
-              var collections = documentViewListCollections(doc.path);
-              // devPrint('collections2: $collections');
-              return Column(children: [
+          stream: controller.stream,
+          builder: (_, snapshot) {
+            if (!snapshot.hasData) {
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              );
+            }
+            var doc = snapshot.data!;
+            var collections = documentViewListCollections(doc.path);
+            // devPrint('collections2: $collections');
+            return Column(
+              children: [
                 ...controller
                     .fieldsViews(doc)
                     .map((e) => FsDocumentFieldView(controller: e)),
-                ...collections.map((e) => FsCollectionListItem(
-                      firestore: firestore,
-                      collRef: e,
-                    )),
-              ]);
-            })
+                ...collections.map(
+                  (e) => FsCollectionListItem(firestore: firestore, collRef: e),
+                ),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
@@ -96,12 +95,16 @@ class FsCollectionListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-        title: Text(getTypeName(collRef.type)),
-        subtitle: Text(collRef.id),
-        onTap: () {
-          goToFsDocumentListScreen(context,
-              firestore: firestore, query: collRef.query());
-        });
+      title: Text(getTypeName(collRef.type)),
+      subtitle: Text(collRef.id),
+      onTap: () {
+        goToFsDocumentListScreen(
+          context,
+          firestore: firestore,
+          query: collRef.query(),
+        );
+      },
+    );
   }
 }
 
@@ -165,28 +168,32 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
           child: Column(
             children: [
               ListTile(
-                  leading: leading,
-                  dense: !showContent,
-                  title: Text(name),
-                  subtitle: subtitle != null ? Text(subtitle) : null,
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: subtitle ?? ''));
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('Copied')));
-                  }),
+                leading: leading,
+                dense: !showContent,
+                title: Text(name),
+                subtitle: subtitle != null ? Text(subtitle) : null,
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: subtitle ?? ''));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Copied')));
+                },
+              ),
               if (field is CvListField)
                 ...listField.v!.indexed.map(((e) {
                   var index = e.$1;
                   //var item = e.$2;
 
                   return FsDocumentListFieldItemView(
-                      controller: fieldController.listFieldItem(index));
-                }))
+                    controller: fieldController.listFieldItem(index),
+                  );
+                })),
             ],
           ),
         ),
-        ...fieldController.subfields
-            .map((e) => FsDocumentFieldView(controller: e))
+        ...fieldController.subfields.map(
+          (e) => FsDocumentFieldView(controller: e),
+        ),
       ],
     );
   }
@@ -231,30 +238,39 @@ class _FsDocumentListFieldItemViewState
       widget.controller.shadowFieldController;
 }
 
-Future<void> goToFsDocumentViewScreen(BuildContext context,
-    {required Firestore firestore, required CvDocumentReference doc}) async {
+Future<void> goToFsDocumentViewScreen(
+  BuildContext context, {
+  required Firestore firestore,
+  required CvDocumentReference doc,
+}) async {
   documentViewInit();
-  await Navigator.of(context).push<Object?>(MaterialPageRoute(
-      builder: (_) => FsDocumentViewScreen(
-            doc: doc,
-            firestore: firestore,
-          )));
+  await Navigator.of(context).push<Object?>(
+    MaterialPageRoute(
+      builder: (_) => FsDocumentViewScreen(doc: doc, firestore: firestore),
+    ),
+  );
 }
 
-Future<void> goToFsDocumentRootScreen(BuildContext context,
-    {required Firestore firestore}) async {
+Future<void> goToFsDocumentRootScreen(
+  BuildContext context, {
+  required Firestore firestore,
+}) async {
   documentViewInit();
-  await Navigator.of(context).push<Object?>(MaterialPageRoute(
-      builder: (_) => FsDocumentRootScreen(
-            firestore: firestore,
-          )));
+  await Navigator.of(context).push<Object?>(
+    MaterialPageRoute(
+      builder: (_) => FsDocumentRootScreen(firestore: firestore),
+    ),
+  );
 }
 
 class FsDocumentViewScreen extends StatefulWidget {
   final Firestore firestore;
   final CvDocumentReference doc;
-  const FsDocumentViewScreen(
-      {super.key, required this.doc, required this.firestore});
+  const FsDocumentViewScreen({
+    super.key,
+    required this.doc,
+    required this.firestore,
+  });
 
   @override
   State<FsDocumentViewScreen> createState() => _FsDocumentViewScreenState();
@@ -263,8 +279,10 @@ class FsDocumentViewScreen extends StatefulWidget {
 class _FsDocumentViewScreenState extends State<FsDocumentViewScreen> {
   Firestore get firestore => widget.firestore;
   CvDocumentReference get doc => widget.doc;
-  late final controller =
-      FsDocumentViewController(firestore: firestore, docRef: doc);
+  late final controller = FsDocumentViewController(
+    firestore: firestore,
+    docRef: doc,
+  );
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -272,42 +290,45 @@ class _FsDocumentViewScreenState extends State<FsDocumentViewScreen> {
         title: const Text('Document view'),
         actions: [
           IconButton(
-              onPressed: () async {
-                var ok = await muiConfirm(context, message: 'Delete document?');
-                if (ok) {
-                  await controller.delete();
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
+            onPressed: () async {
+              var ok = await muiConfirm(context, message: 'Delete document?');
+              if (ok) {
+                await controller.delete();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
                 }
-                var doc = await controller.stream.first;
-                gDocumentClipboardController.addDoc(doc);
-                snack('Copied $doc');
-              },
-              icon: const Icon(Icons.delete)),
+              }
+              var doc = await controller.stream.first;
+              gDocumentClipboardController.addDoc(doc);
+              snack('Copied $doc');
+            },
+            icon: const Icon(Icons.delete),
+          ),
           IconButton(
-              onPressed: () async {
-                var doc = await controller.stream.first;
-                gDocumentClipboardController.addDoc(doc);
-                snack('Copied $doc');
-              },
-              icon: const Icon(Icons.copy))
+            onPressed: () async {
+              var doc = await controller.stream.first;
+              gDocumentClipboardController.addDoc(doc);
+              snack('Copied $doc');
+            },
+            icon: const Icon(Icons.copy),
+          ),
         ],
       ),
       body: ListView(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [FsDocumentView(controller: controller)],
-            ),
-          )
+            child: Column(children: [FsDocumentView(controller: controller)]),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await goToFsDocumentEditScreen(context,
-              firestore: firestore, doc: doc);
+          await goToFsDocumentEditScreen(
+            context,
+            firestore: firestore,
+            doc: doc,
+          );
           (controller as FsDocumentViewControllerBase).reload();
         },
         child: const Icon(Icons.edit),
@@ -336,10 +357,8 @@ class _FsDocumentRootScreenState extends State<FsDocumentRootScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [FsRootView(firestore: firestore)],
-            ),
-          )
+            child: Column(children: [FsRootView(firestore: firestore)]),
+          ),
         ],
       ),
     );

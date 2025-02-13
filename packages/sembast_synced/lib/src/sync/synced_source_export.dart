@@ -16,8 +16,8 @@ class SyncedDbExportMeta extends CvModelBase {
 }
 
 /// Must be json encodable
-typedef SyncedDbSynchronizerFetchExportMeta = Future<Map<String, Object?>>
-    Function();
+typedef SyncedDbSynchronizerFetchExportMeta =
+    Future<Map<String, Object?>> Function();
 
 /// String but typically jsonl
 typedef SyncedDbSynchronizerFetchExport = Future<String> Function(int changeId);

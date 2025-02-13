@@ -12,12 +12,16 @@ Future<void> main() async {
       var fbFirestore = newFirestoreServiceMemory().firestore(app);
       var fbStorage = newStorageServiceMemory().storage(app);
       var storageFirebase = StatStorageFirebase(
-          options: StatStorageOptionsFirebase(
-              storage: fbStorage,
-              firestore: fbFirestore,
-              fsRootDoc: fbFirestore.collection('tp').doc('test')));
-      client =
-          StatClientFirebase(storage: storageFirebase, clientId: 'my_client');
+        options: StatStorageOptionsFirebase(
+          storage: fbStorage,
+          firestore: fbFirestore,
+          fsRootDoc: fbFirestore.collection('tp').doc('test'),
+        ),
+      );
+      client = StatClientFirebase(
+        storage: storageFirebase,
+        clientId: 'my_client',
+      );
     });
     tearDown(() async {
       await client.close();
@@ -33,17 +37,23 @@ Future<void> main() async {
     });
     test('get list', () async {
       var event1 = await client.addEvent(
-          StatEvent(timestamp: DateTime(2024), name: 'test', data: 1));
+        StatEvent(timestamp: DateTime(2024), name: 'test', data: 1),
+      );
       var event2 = await client.addEvent(
-          StatEvent(timestamp: DateTime(2025), name: 'test', data: 2));
+        StatEvent(timestamp: DateTime(2025), name: 'test', data: 2),
+      );
       var event3 = await client.addEvent(
-          StatEvent(timestamp: DateTime(2026), name: 'other', data: 3));
+        StatEvent(timestamp: DateTime(2026), name: 'other', data: 3),
+      );
       var event4 = await client.addEvent(
-          StatEvent(timestamp: DateTime(2027), name: 'test', data: 4));
+        StatEvent(timestamp: DateTime(2027), name: 'test', data: 4),
+      );
       var event5 = await client.addEvent(
-          StatEvent(timestamp: DateTime(2028), name: 'test', data: 5));
+        StatEvent(timestamp: DateTime(2028), name: 'test', data: 5),
+      );
       var event6 = await client.addEvent(
-          StatEvent(timestamp: DateTime(2029), name: 'test', data: 6));
+        StatEvent(timestamp: DateTime(2029), name: 'test', data: 6),
+      );
       var result = await client.getEventList(StatEventListQuery());
       expect(result.events, [event1, event2, event3, event4, event5, event6]);
       result = await client.getEventList(StatEventListQuery(name: 'test'));
@@ -53,8 +63,9 @@ Future<void> main() async {
 
       var query = StatEventListQuery(name: 'test', maxCount: 2);
       Future<void> next() async {
-        result =
-            await client.getEventList(query.withCursor(result.nextCursor!));
+        result = await client.getEventList(
+          query.withCursor(result.nextCursor!),
+        );
       }
 
       result = await client.getEventList(query);
@@ -84,9 +95,10 @@ Future<void> main() async {
       result = await client.getEventList(query);
       expect(result.events, [event1]);
       query = StatEventListQuery(
-          name: 'test',
-          minTimestamp: DateTime(2025),
-          maxTimestamp: DateTime(2029));
+        name: 'test',
+        minTimestamp: DateTime(2025),
+        maxTimestamp: DateTime(2029),
+      );
       result = await client.getEventList(query);
       expect(result.events, [event2, event4, event5]);
     });

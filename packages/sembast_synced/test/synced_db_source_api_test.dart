@@ -13,7 +13,7 @@ void main() {
 
   group('synced_db_source_sync_api_test', () {
     Future<SyncTestsContext> setupContext() async {
-//    setUp(() async {
+      //    setUp(() async {
       firebaseSimContext = initFirebaseSimMemory();
       var apiService = SecureApiServiceBase(
         packageName: 'test.package',
@@ -25,8 +25,10 @@ void main() {
 
       await apiService.initClient();
 
-      var sourcedSource =
-          SyncedSourceApi(apiService: apiService, target: 'test');
+      var sourcedSource = SyncedSourceApi(
+        apiService: apiService,
+        target: 'test',
+      );
 
       return SyncTestsContext()
         ..syncedDb = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames)

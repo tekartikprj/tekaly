@@ -26,16 +26,16 @@ class AutoSynchronizedFirestoreSyncedDbOptions
   final List<String>? synchronizedExcludedStores;
 
   /// Firestore synced db options
-  AutoSynchronizedFirestoreSyncedDbOptions(
-      {Firestore? firestore,
-      required this.databaseFactory,
-      this.sembastDbName = 'synced.db',
+  AutoSynchronizedFirestoreSyncedDbOptions({
+    Firestore? firestore,
+    required this.databaseFactory,
+    this.sembastDbName = 'synced.db',
 
-      /// Default ok for tests only
-      this.rootDocumentPath = 'test/local',
-      this.synchronizedStores,
-      this.synchronizedExcludedStores})
-      : firestore = firestore ?? Firestore.instance;
+    /// Default ok for tests only
+    this.rootDocumentPath = 'test/local',
+    this.synchronizedStores,
+    this.synchronizedExcludedStores,
+  }) : firestore = firestore ?? Firestore.instance;
 }
 
 /// Auto synchronized firestore synced db
@@ -48,8 +48,9 @@ abstract class AutoSynchronizedFirestoreSyncedDb {
 
   AutoSynchronizedFirestoreSyncedDb({required this.options});
 
-  static Future<AutoSynchronizedFirestoreSyncedDb> open(
-      {required AutoSynchronizedFirestoreSyncedDbOptions options}) async {
+  static Future<AutoSynchronizedFirestoreSyncedDb> open({
+    required AutoSynchronizedFirestoreSyncedDbOptions options,
+  }) async {
     var db = _AutoSynchronizedFirestoreSyncedDb(options: options);
     await db.ready;
     return db;
@@ -97,15 +98,19 @@ class _AutoSynchronizedFirestoreSyncedDb
 
   late final ready = () async {
     syncedDb = SyncedDb.openDatabase(
-        databaseFactory: options.databaseFactory,
-        syncedExcludedStoreNames: options.synchronizedExcludedStores,
-        syncedStoreNames: options.synchronizedStores);
+      databaseFactory: options.databaseFactory,
+      syncedExcludedStoreNames: options.synchronizedExcludedStores,
+      syncedStoreNames: options.synchronizedStores,
+    );
     database = await syncedDb.database;
     synchronizer = SyncedDbSynchronizer(
-        db: syncedDb,
-        source: SyncedSourceFirestore(
-            firestore: options.firestore, rootPath: options.rootDocumentPath),
-        autoSync: true);
+      db: syncedDb,
+      source: SyncedSourceFirestore(
+        firestore: options.firestore,
+        rootPath: options.rootDocumentPath,
+      ),
+      autoSync: true,
+    );
   }();
 
   @override

@@ -31,10 +31,13 @@ extension SyncedDbExportExt on SyncedDb {
   /// Export to memory removing meta
   Future<SyncedDbExportInfo> exportInMemory() async {
     var sdb = await database;
-    var lines = await exportDatabaseLines(sdb,
-        storeNames: getNonEmptyStoreNames(sdb).toList()
-          ..removeWhere(
-              (element) => [dbSyncRecordStoreRef.name].contains(element)));
+    var lines = await exportDatabaseLines(
+      sdb,
+      storeNames:
+          getNonEmptyStoreNames(sdb).toList()..removeWhere(
+            (element) => [dbSyncRecordStoreRef.name].contains(element),
+          ),
+    );
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member
     var syncMeta =
@@ -44,10 +47,11 @@ extension SyncedDbExportExt on SyncedDb {
       // ignore: avoid_print
       print('syncMeta: $syncMeta');
     }
-    var exportMeta = SyncedDbExportMeta()
-      ..sourceVersion.setValue(syncMeta.sourceVersion.v)
-      ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())
-      ..lastChangeId.setValue(syncMeta.lastChangeId.v);
+    var exportMeta =
+        SyncedDbExportMeta()
+          ..sourceVersion.setValue(syncMeta.sourceVersion.v)
+          ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())
+          ..lastChangeId.setValue(syncMeta.lastChangeId.v);
     return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
   }
 }

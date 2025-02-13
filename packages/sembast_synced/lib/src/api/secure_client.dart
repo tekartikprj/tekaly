@@ -31,8 +31,12 @@ class ApiException implements Exception {
   late final String? message;
   final Object? cause;
 
-  ApiException(
-      {this.statusCode, String? message, this.cause, this.errorResponse}) {
+  ApiException({
+    this.statusCode,
+    String? message,
+    this.cause,
+    this.errorResponse,
+  }) {
     this.message = message ?? errorResponse?.message.v;
   }
 
@@ -115,9 +119,12 @@ class SecureApiServiceBase implements ApiService {
       httpClientFactory = httpClientFactoryMemory;
       var ff = firebaseFunctionsMemory;
       var ffServerApp = FfServerApp(
-          appFirebaseContext: AppFirebaseContext(
-              firebaseContext: firebaseSimContext!, app: app),
-          isLocal: true);
+        appFirebaseContext: AppFirebaseContext(
+          firebaseContext: firebaseSimContext!,
+          app: app,
+        ),
+        isLocal: true,
+      );
       ffServerApp.initFunction(functionName);
       if (ffServerHttp == null) {
         var httpServer = await ff.serveHttp();
@@ -134,32 +141,36 @@ class SecureApiServiceBase implements ApiService {
       commandUri = commandUri.replace(path: functionName);
     }
     var innerClient = httpClientFactory.newClient();
-    client = RetryClient(innerClient, when: (response) {
-      if (universal.isHttpStatusCodeSuccessful(response.statusCode)) {
-        return false;
-      }
-      switch (response.statusCode) {
-        case universal.httpStatusCodeForbidden:
-        case universal.httpStatusCodeUnauthorized:
+    client = RetryClient(
+      innerClient,
+      when: (response) {
+        if (universal.isHttpStatusCodeSuccessful(response.statusCode)) {
           return false;
-      }
-      retryCount++;
-      if (debugSyncedSync) {
-        // ignore: avoid_print
-        print('retry: ${response.statusCode}');
-      }
-      return true;
-    }, whenError: (error, stackTrace) {
-      if (debugSyncedSync) {
-        // ignore: avoid_print
-        print('retry error?: error');
-        // ignore: avoid_print
-        print(error);
-        // ignore: avoid_print
-        print(stackTrace);
-      }
-      return true;
-    });
+        }
+        switch (response.statusCode) {
+          case universal.httpStatusCodeForbidden:
+          case universal.httpStatusCodeUnauthorized:
+            return false;
+        }
+        retryCount++;
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('retry: ${response.statusCode}');
+        }
+        return true;
+      },
+      whenError: (error, stackTrace) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('retry error?: error');
+          // ignore: avoid_print
+          print(error);
+          // ignore: avoid_print
+          print(stackTrace);
+        }
+        return true;
+      },
+    );
   }
 
   Uri getUri(String command) {
@@ -174,9 +185,10 @@ class SecureApiServiceBase implements ApiService {
         return response.data!;
       } else {
         throw ApiException(
-            message: '${response.error?.message}',
-            statusCode: response.statusCode,
-            cause: response.error);
+          message: '${response.error?.message}',
+          statusCode: response.statusCode,
+          cause: response.error,
+        );
       }
     } catch (e, st) {
       if (isDebug) {
@@ -194,8 +206,11 @@ class SecureApiServiceBase implements ApiService {
   }
 
   Future<ServiceResponse<T>> clientSend<T extends CvModel>(
-      Client client, String command, CvModel request,
-      {Map<String, String>? additionalHeaders}) async {
+    Client client,
+    String command,
+    CvModel request, {
+    Map<String, String>? additionalHeaders,
+  }) async {
     var uri = getUri(command);
     if (debugWebServices) {
       log('-> uri: $uri');
@@ -204,14 +219,19 @@ class SecureApiServiceBase implements ApiService {
     // devPrint('uri $uri');
     var headers = <String, String>{
       httpHeaderContentType: httpContentTypeJson,
-      httpHeaderAccept: httpContentTypeJson
+      httpHeaderAccept: httpContentTypeJson,
     };
     if (additionalHeaders != null) {
       headers.addAll(additionalHeaders);
     }
     // devPrint('query headers: $headers');
-    var response = await httpClientSend(client, httpMethodPost, uri,
-        headers: headers, body: utf8.encode(jsonEncode(request.toMap())));
+    var response = await httpClientSend(
+      client,
+      httpMethodPost,
+      uri,
+      headers: headers,
+      body: utf8.encode(jsonEncode(request.toMap())),
+    );
     //devPrint('response headers: ${response.headers}');
     response.body;
     var body = utf8.decode(response.bodyBytes);
@@ -259,7 +279,7 @@ class SecureApiServiceBase implements ApiService {
     }
   }
 
-/*
+  /*
   Future<void> syncMemory(String siteId) async {
     var target = getSiteTarget(siteId);
     var dbName = getTargetDbName(target);
@@ -281,9 +301,5 @@ class ServiceResponse<T extends CvModel> {
 
   bool get isSuccessful => data != null;
 
-  ServiceResponse({
-    required this.statusCode,
-    this.data,
-    this.error,
-  });
+  ServiceResponse({required this.statusCode, this.data, this.error});
 }

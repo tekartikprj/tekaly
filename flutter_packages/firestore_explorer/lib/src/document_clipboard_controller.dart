@@ -18,9 +18,7 @@ class DocumentClipboardDataEmpty extends DocumentClipboardData {
 class DocumentClipboardDataDocument extends DocumentClipboardData {
   final CvFirestoreDocument document;
 
-  DocumentClipboardDataDocument({
-    required this.document,
-  });
+  DocumentClipboardDataDocument({required this.document});
 }
 
 class DocumentClipboardController extends ValueNotifier<DocumentClipboardData> {

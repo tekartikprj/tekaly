@@ -17,9 +17,10 @@ Future<void> main() async {
       var databaseFactory = newDatabaseFactoryMemory();
       var rootPath = 'test/location';
       var options = AutoSynchronizedFirestoreSyncedDbOptions(
-          firestore: firestore,
-          databaseFactory: databaseFactory,
-          rootDocumentPath: rootPath);
+        firestore: firestore,
+        databaseFactory: databaseFactory,
+        rootDocumentPath: rootPath,
+      );
       syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(options: options);
       expect(syncedDb, isNotNull);
       var db = syncedDb.database;
@@ -27,8 +28,9 @@ Future<void> main() async {
       await record.add(db, {'test': 1});
       await syncedDb.synchronize();
       await syncedDb.close();
-      expect((await firestore.doc('test/location/meta/info').get()).data,
-          {'lastChangeId': 1});
+      expect((await firestore.doc('test/location/meta/info').get()).data, {
+        'lastChangeId': 1,
+      });
     });
     test('add', () async {
       // debugSyncedSync = true;
@@ -36,7 +38,9 @@ Future<void> main() async {
       var firestore = newFirestoreMemory(); // .debugQuickLoggerWrapper();
       var databaseFactory = newDatabaseFactoryMemory();
       var options = AutoSynchronizedFirestoreSyncedDbOptions(
-          firestore: firestore, databaseFactory: databaseFactory);
+        firestore: firestore,
+        databaseFactory: databaseFactory,
+      );
       syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(options: options);
       expect(syncedDb, isNotNull);
       var db = syncedDb.database;
@@ -60,8 +64,11 @@ Future<void> main() async {
       var firestore = newFirestoreMemory(); // .debugQuickLoggerWrapper();
       var databaseFactory = newDatabaseFactoryMemory();
       syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(
-          options: AutoSynchronizedFirestoreSyncedDbOptions(
-              firestore: firestore, databaseFactory: databaseFactory));
+        options: AutoSynchronizedFirestoreSyncedDbOptions(
+          firestore: firestore,
+          databaseFactory: databaseFactory,
+        ),
+      );
     });
     tearDown(() async {
       await syncedDb.close();

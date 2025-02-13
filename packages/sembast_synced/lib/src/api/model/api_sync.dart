@@ -22,7 +22,7 @@ class ApiChange extends ApiChangeRef {
     ...super.fields,
     changeNum,
     data,
-    timestamp
+    timestamp,
   ];
 
   bool get isDeleted => data.v == null;
@@ -63,7 +63,7 @@ class ApiGetChangesRequest extends CvModelBase {
     target,
     afterChangeNum,
     includeDeleted,
-    limit
+    limit,
   ]; // ide the server limit (200 but can change)
 }
 
@@ -91,10 +91,7 @@ class ApiGetChangesResponse extends CvModelBase {
 class ApiGetChangeRequest extends ApiChangeRef {
   final target = CvField<String>('target');
   @override
-  late final List<CvField> fields = <CvField>[
-    target,
-    ...super.fields,
-  ]; // ide the server limit (200 but can change)
+  late final List<CvField> fields = <CvField>[target, ...super.fields]; // ide the server limit (200 but can change)
 }
 
 class ApiGetChangeResponse extends ApiChange {}

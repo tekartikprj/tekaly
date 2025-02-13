@@ -11,8 +11,11 @@ import 'mapping.dart';
 class FsDocumentListScreen extends StatefulWidget {
   final Firestore firestore;
   final CvQueryReference query;
-  const FsDocumentListScreen(
-      {super.key, required this.query, required this.firestore});
+  const FsDocumentListScreen({
+    super.key,
+    required this.query,
+    required this.firestore,
+  });
 
   @override
   State<FsDocumentListScreen> createState() => _FsDocumentListScreenState();
@@ -24,45 +27,51 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var fixedDocuments =
-        documentViewListDocuments(query.collectionReference.path);
+    var fixedDocuments = documentViewListDocuments(
+      query.collectionReference.path,
+    );
     //devPrint('query: $query ($fixedDocuments)');
     var fixedDocumentsIds = fixedDocuments.map((e) => e.id).toSet();
     return Scaffold(
       appBar: AppBar(
-          title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Document list ${getTypeName(query.type)}'),
-          Text(
-            query.collectionReference.path,
-            style: const TextStyle(fontSize: 10),
-          )
-        ],
-      )),
-      body: (fixedDocuments.isEmpty)
-          ? buildItemList(fixedDocumentsIds)
-          : ListView(
-              children: [
-                ListView(
-                  shrinkWrap: true,
-                  children: [
-                    ...fixedDocuments.map((docRef) {
-                      return DocumentListItem(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Document list ${getTypeName(query.type)}'),
+            Text(
+              query.collectionReference.path,
+              style: const TextStyle(fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+      body:
+          (fixedDocuments.isEmpty)
+              ? buildItemList(fixedDocumentsIds)
+              : ListView(
+                children: [
+                  ListView(
+                    shrinkWrap: true,
+                    children: [
+                      ...fixedDocuments.map((docRef) {
+                        return DocumentListItem(
                           model: docRef.cv(),
                           firestore: firestore,
-                          docRef: docRef);
-                    })
-                  ],
-                ),
-                buildItemList(fixedDocumentsIds, shrinkWrap: true),
-              ],
-            ),
+                          docRef: docRef,
+                        );
+                      }),
+                    ],
+                  ),
+                  buildItemList(fixedDocumentsIds, shrinkWrap: true),
+                ],
+              ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await goToFsDocumentEditScreen(context,
-              firestore: firestore,
-              doc: widget.query.collectionReference.doc(cvDocumentIdNew));
+          await goToFsDocumentEditScreen(
+            context,
+            firestore: firestore,
+            doc: widget.query.collectionReference.doc(cvDocumentIdNew),
+          );
           // reload if needed
           setState(() {});
         },
@@ -71,47 +80,53 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
     );
   }
 
-  FutureBuilder<Query> buildItemList(Set<String> fixedDocumentsIds,
-      {bool shrinkWrap = false}) {
+  FutureBuilder<Query> buildItemList(
+    Set<String> fixedDocumentsIds, {
+    bool shrinkWrap = false,
+  }) {
     return FutureBuilder(
-        future: query.rawASync(firestore),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Container();
-          }
-          var rawQuery = snapshot.data!;
-          return FirestoreListView(
-            shrinkWrap: shrinkWrap,
-            query: rawQuery,
-            itemBuilder: (BuildContext context, DocumentSnapshot doc) {
-              try {
-                CvFirestoreDocument model;
+      future: query.rawASync(firestore),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container();
+        }
+        var rawQuery = snapshot.data!;
+        return FirestoreListView(
+          shrinkWrap: shrinkWrap,
+          query: rawQuery,
+          itemBuilder: (BuildContext context, DocumentSnapshot doc) {
+            try {
+              CvFirestoreDocument model;
 
-                // Try unique specific doc builder.
-                var ref = documentViewGetDocument(doc.ref.path);
-                if (ref.type != CvFirestoreDocument) {
-                  model = ref.cv();
-                } else {
-                  model = ref.cvType(query.type);
-                }
-
-                // Exclude already added documents
-                if (fixedDocumentsIds.contains(model.id)) {
-                  return Container();
-                }
-                return DocumentListItem(
-                    model: model, firestore: firestore, docRef: ref);
-              } catch (e) {
-                // ignore: avoid_print
-                print('Error on ${query.type} ${doc.ref.path}: $e');
-                return ListTile(
-                  title: Text('Error on ${query.type} ${doc.ref.path}'),
-                  subtitle: Text('Error building on ${doc.data}: $e'),
-                );
+              // Try unique specific doc builder.
+              var ref = documentViewGetDocument(doc.ref.path);
+              if (ref.type != CvFirestoreDocument) {
+                model = ref.cv();
+              } else {
+                model = ref.cvType(query.type);
               }
-            },
-          );
-        });
+
+              // Exclude already added documents
+              if (fixedDocumentsIds.contains(model.id)) {
+                return Container();
+              }
+              return DocumentListItem(
+                model: model,
+                firestore: firestore,
+                docRef: ref,
+              );
+            } catch (e) {
+              // ignore: avoid_print
+              print('Error on ${query.type} ${doc.ref.path}: $e');
+              return ListTile(
+                title: Text('Error on ${query.type} ${doc.ref.path}'),
+                subtitle: Text('Error building on ${doc.data}: $e'),
+              );
+            }
+          },
+        );
+      },
+    );
   }
 }
 
@@ -141,7 +156,7 @@ class DocumentListItem extends StatelessWidget {
               return Text('${field.name}: ${field.value}');
             }
             return Container();
-          })
+          }),
         ],
       ),
       onTap: () {
@@ -151,12 +166,15 @@ class DocumentListItem extends StatelessWidget {
   }
 }
 
-Future<void> goToFsDocumentListScreen(BuildContext context,
-    {required Firestore firestore, required CvQueryReference query}) async {
+Future<void> goToFsDocumentListScreen(
+  BuildContext context, {
+  required Firestore firestore,
+  required CvQueryReference query,
+}) async {
   documentViewInit();
-  await Navigator.of(context).push<Object?>(MaterialPageRoute(
-      builder: (_) => FsDocumentListScreen(
-            query: query,
-            firestore: firestore,
-          )));
+  await Navigator.of(context).push<Object?>(
+    MaterialPageRoute(
+      builder: (_) => FsDocumentListScreen(query: query, firestore: firestore),
+    ),
+  );
 }

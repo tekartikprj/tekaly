@@ -24,8 +24,8 @@ mixin SyncedDbAppSyncMixin implements SyncedDbAppSync {
   late SyncedDb db;
 }
 
-typedef SyncedDbAppSyncFetchExportMeta = Future<Map<String, Object?>>
-    Function();
+typedef SyncedDbAppSyncFetchExportMeta =
+    Future<Map<String, Object?>> Function();
 typedef SyncedDbAppSyncFetchExport = Future<String> Function(int changeId);
 
 class SyncedDbHttpExportFetcher implements SyncedDbAppSyncExportFetcher {
@@ -42,16 +42,20 @@ class SyncedDbHttpExportFetcher implements SyncedDbAppSyncExportFetcher {
 
   Client get client => _client ??= httpClientFactory.newClient();
 
-  SyncedDbHttpExportFetcher(
-      {required this.baseUri, HttpClientFactory? httpClientFactory}) {
+  SyncedDbHttpExportFetcher({
+    required this.baseUri,
+    HttpClientFactory? httpClientFactory,
+  }) {
     this.httpClientFactory = httpClientFactory ?? httpClientFactoryUniversal;
   }
 
   Uri get exportMetaUri => baseUri.replace(
-      pathSegments: [...baseUri.pathSegments, syncedDbExportMetaFilename]);
+    pathSegments: [...baseUri.pathSegments, syncedDbExportMetaFilename],
+  );
 
-  Uri get exportUri => baseUri
-      .replace(pathSegments: [...baseUri.pathSegments, syncedDbExportFilename]);
+  Uri get exportUri => baseUri.replace(
+    pathSegments: [...baseUri.pathSegments, syncedDbExportFilename],
+  );
 
   Future<String> _fetchExport(int changeId) async {
     try {
@@ -102,8 +106,8 @@ class SyncedDbAppSyncExport
   @override
   Future<void> sync() async {
     var meta = await db.getSyncMetaInfo();
-    var newMeta = SyncedDbExportMeta()
-      ..fromMap(await fetcher.fetchExportMeta());
+    var newMeta =
+        SyncedDbExportMeta()..fromMap(await fetcher.fetchExportMeta());
     var newLastChangeId = newMeta.lastChangeId.v!;
     if ((meta?.sourceVersion.v != newMeta.sourceVersion.v) ||
         (newMeta.lastChangeId.v! > (meta?.lastChangeId.v ?? 0))) {
@@ -112,8 +116,11 @@ class SyncedDbAppSyncExport
         print('importing data $newMeta');
       }
       var data = await fetcher.fetchExport(newLastChangeId);
-      var sourceDb =
-          await importDatabaseAny(data, newDatabaseFactoryMemory(), 'export');
+      var sourceDb = await importDatabaseAny(
+        data,
+        newDatabaseFactoryMemory(),
+        'export',
+      );
       await databaseMerge(await db.database, sourceDatabase: sourceDb);
       await sourceDb.close();
     }

@@ -22,7 +22,9 @@ Future<void> main() async {
       var doc = coll.doc('1');
 
       var controller = FsDocumentViewController<FsRootCollectionDoc>(
-          firestore: firestore, docRef: doc);
+        firestore: firestore,
+        docRef: doc,
+      );
 
       var subscription = controller.stream.listen((event) {
         // print(event);

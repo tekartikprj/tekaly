@@ -9,7 +9,9 @@ FirebaseContext initFirebaseSimIo() {
 
   var firebase = FirebaseLocal();
   var servicesContext = FirebaseServicesContext(
-      firebase: firebase, firestore: firestoreServiceIo);
+    firebase: firebase,
+    firestore: firestoreServiceIo,
+  );
   return servicesContext.initServices();
   /*
   firestoreService = firestoreServiceIo;

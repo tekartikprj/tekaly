@@ -20,23 +20,29 @@ class SyncedDbStringFetcherContext {
   /// Optional meta basename suffix
   final String? metaBasenameSuffix;
 
-  SyncedDbStringFetcherContext(
-      {required this.fetcher, required this.metaBasenameSuffix});
+  SyncedDbStringFetcherContext({
+    required this.fetcher,
+    required this.metaBasenameSuffix,
+  });
 }
 
 extension SyncedDbFetcherExt on SyncedDb {
-  Future<void> importDatabaseFromFetcher(
-      {
-      /// Destination folder (import export.jsonl and export_meta.json)
-      required SyncedDbStringFetcherContext fetcherContext}) async {
+  Future<void> importDatabaseFromFetcher({
+    /// Destination folder (import export.jsonl and export_meta.json)
+    required SyncedDbStringFetcherContext fetcherContext,
+  }) async {
     var fetcher = fetcherContext.fetcher;
-    await fetchAndImport(fetchExport: (int changeId) async {
-      return fetcher.getString(getExportFileName(changeId));
-    }, fetchExportMeta: () async {
-      var exportString = await fetcher.getString(
-          getExportMetaFileName(suffix: fetcherContext.metaBasenameSuffix));
-      var map = jsonDecode(exportString) as Map;
-      return asModel(map);
-    });
+    await fetchAndImport(
+      fetchExport: (int changeId) async {
+        return fetcher.getString(getExportFileName(changeId));
+      },
+      fetchExportMeta: () async {
+        var exportString = await fetcher.getString(
+          getExportMetaFileName(suffix: fetcherContext.metaBasenameSuffix),
+        );
+        var map = jsonDecode(exportString) as Map;
+        return asModel(map);
+      },
+    );
   }
 }

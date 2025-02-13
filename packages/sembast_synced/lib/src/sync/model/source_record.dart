@@ -60,7 +60,9 @@ class SyncedSourceRecord extends CvModelBase {
   /// Server timestamp
   final syncTimestamp = CvField<Timestamp>(syncTimestampKey);
   final record = CvModelField<SyncedSourceRecordData>(
-      recordFieldKey, (_) => SyncedSourceRecordData());
+    recordFieldKey,
+    (_) => SyncedSourceRecordData(),
+  );
   //final store = CvField<String>(recordStoreFieldKey);
   //final key = CvField<String>(recordKeyFieldKey);
   //final deleted = CvField<bool>(recordDeletedFieldKey);

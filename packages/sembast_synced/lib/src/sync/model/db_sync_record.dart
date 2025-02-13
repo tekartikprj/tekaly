@@ -46,12 +46,20 @@ class DbSyncRecord extends DbIntRecordBase {
       stringMapStoreFactory.store(store.v).record(key.v!);
 
   @override
-  List<CvField> get fields =>
-      [store, key, deleted, dirty, syncId, syncTimestamp, syncChangeId];
+  List<CvField> get fields => [
+    store,
+    key,
+    deleted,
+    dirty,
+    syncId,
+    syncTimestamp,
+    syncChangeId,
+  ];
 }
 
 DbSyncRecord? dbSyncRecordFromSnapshot(
-        RecordSnapshot<int, Map<String, Object?>>? snapshot) =>
+  RecordSnapshot<int, Map<String, Object?>>? snapshot,
+) =>
     snapshot == null
         ? null
         : (DbSyncRecord()

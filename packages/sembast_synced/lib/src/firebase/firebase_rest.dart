@@ -10,10 +10,13 @@ FirebaseContext initFirebaseRest(Client client, {required String fbProjectId}) {
   var firebase = firebaseRest;
   var firestoreService = firestoreServiceRest;
   var app = firebase.initializeApp(
-      options: AppOptionsRest(client: client)..projectId = fbProjectId);
+    options: AppOptionsRest(client: client)..projectId = fbProjectId,
+  );
   var firestore = firestoreServiceRest.firestore(app);
-  var servicesContext =
-      FirebaseServicesContext(firebase: firebase, firestore: firestoreService);
+  var servicesContext = FirebaseServicesContext(
+    firebase: firebase,
+    firestore: firestoreService,
+  );
   return FirebaseContext(services: servicesContext, firestore: firestore);
   // authService = authServiceRest;
   //storageService = storageServiceRest;
@@ -31,8 +34,9 @@ class SyncedDbUnauthenticatedStorageApiImportContext {
   final String? metaBasenameSuffix;
 
   /// Context
-  SyncedDbUnauthenticatedStorageApiImportContext(
-      {required this.storageApi,
-      required this.rootPath,
-      this.metaBasenameSuffix});
+  SyncedDbUnauthenticatedStorageApiImportContext({
+    required this.storageApi,
+    required this.rootPath,
+    this.metaBasenameSuffix,
+  });
 }

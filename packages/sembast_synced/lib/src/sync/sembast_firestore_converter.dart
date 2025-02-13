@@ -59,9 +59,10 @@ dynamic sembastToFirestore(dynamic value) {
     converted = _toFirestore(value);
   } on ArgumentError catch (e) {
     throw ArgumentError.value(
-        e.invalidValue,
-        '${(e.invalidValue as Object?)?.runtimeType} in $value',
-        'not supported');
+      e.invalidValue,
+      '${(e.invalidValue as Object?)?.runtimeType} in $value',
+      'not supported',
+    );
   }
 
   /// Ensure root is Map<String, Object?> if only Map
@@ -115,9 +116,10 @@ dynamic firestoreToSembast(dynamic value) {
     converted = _toSembast(value);
   } on ArgumentError catch (e) {
     throw ArgumentError.value(
-        e.invalidValue,
-        '${(e.invalidValue as Object?)?.runtimeType} in $value',
-        'not supported');
+      e.invalidValue,
+      '${(e.invalidValue as Object?)?.runtimeType} in $value',
+      'not supported',
+    );
   }
 
   /// Ensure root is Map<String, Object?> if only Map
@@ -142,26 +144,27 @@ Map<String, Object?> mapFirestoreToSembast(Map<String, Object?> map) =>
 
 /// Snapshot to a cv record
 T? cvRecordFromSnapshot<T extends CvModel>(
-        firestore.DocumentSnapshot snapshot) =>
+  firestore.DocumentSnapshot snapshot,
+) =>
     (snapshot.exists)
         ? () {
-            var data =
-                firestoreToSembast(snapshot.data) as Map<String, Object?>;
-            return cvBuildModel<T>(data)..fromMap(data);
-          }()
+          var data = firestoreToSembast(snapshot.data) as Map<String, Object?>;
+          return cvBuildModel<T>(data)..fromMap(data);
+        }()
         : null;
 
 CvMetaInfoRecord? metaInfoRecordFromSnapshot(
-        firestore.DocumentSnapshot snapshot) =>
-    cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
+  firestore.DocumentSnapshot snapshot,
+) => cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
 
 /// Copy the sync id
 SyncedSourceRecord? sourceRecordFromSnapshot(
-        firestore.DocumentSnapshot snapshot) =>
+  firestore.DocumentSnapshot snapshot,
+) =>
     cvRecordFromSnapshot<SyncedSourceRecord>(snapshot)
       ?..syncId.v = snapshot.ref.id;
 
 /// Copy the sync id
 List<SyncedSourceRecord?> sourceRecordFromSnapshots(
-        List<firestore.DocumentSnapshot> snapshots) =>
-    snapshots.map(sourceRecordFromSnapshot).toList();
+  List<firestore.DocumentSnapshot> snapshots,
+) => snapshots.map(sourceRecordFromSnapshot).toList();

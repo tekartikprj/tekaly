@@ -59,15 +59,14 @@ class FfServerApp {
 
   Firestore get firestore => firebaseContext.firestore;
 
-  FfServerApp({
-    required this.appFirebaseContext,
-    this.isLocal = false,
-  }) {
+  FfServerApp({required this.appFirebaseContext, this.isLocal = false}) {
     initApiBuilders();
   }
 
   HttpsFunction get commandV1 => functions.https.onRequestV2(
-      HttpsOptions(cors: true, region: regionBelgium), commandHttp);
+    HttpsOptions(cors: true, region: regionBelgium),
+    commandHttp,
+  );
 
   Future<void> commandHttp(ExpressHttpRequest request) async {
     var uri = request.uri;
@@ -122,11 +121,12 @@ class FfServerApp {
       // devPrint(st);
 
       await sendErrorResponse(
-          request,
-          httpStatusCodeInternalServerError,
-          ApiErrorResponse()
-            ..message.v = e.toString()
-            ..stackTrace.v = st.toString());
+        request,
+        httpStatusCodeInternalServerError,
+        ApiErrorResponse()
+          ..message.v = e.toString()
+          ..stackTrace.v = st.toString(),
+      );
     }
   }
 
@@ -137,7 +137,10 @@ class FfServerApp {
   }
 
   Future<void> sendErrorResponse(
-      ExpressHttpRequest request, int statusCode, CvModel model) async {
+    ExpressHttpRequest request,
+    int statusCode,
+    CvModel model,
+  ) async {
     var res = request.response;
     try {
       res.statusCode = statusCode;
@@ -174,8 +177,10 @@ class CommandHandler {
 }
 
 abstract class SyncCommandHandler extends FirebaseCommandHandler {
-  SyncCommandHandler(
-      {required super.request, required super.appFirebaseContext});
+  SyncCommandHandler({
+    required super.request,
+    required super.appFirebaseContext,
+  });
 
   Future<bool> requireTargetAuthToken(String target) async {
     // Or send error
@@ -241,7 +246,8 @@ class SyncPutInfoCommandHandler extends SyncCommandHandler {
       initSyncSource(target);
 
       var metaInfo = syncInfoToMeta(apiRequest);
-      var meta = (await syncedSourceFirestore.putMetaInfo(metaInfo)) ??
+      var meta =
+          (await syncedSourceFirestore.putMetaInfo(metaInfo)) ??
           CvMetaInfoRecord();
       var response = ApiPutSyncInfoResponse();
       metaToSyncInfo(meta, response);
@@ -263,22 +269,25 @@ class SyncGetChangesCommandHandler extends SyncCommandHandler {
       initSyncSource(target);
 
       var recordList = await syncedSourceFirestore.getSourceRecordList(
-          afterChangeId: apiRequest.afterChangeNum.v,
-          includeDeleted: apiRequest.includeDeleted.v,
-          limit: apiRequest.limit.v);
+        afterChangeId: apiRequest.afterChangeNum.v,
+        includeDeleted: apiRequest.includeDeleted.v,
+        limit: apiRequest.limit.v,
+      );
 
       var metaInfo = await getMetaInfo();
 
       var syncInfo = ApiSyncInfo();
       metaToSyncInfo(metaInfo, syncInfo);
-      var response = ApiGetChangesResponse()
-        ..syncInfo.v = syncInfo
-        ..lastChangeNum.v = recordList.lastChangeId
-        ..changes.v = recordList.list.map((e) {
-          var apiChange = ApiChange();
-          recordToSyncChange(e, apiChange);
-          return apiChange;
-        }).toList();
+      var response =
+          ApiGetChangesResponse()
+            ..syncInfo.v = syncInfo
+            ..lastChangeNum.v = recordList.lastChangeId
+            ..changes.v =
+                recordList.list.map((e) {
+                  var apiChange = ApiChange();
+                  recordToSyncChange(e, apiChange);
+                  return apiChange;
+                }).toList();
       if (recordList.isNotEmpty) {
         response.lastChangeNum.v = response.changes.v!.last.changeNum.v;
       }

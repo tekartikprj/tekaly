@@ -41,19 +41,24 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   @override
   Future<CvMetaInfoRecord?> getMetaInfo() async {
     var apiResponse = await apiService.send<ApiGetSyncInfoResponse>(
-        commandSyncGetInfo, ApiGetSyncInfoRequest()..target.v = target);
+      commandSyncGetInfo,
+      ApiGetSyncInfoRequest()..target.v = target,
+    );
     return syncInfoToMeta(apiResponse);
   }
 
   @override
   Future<SyncedSourceRecord?> getSourceRecord(
-      SyncedDataSourceRef sourceRef) async {
+    SyncedDataSourceRef sourceRef,
+  ) async {
     var request = ApiGetChangeRequest();
     request.target.v = target;
     recordRefToSyncChangeRef(sourceRef, request);
 
     var apiResponse = await apiService.send<ApiGetChangeResponse>(
-        commandSyncGetChange, request);
+      commandSyncGetChange,
+      request,
+    );
     if (apiResponse.key.v == null) {
       return null;
     }
@@ -61,19 +66,21 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<SyncedSourceRecordList> getSourceRecordList(
-      {int? afterChangeId,
-      int? limit,
-      bool? includeDeleted,
-      @Deprecated('Not used') String? pageToken}) async {
+  Future<SyncedSourceRecordList> getSourceRecordList({
+    int? afterChangeId,
+    int? limit,
+    bool? includeDeleted,
+    @Deprecated('Not used') String? pageToken,
+  }) async {
     includeDeleted ??= false;
     var apiResponse = await apiService.send<ApiGetChangesResponse>(
-        commandSyncGetChanges,
-        ApiGetChangesRequest()
-          ..target.v = target
-          ..includeDeleted.setValue(includeDeleted ? true : null)
-          ..afterChangeNum.v = afterChangeId
-          ..limit.v);
+      commandSyncGetChanges,
+      ApiGetChangesRequest()
+        ..target.v = target
+        ..includeDeleted.setValue(includeDeleted ? true : null)
+        ..afterChangeNum.v = afterChangeId
+        ..limit.v,
+    );
     var list = <SyncedSourceRecord>[];
     var lastChangeId = apiResponse.lastChangeNum.v;
     for (var change in apiResponse.changes.v ?? <ApiChange>[]) {
@@ -89,12 +96,13 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   @override
   Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) async {
     var apiResponse = await apiService.send<ApiPutSyncInfoResponse>(
-        commandSyncPutInfo,
-        ApiPutSyncInfoRequest()
-          ..target.v = target
-          ..lastChangeNum.v = info.lastChangeId.v
-          ..minIncrementalChangeNum.v = info.minIncrementalChangeId.v
-          ..version.v = info.version.v);
+      commandSyncPutInfo,
+      ApiPutSyncInfoRequest()
+        ..target.v = target
+        ..lastChangeNum.v = info.lastChangeId.v
+        ..minIncrementalChangeNum.v = info.minIncrementalChangeId.v
+        ..version.v = info.version.v,
+    );
     return CvMetaInfoRecord()
       ..version.v = apiResponse.version.v
       ..minIncrementalChangeId.v = apiResponse.minIncrementalChangeNum.v
@@ -106,7 +114,9 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
     var request = ApiPutChangeRequest()..target.v = target;
     recordToSyncChange(record, request);
     var apiResponse = await apiService.send<ApiPutChangeResponse>(
-        commandSyncPutChange, request);
+      commandSyncPutChange,
+      request,
+    );
     return apiChangeToRecord(apiResponse);
   }
 
@@ -115,7 +125,9 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
     var request = ApiPutChangeRequest()..target.v = target;
     recordToSyncChange(record, request);
     await apiService.send<ApiPutChangeResponse>(
-        commandSyncPutRawChange, request);
+      commandSyncPutRawChange,
+      request,
+    );
   }
 }
 
@@ -128,7 +140,10 @@ Timestamp? parseTimestamp(String? timestamp) {
 
 SyncedDataSourceRef apiChangeRefToRecordRef(ApiChangeRef change) {
   return SyncedDataSourceRef(
-      syncId: change.syncId.v, key: change.key.v, store: change.store.v);
+    syncId: change.syncId.v,
+    key: change.key.v,
+    store: change.store.v,
+  );
 }
 
 void recordRefToSyncChangeRef(SyncedDataSourceRef record, ApiChangeRef change) {
@@ -147,11 +162,12 @@ void recordToSyncChangeRef(SyncedSourceRecord record, ApiChangeRef change) {
 }
 
 SyncedSourceRecord apiChangeToRecord(ApiChange change) {
-  var recordData = SyncedSourceRecordData()
-    ..store.v = change.store.v
-    ..key.v = change.key.v
-    ..value.v = jsonDecodeSembastValueOrNull(change.data.v) as Model?
-    ..deleted.v = change.data.v == null;
+  var recordData =
+      SyncedSourceRecordData()
+        ..store.v = change.store.v
+        ..key.v = change.key.v
+        ..value.v = jsonDecodeSembastValueOrNull(change.data.v) as Model?
+        ..deleted.v = change.data.v == null;
   return SyncedSourceRecord()
     ..syncId.v = change.syncId.v
     ..syncChangeId.v = change.changeNum.v

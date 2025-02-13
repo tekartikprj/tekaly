@@ -36,22 +36,25 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay}) {
     checkDelay ??= const Duration(minutes: 60);
     late StreamController<CvMetaInfoRecord?> controller;
-    controller = StreamController<CvMetaInfoRecord?>(onListen: () async {
-      while (true) {
-        var info = await getMetaInfo();
-        if (!controller.isClosed) {
-          controller.add(info);
-        } else {
-          break;
+    controller = StreamController<CvMetaInfoRecord?>(
+      onListen: () async {
+        while (true) {
+          var info = await getMetaInfo();
+          if (!controller.isClosed) {
+            controller.add(info);
+          } else {
+            break;
+          }
+          await Future<void>.delayed(checkDelay!);
+          if (controller.isClosed) {
+            break;
+          }
         }
-        await Future<void>.delayed(checkDelay!);
-        if (controller.isClosed) {
-          break;
-        }
-      }
-    }, onCancel: () {
-      controller.close();
-    });
+      },
+      onCancel: () {
+        controller.close();
+      },
+    );
     return controller.stream;
   }
 
@@ -66,8 +69,11 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<SyncedSourceRecordList> getSourceRecordList(
-      {int? afterChangeId, int? limit, bool? includeDeleted}) {
+  Future<SyncedSourceRecordList> getSourceRecordList({
+    int? afterChangeId,
+    int? limit,
+    bool? includeDeleted,
+  }) {
     throw UnimplementedError('SyncedSource.getSourceRecordList');
   }
 
@@ -109,8 +115,11 @@ abstract class SyncedSource {
   /// if [afterChangeId] is not null, only the update after it are fetched
   ///
   /// After calling this you should check meta info again to be sure the minChange did not change
-  Future<SyncedSourceRecordList> getSourceRecordList(
-      {int? afterChangeId, int? limit, bool? includeDeleted});
+  Future<SyncedSourceRecordList> getSourceRecordList({
+    int? afterChangeId,
+    int? limit,
+    bool? includeDeleted,
+  });
 
   @visibleForTesting
   Future<void> putRawRecord(SyncedSourceRecord record);
@@ -126,18 +135,24 @@ abstract class SyncedSource {
 }
 
 extension SyncedSourceExt on SyncedSource {
-  Future<SyncedSourceRecordList> getAllSourceRecordList(
-      {int? afterChangeId, int? stepLimit, bool? includeDeleted}) async {
+  Future<SyncedSourceRecordList> getAllSourceRecordList({
+    int? afterChangeId,
+    int? stepLimit,
+    bool? includeDeleted,
+  }) async {
     var list = SyncedSourceRecordList(<SyncedSourceRecord>[], null);
     while (true) {
       var nextList = await getSourceRecordList(
-          afterChangeId: afterChangeId,
-          limit: stepLimit,
-          includeDeleted: includeDeleted);
+        afterChangeId: afterChangeId,
+        limit: stepLimit,
+        includeDeleted: includeDeleted,
+      );
       var lastChangeId =
           nextList.lastChangeId ?? nextList.list.lastOrNull?.syncChangeId.v;
-      list = SyncedSourceRecordList(
-          [...list.list, ...nextList.list], lastChangeId ?? list.lastChangeId);
+      list = SyncedSourceRecordList([
+        ...list.list,
+        ...nextList.list,
+      ], lastChangeId ?? list.lastChangeId);
       if (nextList.isEmpty) {
         break;
       }

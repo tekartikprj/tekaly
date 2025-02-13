@@ -20,8 +20,11 @@ class _StorageFetcher implements SyncedDbStringFetcher {
   final String? bucket;
   final String rootPath;
 
-  _StorageFetcher(
-      {required this.storage, required this.bucket, required this.rootPath});
+  _StorageFetcher({
+    required this.storage,
+    required this.bucket,
+    required this.rootPath,
+  });
 
   @override
   Future<String> getString(String path) async {
@@ -44,9 +47,12 @@ class _UnauthenticatedStorageFetcher implements SyncedDbStringFetcher {
     var filePath = url.join(rootPath, path);
     // devPrint('Getting $metaPath');
     var client = this.client ??= api.client ?? Client();
-    return await httpClientRead(client, httpMethodGet,
-        Uri.parse('${api.getMediaUrl(filePath)}$noCache'),
-        responseEncoding: utf8);
+    return await httpClientRead(
+      client,
+      httpMethodGet,
+      Uri.parse('${api.getMediaUrl(filePath)}$noCache'),
+      responseEncoding: utf8,
+    );
   }
 }
 
@@ -55,32 +61,38 @@ extension SyncedDbImportStorageExt on SyncedDb {
   /// Export
   /// * `export_meta<suffix>.json`
   /// * `export_<changeId>.jsonl`
-  Future<void> importDatabaseFromStorage(
-      {required SyncedDbStorageImportContext importContext}) async {
+  Future<void> importDatabaseFromStorage({
+    required SyncedDbStorageImportContext importContext,
+  }) async {
     if (importContext is SyncedDbStorageExportContext) {
       var fetcher = _StorageFetcher(
-          storage: importContext.storage,
-          bucket: importContext.bucketName,
-          rootPath: importContext.rootPath);
+        storage: importContext.storage,
+        bucket: importContext.bucketName,
+        rootPath: importContext.rootPath,
+      );
       await importDatabaseFromFetcher(
-          fetcherContext: SyncedDbStringFetcherContext(
-              fetcher: fetcher,
-              metaBasenameSuffix: importContext.metaBasenameSuffix));
+        fetcherContext: SyncedDbStringFetcherContext(
+          fetcher: fetcher,
+          metaBasenameSuffix: importContext.metaBasenameSuffix,
+        ),
+      );
     } else {
       throw UnimplementedError();
     }
   }
 
-  Future<void> importDatabaseFromUnauthenticatedStorage(
-      {required SyncedDbUnauthenticatedStorageApiImportContext
-          importContext}) async {
+  Future<void> importDatabaseFromUnauthenticatedStorage({
+    required SyncedDbUnauthenticatedStorageApiImportContext importContext,
+  }) async {
     var fetcher = _UnauthenticatedStorageFetcher(
       api: importContext.storageApi,
       rootPath: importContext.rootPath,
     );
     await importDatabaseFromFetcher(
-        fetcherContext: SyncedDbStringFetcherContext(
-            fetcher: fetcher,
-            metaBasenameSuffix: importContext.metaBasenameSuffix));
+      fetcherContext: SyncedDbStringFetcherContext(
+        fetcher: fetcher,
+        metaBasenameSuffix: importContext.metaBasenameSuffix,
+      ),
+    );
   }
 }

@@ -3,18 +3,19 @@ import 'import_firebase.dart';
 
 class FsDocumentFieldViewUiController<T extends CvFirestoreDocument>
     extends FsDocumentFieldViewControllerBase<T> {
-  FsDocumentFieldViewUiController(
-      {required super.documentViewController,
-      required super.parent,
-      required super.field});
+  FsDocumentFieldViewUiController({
+    required super.documentViewController,
+    required super.parent,
+    required super.field,
+  });
 }
 
 class FsDocumentViewUiController<T extends CvFirestoreDocument>
     extends FsDocumentViewControllerBase<T> {
-  factory FsDocumentViewUiController(
-          {required Firestore firestore,
-          required CvDocumentReference<T> docRef}) =>
-      _FsDocumentViewController(firestore: firestore, docRef: docRef);
+  factory FsDocumentViewUiController({
+    required Firestore firestore,
+    required CvDocumentReference<T> docRef,
+  }) => _FsDocumentViewController(firestore: firestore, docRef: docRef);
 }
 
 class _FsDocumentViewController<T extends CvFirestoreDocument>

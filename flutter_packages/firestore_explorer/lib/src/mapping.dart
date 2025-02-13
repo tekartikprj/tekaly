@@ -5,7 +5,7 @@ Map<Type, String> _typeNames = {
   int: 'int',
   double: 'double',
   bool: 'bool',
-  num: 'num'
+  num: 'num',
 };
 
 void documentViewAddTypeName(Type type, String name) {
@@ -194,6 +194,6 @@ void documentViewInit() {
   cvAddConstructor(CvFirestoreMapDocument.new);
   documentViewAddTypeNames({
     CvFirestoreDocument: 'CvFirestoreDocument',
-    CvFirestoreMapDocument: 'CvFirestoreMapDocument'
+    CvFirestoreMapDocument: 'CvFirestoreMapDocument',
   });
 }

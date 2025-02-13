@@ -43,8 +43,14 @@ class FsAppInfo extends CvFirestoreDocumentBase {
   final noNameSub1 = CvModelField<CvAppInfoNoNameSub1>('noNameSub1');
   final noNameSub2s = CvModelListField<CvAppInfoNoNameSub2>('noNameSub2s');
   @override
-  CvFields get fields =>
-      [name, sub1, sub2s, noNameSub1, noNameSub2s, stringList];
+  CvFields get fields => [
+    name,
+    sub1,
+    sub2s,
+    noNameSub1,
+    noNameSub2s,
+    stringList,
+  ];
 }
 
 class FsNoNameAppInfo extends CvFirestoreDocumentBase {

@@ -26,10 +26,11 @@ extension SyncedDbExportStorageExt on SyncedDb {
   /// Export
   /// * `export_meta<suffix>.json`
   /// * `export_<changeId>.jsonl`
-  Future<SyncedDbExportResult> exportDatabaseToStorage(
-      {required SyncedDbStorageExportContext exportContext,
-      bool? metaOnly,
-      bool? noMeta}) async {
+  Future<SyncedDbExportResult> exportDatabaseToStorage({
+    required SyncedDbStorageExportContext exportContext,
+    bool? metaOnly,
+    bool? noMeta,
+  }) async {
     metaOnly ??= false;
     noMeta ??= false;
     var exportInfo = await exportInMemory();

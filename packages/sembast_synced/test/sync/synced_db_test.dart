@@ -33,14 +33,16 @@ void main() {
     });
     test('add/delete record', () async {
       var db = await syncedDb.database;
-      var key = (await dbEntityStoreRef.add(db, DbEntity()..name.v = 'test'))
-          .rawRef
-          .key;
+      var key =
+          (await dbEntityStoreRef.add(
+            db,
+            DbEntity()..name.v = 'test',
+          )).rawRef.key;
       expect(await syncedDb.getSyncRecords(), [
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
+          ..dirty.v = true,
       ]);
       await dbEntityStoreRef.record(key).delete(db);
       expect(await syncedDb.getSyncRecords(), [
@@ -48,27 +50,29 @@ void main() {
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = true
-          ..deleted.v = true
+          ..deleted.v = true,
       ]);
     });
     test('add/put/delete record', () async {
       var db = await syncedDb.database;
-      var key = (await dbEntityStoreRef.add(db, DbEntity()..name.v = 'test'))
-          .rawRef
-          .key;
+      var key =
+          (await dbEntityStoreRef.add(
+            db,
+            DbEntity()..name.v = 'test',
+          )).rawRef.key;
       var ref = dbEntityStoreRef.record(key);
       expect(await syncedDb.getSyncRecords(), [
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
+          ..dirty.v = true,
       ]);
       await (ref.cv()..name.v = 'updated').put(db);
       expect(await syncedDb.getSyncRecords(), [
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
+          ..dirty.v = true,
       ]);
       await dbEntityStoreRef.record(key).delete(db);
       expect(await syncedDb.getSyncRecords(), [
@@ -76,15 +80,17 @@ void main() {
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = true
-          ..deleted.v = true
+          ..deleted.v = true,
       ]);
     });
     test('delete/put record', () async {
       // syncedDbDebug = devWarning(true);
       var db = await syncedDb.database;
-      var key = (await dbEntityStoreRef.add(db, DbEntity()..name.v = 'test'))
-          .rawRef
-          .key;
+      var key =
+          (await dbEntityStoreRef.add(
+            db,
+            DbEntity()..name.v = 'test',
+          )).rawRef.key;
       await syncedDb.clearSyncRecords(null);
       var ref = dbEntityStoreRef.record(key);
 
@@ -94,14 +100,14 @@ void main() {
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = true
-          ..deleted.v = true
+          ..deleted.v = true,
       ]);
       await (ref.cv()..name.v = 'updated').put(db);
       expect(await syncedDb.getSyncRecords(), [
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
+          ..dirty.v = true,
       ]);
     });
     test('putRecord', () async {
@@ -112,7 +118,7 @@ void main() {
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = 'test'
-          ..dirty.v = true
+          ..dirty.v = true,
       ]);
 
       /// Manually delete the sync record so that it gets re-created
@@ -123,7 +129,7 @@ void main() {
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = 'test'
-          ..dirty.v = true
+          ..dirty.v = true,
       ]);
     });
 
@@ -142,7 +148,7 @@ void main() {
           ..store.v = dbEntityStoreRef.name
           ..key.v = 'test_delete'
           ..dirty.v = true
-          ..deleted.v = true
+          ..deleted.v = true,
       ]);
     });
     test('ext', () async {
@@ -171,13 +177,13 @@ void main() {
         {'store': 'entity'},
         [
           'export',
-          {'name': 'test'}
+          {'name': 'test'},
         ],
         {'store': 'syncRecord'},
         [
           1,
-          {'store': 'entity', 'key': 'export', 'dirty': true}
-        ]
+          {'store': 'entity', 'key': 'export', 'dirty': true},
+        ],
       ]);
     });
   });

@@ -23,13 +23,17 @@ Future<void> main() async {
 Future<void> run() async {
   WidgetsFlutterBinding.ensureInitialized();
   initFsBuilders();
-  var sembastFactory = kIsWeb
-      ? databaseFactoryWeb
-      : createDatabaseFactoryIo(
-          rootPath:
-              normalize(absolute('.local', 'tk_firestore_explorer_test_app')));
-  firestore = newFirestoreServiceSembast(databaseFactory: sembastFactory)
-      .firestore(newFirebaseAppLocal());
+  var sembastFactory =
+      kIsWeb
+          ? databaseFactoryWeb
+          : createDatabaseFactoryIo(
+            rootPath: normalize(
+              absolute('.local', 'tk_firestore_explorer_test_app'),
+            ),
+          );
+  firestore = newFirestoreServiceSembast(
+    databaseFactory: sembastFactory,
+  ).firestore(newFirebaseAppLocal());
   //.debugQuickLoggerWrapper();
   var app1 = apps.doc('app1').cv()..name.v = 'test';
   await firestore.cvSet(app1);
@@ -37,11 +41,15 @@ Future<void> run() async {
     FsApp: 'FsApp',
     FsAppInfo: 'FsAppInfo',
     CvAppInfoSub1: 'CvAppInfoSub1',
-    CvAppInfoSub2: 'CvAppInfoSub2'
+    CvAppInfoSub2: 'CvAppInfoSub2',
   });
   documentViewAddCollections([apps, infos]);
-  documentViewAddDocuments(
-      [apps.doc('app1'), apps.doc('app2'), appInfo1Ref, noNameAppInfo1Ref]);
+  documentViewAddDocuments([
+    apps.doc('app1'),
+    apps.doc('app2'),
+    appInfo1Ref,
+    noNameAppInfo1Ref,
+  ]);
   runApp(const MyApp());
 }
 
@@ -126,15 +134,21 @@ class _MyHomePageState extends State<MyHomePage> {
           ListTile(
             title: const Text('apps'),
             onTap: () async {
-              await goToFsDocumentListScreen(context,
-                  firestore: firestore, query: apps.query());
+              await goToFsDocumentListScreen(
+                context,
+                firestore: firestore,
+                query: apps.query(),
+              );
             },
           ),
           ListTile(
             title: const Text('apps/app1'),
             onTap: () async {
-              await goToFsDocumentViewScreen(context,
-                  firestore: firestore, doc: apps.doc('app1'));
+              await goToFsDocumentViewScreen(
+                context,
+                firestore: firestore,
+                doc: apps.doc('app1'),
+              );
             },
           ),
         ],

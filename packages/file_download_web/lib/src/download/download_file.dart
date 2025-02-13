@@ -11,9 +11,11 @@ class DownloadFileInfo {
   final Uint8List data;
   final String mimeType;
 
-  DownloadFileInfo(
-      {required this.filename, required this.data, String? mimeType})
-      : mimeType = mimeType ?? filenameMimeType(filename);
+  DownloadFileInfo({
+    required this.filename,
+    required this.data,
+    String? mimeType,
+  }) : mimeType = mimeType ?? filenameMimeType(filename);
 
   @override
   String toString() =>

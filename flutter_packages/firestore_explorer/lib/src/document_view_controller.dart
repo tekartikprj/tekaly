@@ -29,7 +29,8 @@ extension DocumentViewCvModelListFieldExt<T extends CvModel>
 var forceNoTrackChanges = false;
 
 abstract class FsDocumentListFieldItemViewController<
-    T extends CvFirestoreDocument> {
+  T extends CvFirestoreDocument
+> {
   FsDocumentFieldViewController<T> get shadowFieldController;
   FsDocumentFieldViewController<T> get parent;
   int get listLevel;
@@ -38,18 +39,22 @@ abstract class FsDocumentListFieldItemViewController<
   /// Optional index for sub list items
   int get listIndex;
 
-  factory FsDocumentListFieldItemViewController(
-          {required FsDocumentFieldViewController<T> parent,
-          required int index}) =>
-      _FsDocumentListFieldItemViewController<T>(
-          parent: parent, listIndex: index);
+  factory FsDocumentListFieldItemViewController({
+    required FsDocumentFieldViewController<T> parent,
+    required int index,
+  }) => _FsDocumentListFieldItemViewController<T>(
+    parent: parent,
+    listIndex: index,
+  );
 }
 
 class _FsDocumentListFieldItemViewController<T extends CvFirestoreDocument>
     extends FsDocumentListFieldItemViewControllerBase<T>
     implements FsDocumentListFieldItemViewController<T> {
-  _FsDocumentListFieldItemViewController(
-      {required super.parent, required super.listIndex});
+  _FsDocumentListFieldItemViewController({
+    required super.parent,
+    required super.listIndex,
+  });
 }
 
 abstract class FsDocumentFieldViewController<T extends CvFirestoreDocument> {
@@ -60,14 +65,15 @@ abstract class FsDocumentFieldViewController<T extends CvFirestoreDocument> {
   /// Optional index for sub list items
 
   List<FsDocumentFieldViewController<T>> get subfields;
-  factory FsDocumentFieldViewController(
-          {required FsDocumentViewController<T> documentViewController,
-          required FsDocumentFieldViewController<T> parent,
-          required CvField field}) =>
-      _FsDocumentFieldViewController<T>(
-          documentViewController: documentViewController,
-          parent: parent,
-          field: field);
+  factory FsDocumentFieldViewController({
+    required FsDocumentViewController<T> documentViewController,
+    required FsDocumentFieldViewController<T> parent,
+    required CvField field,
+  }) => _FsDocumentFieldViewController<T>(
+    documentViewController: documentViewController,
+    parent: parent,
+    field: field,
+  );
 
   /// Create a controller of a list field
   FsDocumentListFieldItemViewController<T> listFieldItem(int index) =>
@@ -77,10 +83,11 @@ abstract class FsDocumentFieldViewController<T extends CvFirestoreDocument> {
 class _FsDocumentFieldViewController<T extends CvFirestoreDocument>
     extends FsDocumentFieldViewControllerBase<T>
     implements FsDocumentFieldViewController<T> {
-  _FsDocumentFieldViewController(
-      {required super.documentViewController,
-      required super.parent,
-      required super.field});
+  _FsDocumentFieldViewController({
+    required super.documentViewController,
+    required super.parent,
+    required super.field,
+  });
 }
 
 class FsDocumentFieldViewControllerBase<T extends CvFirestoreDocument>
@@ -109,9 +116,10 @@ class FsDocumentFieldViewControllerBase<T extends CvFirestoreDocument>
       var subfields = field.v!.fields;
       return subfields.where((element) => element.isNotNull).map((e) {
         return FsDocumentFieldViewControllerBase<T>(
-            documentViewController: documentViewController,
-            field: e,
-            parent: this);
+          documentViewController: documentViewController,
+          field: e,
+          parent: this,
+        );
       }).toList();
     } else {
       return <FsDocumentFieldViewControllerBase<T>>[];
@@ -123,7 +131,9 @@ class FsDocumentFieldViewControllerBase<T extends CvFirestoreDocument>
     var field = this.field;
     if (field is CvListField) {
       return FsDocumentListFieldItemViewController<T>(
-          parent: this, index: index);
+        parent: this,
+        index: index,
+      );
     }
     throw UnimplementedError();
   }
@@ -162,19 +172,22 @@ class FsDocumentListFieldItemViewControllerBase<T extends CvFirestoreDocument>
       shadowField = listField.shadowField(list[listIndex]);
     }
     return initShadowFieldController(
-        documentViewController: parent.documentViewController,
-        parent: parent,
-        field: shadowField);
+      documentViewController: parent.documentViewController,
+      parent: parent,
+      field: shadowField,
+    );
   }
 
-  FsDocumentFieldViewController<T> initShadowFieldController(
-      {required FsDocumentViewController<T> documentViewController,
-      required FsDocumentFieldViewController<T> parent,
-      required CvField field}) {
+  FsDocumentFieldViewController<T> initShadowFieldController({
+    required FsDocumentViewController<T> documentViewController,
+    required FsDocumentFieldViewController<T> parent,
+    required CvField field,
+  }) {
     return FsDocumentFieldViewController(
-        documentViewController: parent.documentViewController,
-        parent: parent,
-        field: field);
+      documentViewController: parent.documentViewController,
+      parent: parent,
+      field: field,
+    );
   }
 
   FsDocumentListFieldItemViewControllerBase({
@@ -199,8 +212,10 @@ class FsDocumentViewControllerBase<T extends CvFirestoreDocument>
     _docSubscription = null;
   }
 
-  late final _docSubject =
-      BehaviorSubject<T>(onListen: _onListen, onCancel: _onCancel);
+  late final _docSubject = BehaviorSubject<T>(
+    onListen: _onListen,
+    onCancel: _onCancel,
+  );
   @override
   final Firestore firestore;
   @override
@@ -214,7 +229,10 @@ class FsDocumentViewControllerBase<T extends CvFirestoreDocument>
     }
     return doc.fields.where((element) => element.isNotNull).map((e) {
       return FsDocumentFieldViewControllerBase<T>(
-          documentViewController: this, field: e, parent: null);
+        documentViewController: this,
+        field: e,
+        parent: null,
+      );
     }).toList();
   }
 
@@ -267,10 +285,10 @@ abstract class FsDocumentViewController<T extends CvFirestoreDocument> {
   CvDocumentReference get docRef;
   Firestore get firestore;
   List<FsDocumentFieldViewController<T>> fieldsViews(T doc);
-  factory FsDocumentViewController(
-          {required Firestore firestore,
-          required CvDocumentReference<T> docRef}) =>
-      _FsDocumentViewController(firestore: firestore, docRef: docRef);
+  factory FsDocumentViewController({
+    required Firestore firestore,
+    required CvDocumentReference<T> docRef,
+  }) => _FsDocumentViewController(firestore: firestore, docRef: docRef);
   Stream<T> get stream;
   void close();
 

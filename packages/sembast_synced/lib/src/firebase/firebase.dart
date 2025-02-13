@@ -18,7 +18,9 @@ class FirebaseServicesContext {
   FirebaseContext initServices() {
     var firebaseApp = firebase.initializeApp();
     return FirebaseContext(
-        services: this, firestore: firestore.firestore(firebaseApp));
+      services: this,
+      firestore: firestore.firestore(firebaseApp),
+    );
   }
 }
 
@@ -27,8 +29,11 @@ class FirebaseContext {
   final Firestore firestore;
   FirebaseFunctions? functions;
 
-  FirebaseContext(
-      {required this.services, this.functions, required this.firestore});
+  FirebaseContext({
+    required this.services,
+    this.functions,
+    required this.firestore,
+  });
 }
 
 class AppFirebaseContext {
@@ -63,9 +68,10 @@ class SyncedDbStorageImportExportContext
   final String? metaBasenameSuffix;
 
   /// Constructor
-  SyncedDbStorageImportExportContext(
-      {required this.storage,
-      this.bucketName,
-      required this.rootPath,
-      this.metaBasenameSuffix});
+  SyncedDbStorageImportExportContext({
+    required this.storage,
+    this.bucketName,
+    required this.rootPath,
+    this.metaBasenameSuffix,
+  });
 }

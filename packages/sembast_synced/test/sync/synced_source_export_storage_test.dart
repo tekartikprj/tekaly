@@ -12,8 +12,11 @@ void main() {
     var storage = newStorageMemory();
     var rootPath = 'my_test';
     await syncedDb.exportDatabaseToStorage(
-        exportContext:
-            SyncedDbStorageExportContext(storage: storage, rootPath: rootPath));
+      exportContext: SyncedDbStorageExportContext(
+        storage: storage,
+        rootPath: rootPath,
+      ),
+    );
     var meta =
         await storage.bucket().file('my_test/export_meta.json').readAsString();
     expect(meta, '{"lastChangeId":0}');
@@ -21,24 +24,27 @@ void main() {
         await storage.bucket().file('my_test/export_0.jsonl').readAsString();
     expect(content, '{"sembast_export":1,"version":1}\n');
     var db = await syncedDb.database;
-    await stringMapStoreFactory
-        .store('my_store')
-        .record('my_key')
-        .put(db, {'test': 123});
+    await stringMapStoreFactory.store('my_store').record('my_key').put(db, {
+      'test': 123,
+    });
 
     await syncedDb.exportDatabaseToStorage(
-        exportContext:
-            SyncedDbStorageExportContext(storage: storage, rootPath: rootPath));
+      exportContext: SyncedDbStorageExportContext(
+        storage: storage,
+        rootPath: rootPath,
+      ),
+    );
     meta =
         await storage.bucket().file('my_test/export_meta.json').readAsString();
     expect(meta, '{"lastChangeId":0}');
     content =
         await storage.bucket().file('my_test/export_0.jsonl').readAsString();
     expect(
-        content,
-        '{"sembast_export":1,"version":1}\n'
-        '{"store":"my_store"}\n'
-        '["my_key",{"test":123}]\n');
+      content,
+      '{"sembast_export":1,"version":1}\n'
+      '{"store":"my_store"}\n'
+      '["my_key",{"test":123}]\n',
+    );
   });
 
   test('synced exportDatabaseToStorage', () async {
@@ -46,18 +52,22 @@ void main() {
     var storage = newStorageMemory();
     var rootPath = 'my_test';
     var db = await syncedDb.database;
-    await stringMapStoreFactory
-        .store('my_store')
-        .record('my_key')
-        .put(db, {'test': 123});
+    await stringMapStoreFactory.store('my_store').record('my_key').put(db, {
+      'test': 123,
+    });
 
     var synchronizer = SyncedDbSynchronizer(
-        db: syncedDb, source: newInMemorySyncedSourceMemory());
+      db: syncedDb,
+      source: newInMemorySyncedSourceMemory(),
+    );
     await synchronizer.sync();
-    var importExportContext =
-        SyncedDbStorageExportContext(storage: storage, rootPath: rootPath);
+    var importExportContext = SyncedDbStorageExportContext(
+      storage: storage,
+      rootPath: rootPath,
+    );
     var result = await syncedDb.exportDatabaseToStorage(
-        exportContext: importExportContext);
+      exportContext: importExportContext,
+    );
     expect(result.exportSize, 188);
     var meta =
         await storage.bucket().file('my_test/export_meta.json').readAsString();
@@ -68,25 +78,29 @@ void main() {
     var content =
         await storage.bucket().file('my_test/export_1.jsonl').readAsString();
     expect(
-        content,
-        '{"sembast_export":1,"version":1}\n'
-        '{"store":"my_store"}\n'
-        '["my_key",{"test":123}]\n'
-        '{"store":"syncMeta"}\n'
-        '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n');
+      content,
+      '{"sembast_export":1,"version":1}\n'
+      '{"store":"my_store"}\n'
+      '["my_key",{"test":123}]\n'
+      '{"store":"syncMeta"}\n'
+      '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n',
+    );
 
     await syncedDb.close();
     syncedDb = SyncedDb.newInMemory();
     db = await syncedDb.database;
     expect(
-        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
-        isNull);
+      await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+      isNull,
+    );
     expect((await syncedDb.getSyncMetaInfo()), isNull);
     await syncedDb.importDatabaseFromStorage(
-        importContext: importExportContext);
+      importContext: importExportContext,
+    );
     expect((await syncedDb.getSyncMetaInfo())!.lastChangeId.v, 1);
     expect(
-        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
-        {'test': 123});
+      await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+      {'test': 123},
+    );
   });
 }

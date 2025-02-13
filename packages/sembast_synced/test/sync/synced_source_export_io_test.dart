@@ -12,13 +12,14 @@ void main() {
   test('exportDatabaseToIo', () async {
     var syncedDb = SyncedDb.newInMemory();
     var db = await syncedDb.database;
-    await stringMapStoreFactory
-        .store('my_store')
-        .record('my_key')
-        .put(db, {'test': 123});
+    await stringMapStoreFactory.store('my_store').record('my_key').put(db, {
+      'test': 123,
+    });
 
     var synchronizer = SyncedDbSynchronizer(
-        db: syncedDb, source: newInMemorySyncedSourceMemory());
+      db: syncedDb,
+      source: newInMemorySyncedSourceMemory(),
+    );
     await synchronizer.sync();
     var dbMeta = (await syncedDb.getSyncMetaInfo())!;
     var timestamp = dbMeta.lastTimestamp.v!.toIso8601String();
@@ -30,23 +31,26 @@ void main() {
     expect(meta, '{"lastChangeId":1,"lastTimestamp":"$timestamp"}');
     var content = await File(join(dir, 'export.jsonl')).readAsString();
     expect(
-        content,
-        '{"sembast_export":1,"version":1}\n'
-        '{"store":"my_store"}\n'
-        '["my_key",{"test":123}]\n'
-        '{"store":"syncMeta"}\n'
-        '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n');
+      content,
+      '{"sembast_export":1,"version":1}\n'
+      '{"store":"my_store"}\n'
+      '["my_key",{"test":123}]\n'
+      '{"store":"syncMeta"}\n'
+      '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n',
+    );
     await syncedDb.close();
     syncedDb = SyncedDb.newInMemory();
     db = await syncedDb.database;
     expect(
-        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
-        isNull);
+      await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+      isNull,
+    );
     expect((await syncedDb.getSyncMetaInfo()), isNull);
     await syncedDb.importDatabaseFromFiles(dir: dir);
     expect((await syncedDb.getSyncMetaInfo())!.lastChangeId.v, 1);
     expect(
-        await stringMapStoreFactory.store('my_store').record('my_key').get(db),
-        {'test': 123});
+      await stringMapStoreFactory.store('my_store').record('my_key').get(db),
+      {'test': 123},
+    );
   });
 }

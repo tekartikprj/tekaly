@@ -43,12 +43,13 @@ class SyncedSourceFirestore
     // Nothing to close
   }
 
-  SyncedSourceFirestore(
-      {required this.firestore,
+  SyncedSourceFirestore({
+    required this.firestore,
 
-      /// Document path
-      @required this.rootPath,
-      this.noAuth = false}) {
+    /// Document path
+    @required this.rootPath,
+    this.noAuth = false,
+  }) {
     dataCollection = firestore.collection(getPath(dataCollectionId));
     metaCollection = firestore.collection(getPath(metaCollectionId));
     metaInfoReference = metaCollection.doc(metaInfoDocumentId);
@@ -101,21 +102,26 @@ class SyncedSourceFirestore
     fixAndCheckPutSyncedRecord(record);
     var newRecord = false;
     var ref = SyncedDataSourceRef(
-        store: record.record.v!.store.v,
-        key: record.record.v!.key.v,
-        syncId: record.syncId.v);
+      store: record.record.v!.store.v,
+      key: record.record.v!.key.v,
+      syncId: record.syncId.v,
+    );
     var existing = await getSourceRecord(ref);
     if (existing == null) {
       newRecord = true;
 
       /// Generate sync id
       ref = SyncedDataSourceRef(
-          store: record.recordStore,
-          key: record.recordKey,
-          syncId: _generateSyncId(record));
+        store: record.recordStore,
+        key: record.recordKey,
+        syncId: _generateSyncId(record),
+      );
     } else {
       ref = SyncedDataSourceRef(
-          store: ref.store, key: ref.key, syncId: existing.syncId.v);
+        store: ref.store,
+        key: ref.key,
+        syncId: existing.syncId.v,
+      );
     }
     var map = _prepareRecordMap(record);
 
@@ -128,12 +134,14 @@ class SyncedSourceFirestore
       if (newRecord) {
         if (existing != null) {
           throw StateError(
-              'Expect not existing source record ${ref.syncId}, try again');
+            'Expect not existing source record ${ref.syncId}, try again',
+          );
         }
       } else {
         if (existing == null) {
           throw StateError(
-              'Expect existing source record ${ref.syncId}, try again');
+            'Expect existing source record ${ref.syncId}, try again',
+          );
         }
       }
       // increment change id
@@ -142,8 +150,9 @@ class SyncedSourceFirestore
       // Set in map and update meta info
       map[syncChangeIdKey] = lastChangeId;
       txn.set(dataCollection.doc(ref.syncId!), map, fb.SetOptions(merge: true));
-      txn.set(metaInfoReference, {metaLastChangeIdKey: lastChangeId},
-          fb.SetOptions(merge: true));
+      txn.set(metaInfoReference, {
+        metaLastChangeIdKey: lastChangeId,
+      }, fb.SetOptions(merge: true));
     });
 
     return getSourceRecord(ref);
@@ -159,16 +168,20 @@ class SyncedSourceFirestore
   @override
   Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) async {
     await firestore.runTransaction((txn) async {
-      var existing =
-          await _txnGetRecord<CvMetaInfoRecord>(txn, metaInfoReference);
+      var existing = await _txnGetRecord<CvMetaInfoRecord>(
+        txn,
+        metaInfoReference,
+      );
       // timestamp can only be later
       if (existing?.minIncrementalChangeId.v != null) {
         if (info.minIncrementalChangeId.v != null) {
-          if (info.minIncrementalChangeId.v!
-                  .compareTo(existing!.minIncrementalChangeId.v!) <
+          if (info.minIncrementalChangeId.v!.compareTo(
+                existing!.minIncrementalChangeId.v!,
+              ) <
               0) {
             throw StateError(
-                'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}');
+              'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}',
+            );
           }
         }
       }
@@ -182,20 +195,29 @@ class SyncedSourceFirestore
   }
 
   Future<T?> _txnGetRecord<T extends CvModel>(
-      fb.Transaction txn, fb.DocumentReference doc) async {
+    fb.Transaction txn,
+    fb.DocumentReference doc,
+  ) async {
     return cvRecordFromSnapshot<T>(await txn.get(doc));
   }
 
   void _txnSetRecord(
-      fb.Transaction txn, fb.DocumentReference doc, CvModel record,
-      {bool? merge}) async {
-    txn.set(doc, mapSembastToFirestore(record.toMap()),
-        fb.SetOptions(merge: merge ?? false));
+    fb.Transaction txn,
+    fb.DocumentReference doc,
+    CvModel record, {
+    bool? merge,
+  }) async {
+    txn.set(
+      doc,
+      mapSembastToFirestore(record.toMap()),
+      fb.SetOptions(merge: merge ?? false),
+    );
   }
 
   @override
   Future<SyncedSourceRecord?> getSourceRecord(
-      SyncedDataSourceRef sourceRef) async {
+    SyncedDataSourceRef sourceRef,
+  ) async {
     /// Try by sync id first
     if (sourceRef.syncId != null) {
       var doc = dataCollection.doc(sourceRef.syncId!);
@@ -213,12 +235,18 @@ class SyncedSourceFirestore
         }
       }
     }
-    var querySnapshot = await dataCollection
-        .where('$recordFieldKey.$recordStoreFieldKey',
-            isEqualTo: sourceRef.store)
-        .where('$recordFieldKey.$recordKeyFieldKey', isEqualTo: sourceRef.key)
-        .limit(1)
-        .get();
+    var querySnapshot =
+        await dataCollection
+            .where(
+              '$recordFieldKey.$recordStoreFieldKey',
+              isEqualTo: sourceRef.store,
+            )
+            .where(
+              '$recordFieldKey.$recordKeyFieldKey',
+              isEqualTo: sourceRef.key,
+            )
+            .limit(1)
+            .get();
     if (querySnapshot.docs.isNotEmpty) {
       return sourceRecordFromSnapshot(querySnapshot.docs.first);
     }
@@ -226,20 +254,27 @@ class SyncedSourceFirestore
   }
 
   Future<SyncedSourceRecord?> txnGetSourceRecordById(
-      fb.Transaction txn, String syncId) async {
+    fb.Transaction txn,
+    String syncId,
+  ) async {
     var doc = dataCollection.doc(syncId);
     var raw = await txn.get(doc);
     return sourceRecordFromSnapshot(raw);
   }
 
   Future<SyncedSourceRecord?> getSourceRecordById(
-      fb.Transaction txn, String syncId) async {
+    fb.Transaction txn,
+    String syncId,
+  ) async {
     return sourceRecordFromSnapshot(await dataCollection.doc(syncId).get());
   }
 
   @override
-  Future<SyncedSourceRecordList> getSourceRecordList(
-      {int? afterChangeId, int? limit, bool? includeDeleted}) async {
+  Future<SyncedSourceRecordList> getSourceRecordList({
+    int? afterChangeId,
+    int? limit,
+    bool? includeDeleted,
+  }) async {
     includeDeleted ??= false;
     var query = dataCollection.orderBy(syncChangeIdKey);
     // devPrint('dataCollaction $dataCollection');
@@ -266,15 +301,21 @@ class SyncedSourceFirestore
 
      */
 
-    var unfilteredList = querySnapshot.docs
-        .map((snapshot) =>
-            snapshot.data.fromFirestore().cv<SyncedSourceRecord>()
-              ..syncId.v = snapshot.ref.id)
-        .toList();
-    var list = unfilteredList
-        .where(
-            (element) => (includeDeleted ?? false) ? true : !element.isDeleted)
-        .toList();
+    var unfilteredList =
+        querySnapshot.docs
+            .map(
+              (snapshot) =>
+                  snapshot.data.fromFirestore().cv<SyncedSourceRecord>()
+                    ..syncId.v = snapshot.ref.id,
+            )
+            .toList();
+    var list =
+        unfilteredList
+            .where(
+              (element) =>
+                  (includeDeleted ?? false) ? true : !element.isDeleted,
+            )
+            .toList();
     var lastChangeNum = unfilteredList.lastOrNull?.syncChangeId.v;
     return SyncedSourceRecordList(list, lastChangeNum);
   }
@@ -283,13 +324,15 @@ class SyncedSourceFirestore
   Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay}) {
     return metaInfoReference
         .onSnapshotSupport(
-            options: TrackChangesPullOptions(
-                refreshDelay: checkDelay ?? const Duration(minutes: 60)))
+          options: TrackChangesPullOptions(
+            refreshDelay: checkDelay ?? const Duration(minutes: 60),
+          ),
+        )
         .map((snapshot) {
-      if (snapshot.exists) {
-        return cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
-      }
-      return null;
-    });
+          if (snapshot.exists) {
+            return cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
+          }
+          return null;
+        });
   }
 }

@@ -15,12 +15,11 @@ extension CvDocumentReferenceEditExt on CvDocumentReference {
 
 InputDecoration buildInputDecoration({required String labelText}) {
   return InputDecoration(
-      labelText: labelText,
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(
-          Radius.circular(4.0),
-        ),
-      ));
+    labelText: labelText,
+    border: const OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(4.0)),
+    ),
+  );
 }
 
 class FsDocumentEdit extends StatefulWidget {
@@ -53,22 +52,24 @@ class _FsDocumentEditState extends State<FsDocumentEdit> {
               Text(widget.controller.docRef.path),
               Text(getTypeName(widget.controller.docRef.type)),
               FutureBuilder(
-                  future: controller.futureEditedDocument,
-                  builder: (_, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-                    var doc = snapshot.data!;
-                    return Column(
-                      children: controller
-                          .fieldsEditViews(doc)
-                          .map((e) => FsDocumentFieldEdit(controller: e))
-                          .toList(),
+                future: controller.futureEditedDocument,
+                builder: (_, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
                     );
-                  })
+                  }
+                  var doc = snapshot.data!;
+                  return Column(
+                    children:
+                        controller
+                            .fieldsEditViews(doc)
+                            .map((e) => FsDocumentFieldEdit(controller: e))
+                            .toList(),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -103,14 +104,17 @@ class _FsDocumentFieldEditState extends State<FsDocumentFieldEdit>
       controller;
 }
 
-Future<void> goToFsDocumentEditScreen(BuildContext context,
-    {required Firestore firestore, required CvDocumentReference doc}) async {
+Future<void> goToFsDocumentEditScreen(
+  BuildContext context, {
+  required Firestore firestore,
+  required CvDocumentReference doc,
+}) async {
   documentViewInit();
-  await Navigator.of(context).push<Object?>(MaterialPageRoute(
-      builder: (_) => FsDocumentEditScreen(
-            doc: doc,
-            firestore: firestore,
-          )));
+  await Navigator.of(context).push<Object?>(
+    MaterialPageRoute(
+      builder: (_) => FsDocumentEditScreen(doc: doc, firestore: firestore),
+    ),
+  );
 }
 
 mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
@@ -131,83 +135,82 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
         Padding(
           padding: EdgeInsets.only(left: 16.0 * level),
           child: ValueListenableBuilder<bool>(
-              valueListenable: inEdit,
-              builder: (context, snapshot, _) {
-                if (snapshot) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                        controller: textEditingController ??=
-                            TextEditingController(
-                                text: field.value?.toString() ?? ''),
-                        decoration: buildInputDecoration(
-                          labelText: field.name,
+            valueListenable: inEdit,
+            builder: (context, snapshot, _) {
+              if (snapshot) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller:
+                        textEditingController ??= TextEditingController(
+                          text: field.value?.toString() ?? '',
                         ),
-                        onSubmitted: (value) {
-                          setState(() {
-                            inEdit.value = false;
-                          });
-                        },
-                        onChanged: editSaveField),
-                  );
-                }
-                String? subtitleText;
-                var value = field.value;
-                var valueType = value.runtimeType;
-                var typeName = field.getTypeName();
+                    decoration: buildInputDecoration(labelText: field.name),
+                    onSubmitted: (value) {
+                      setState(() {
+                        inEdit.value = false;
+                      });
+                    },
+                    onChanged: editSaveField,
+                  ),
+                );
+              }
+              String? subtitleText;
+              var value = field.value;
+              var valueType = value.runtimeType;
+              var typeName = field.getTypeName();
 
-                var titleText = field.name;
-                if (field is CvModelField) {
-                  subtitleText = typeName;
-                } else if (field is CvListField) {
-                  subtitleText = typeName;
+              var titleText = field.name;
+              if (field is CvModelField) {
+                subtitleText = typeName;
+              } else if (field is CvListField) {
+                subtitleText = typeName;
+              } else {
+                if (valueType.isBasicType) {
+                  titleText = value.toString();
                 } else {
-                  if (valueType.isBasicType) {
-                    titleText = value.toString();
-                  } else {
-                    subtitleText = typeName;
-                  }
-                  //subtitleText = field.value.toString();
+                  subtitleText = typeName;
                 }
+                //subtitleText = field.value.toString();
+              }
 
-                return Column(
-                  children: [
-                    ListTile(
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (field.hasValue)
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () {
-                                  setState(() {
-                                    field.clear();
-                                  });
-                                },
-                              ),
-                            if (field.hasValue)
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () {
-                                  _edit();
-                                },
-                              )
-                            else
-                              IconButton(
-                                icon: const Icon(Icons.create_outlined),
-                                onPressed: () {
-                                  _edit();
-                                },
-                              ),
-                          ],
-                        ),
-                        title: Text(titleText),
-                        subtitle:
-                            subtitleText == null ? null : Text(subtitleText),
-                        onTap: () {
-                          _edit();
+              return Column(
+                children: [
+                  ListTile(
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (field.hasValue)
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () {
+                              setState(() {
+                                field.clear();
+                              });
+                            },
+                          ),
+                        if (field.hasValue)
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () {
+                              _edit();
+                            },
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.create_outlined),
+                            onPressed: () {
+                              _edit();
+                            },
+                          ),
+                      ],
+                    ),
+                    title: Text(titleText),
+                    subtitle: subtitleText == null ? null : Text(subtitleText),
+                    onTap: () {
+                      _edit();
 
-                          /*
+                      /*
                     showDialog(
                         context: context,
                         builder: (_) {
@@ -222,62 +225,67 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                             ),
                           );
                         });*/
-                        }),
-                    if (field is CvListField && field.hasValue)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16.0),
-                        child: Column(
-                          children: [
-                            for (var (index, item)
-                                in (field as CvListField).v!.indexed)
-                              ListTile(
-                                title: Text(item.toString()),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    setState(() {
-                                      (field as CvListField).v!.removeAt(index);
-                                    });
-                                  },
-                                ),
-                              ),
+                    },
+                  ),
+                  if (field is CvListField && field.hasValue)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16.0),
+                      child: Column(
+                        children: [
+                          for (var (index, item)
+                              in (field as CvListField).v!.indexed)
                             ListTile(
-                              onTap: () {
-                                var field = this.field;
-                                if (field is CvModelListField) {
-                                  // devPrint('Creating model list field');
-
+                              title: Text(item.toString()),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () {
                                   setState(() {
-                                    field.v!.add(field.create({}));
+                                    (field as CvListField).v!.removeAt(index);
                                   });
-                                } else if (field is CvListField) {
-                                  setState(() {
-                                    field.v!.add(field.createDefaultValue());
-                                  });
-                                }
-                              },
-                              title: const Text('Add'),
-                              trailing: const Icon(Icons.add),
+                                },
+                              ),
                             ),
-                            if (field is CvListField)
-                              ...listField.v!.indexed.map(((e) {
-                                var index = e.$1;
-                                //var item = e.$2;
-                                //return Container();
+                          ListTile(
+                            onTap: () {
+                              var field = this.field;
+                              if (field is CvModelListField) {
+                                // devPrint('Creating model list field');
 
-                                return FsDocumentListFieldItemEdit(
-                                    controller:
-                                        fieldController.listFieldItem(index));
-                              }))
-                          ],
-                        ),
+                                setState(() {
+                                  field.v!.add(field.create({}));
+                                });
+                              } else if (field is CvListField) {
+                                setState(() {
+                                  field.v!.add(field.createDefaultValue());
+                                });
+                              }
+                            },
+                            title: const Text('Add'),
+                            trailing: const Icon(Icons.add),
+                          ),
+                          if (field is CvListField)
+                            ...listField.v!.indexed.map(((e) {
+                              var index = e.$1;
+                              //var item = e.$2;
+                              //return Container();
+
+                              return FsDocumentListFieldItemEdit(
+                                controller: fieldController.listFieldItem(
+                                  index,
+                                ),
+                              );
+                            })),
+                        ],
                       ),
-                  ],
-                );
-              }),
+                    ),
+                ],
+              );
+            },
+          ),
         ),
-        ...fieldController.subfields
-            .map((e) => FsDocumentFieldEdit(controller: e))
+        ...fieldController.subfields.map(
+          (e) => FsDocumentFieldEdit(controller: e),
+        ),
       ],
     );
   }
@@ -329,8 +337,11 @@ class FsDocumentEditScreen extends StatefulWidget {
   final Firestore firestore;
   final CvDocumentReference doc;
 
-  const FsDocumentEditScreen(
-      {super.key, required this.doc, required this.firestore});
+  const FsDocumentEditScreen({
+    super.key,
+    required this.doc,
+    required this.firestore,
+  });
 
   @override
   State<FsDocumentEditScreen> createState() => _FsDocumentEditScreenState();
@@ -353,8 +364,10 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
     super.initState();
   }
 
-  late final controller =
-      FsDocumentEditUiController(firestore: firestore, docRef: docRef);
+  late final controller = FsDocumentEditUiController(
+    firestore: firestore,
+    docRef: docRef,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -363,19 +376,20 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
         title: const Text('Document edit'),
         actions: [
           IconButton(
-              onPressed: () async {
-                var doc = gDocumentClipboardController.doc;
-                snack('doc: $doc');
-                if (doc != null) {
-                  var existing = await controller.futureEditedDocument;
+            onPressed: () async {
+              var doc = gDocumentClipboardController.doc;
+              snack('doc: $doc');
+              if (doc != null) {
+                var existing = await controller.futureEditedDocument;
 
-                  snack('existing: $existing');
-                  setState(() {
-                    existing.copyFrom(doc);
-                  });
-                }
-              },
-              icon: const Icon(Icons.paste))
+                snack('existing: $existing');
+                setState(() {
+                  existing.copyFrom(doc);
+                });
+              }
+            },
+            icon: const Icon(Icons.paste),
+          ),
         ],
       ),
       body: ListView(
@@ -390,20 +404,16 @@ class _FsDocumentEditScreenState extends State<FsDocumentEditScreen> {
                       const SizedBox(height: 16.0),
                       TextField(
                         controller: idController,
-                        decoration: buildInputDecoration(
-                          labelText: 'id',
-                        ),
+                        decoration: buildInputDecoration(labelText: 'id'),
                       ),
                       const SizedBox(height: 16.0),
                     ],
                   ),
                 ),
               FsDocumentEdit(controller: controller),
-              const SizedBox(
-                height: 80,
-              ),
+              const SizedBox(height: 80),
             ],
-          )
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

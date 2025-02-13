@@ -8,7 +8,7 @@ import 'synced_source_firestore_test.dart';
 void main() {
   group('synced_db_source_sync_firestore_test', () {
     Future<SyncTestsContext> setupContext() async {
-//    setUp(() async {
+      //    setUp(() async {
       return SyncTestsContext()
         ..syncedDb = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames)
         ..source = newInMemorySyncedSourceFirestore();

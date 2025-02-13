@@ -13,6 +13,8 @@ Future<void> downloadFile(DownloadFileInfo imageInfo) async {
 
 /// Web only
 void anchorSelectorSetDownloadFileInfo(
-    String selector, DownloadFileInfo fileInfo) {
+  String selector,
+  DownloadFileInfo fileInfo,
+) {
   // no op
 }

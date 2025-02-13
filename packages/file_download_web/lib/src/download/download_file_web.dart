@@ -41,7 +41,9 @@ Future<void> downloadFile(DownloadFileInfo fileInfo) async {
 }
 
 void anchorSelectorSetDownloadFileInfo(
-    String selector, DownloadFileInfo fileInfo) async {
+  String selector,
+  DownloadFileInfo fileInfo,
+) async {
   var anchor = document.querySelector(selector) as HTMLAnchorElement;
   fileInfo.applyToAnchor(anchor);
 }

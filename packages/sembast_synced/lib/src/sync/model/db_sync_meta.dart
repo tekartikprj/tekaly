@@ -20,6 +20,11 @@ class DbSyncMetaInfo extends DbStringRecordBase {
   final lastChangeId = CvField<int>('lastChangeId');
 
   @override
-  List<CvField> get fields =>
-      [source, sourceId, lastTimestamp, lastChangeId, sourceVersion];
+  List<CvField> get fields => [
+    source,
+    sourceId,
+    lastTimestamp,
+    lastChangeId,
+    sourceVersion,
+  ];
 }

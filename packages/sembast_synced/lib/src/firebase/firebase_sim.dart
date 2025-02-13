@@ -12,8 +12,9 @@ FirebaseContext initFirebaseSimMemory() {
   var firestoreService = newFirestoreServiceMemory();
 
   return FirebaseServicesContext(
-          firebase: firebase, firestore: firestoreService)
-      .initServices()
+      firebase: firebase,
+      firestore: firestoreService,
+    ).initServices()
     ..functions = firebaseFunctionsMemory;
 }
 
@@ -23,7 +24,8 @@ FirebaseContext initFirebaseSim({required String packageName}) {
   var sembastDatabaseFactory = getDatabaseFactory(packageName: packageName);
   var firestoreService = FirestoreServiceSembast(sembastDatabaseFactory);
   return FirebaseServicesContext(
-          firebase: firebase, firestore: firestoreService)
-      .initServices()
+      firebase: firebase,
+      firestore: firestoreService,
+    ).initServices()
     ..functions = firebaseFunctionsMemory;
 }

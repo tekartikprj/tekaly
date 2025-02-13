@@ -16,8 +16,10 @@ Future<void> downloadImage(DownloadImageInfo imageInfo) async {
     window.location.href = imageInfo.url;
     */
 
-    var blob = web.Blob([imageInfo.data.toJS].toJS,
-        web.BlobPropertyBag(type: imageInfo.mimeType));
+    var blob = web.Blob(
+      [imageInfo.data.toJS].toJS,
+      web.BlobPropertyBag(type: imageInfo.mimeType),
+    );
     var a =
         web.document.createElement('a') as web.HTMLAnchorElement; //Create <a>
     // ignore: unsafe_html

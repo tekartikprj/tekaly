@@ -13,38 +13,43 @@ abstract class FsDocumentFieldEditController<T extends CvFirestoreDocument>
   FsDocumentEditController<T> get documentEditController;
   @override
   FsDocumentListFieldItemEditController<T> listFieldItem(int index);
-  factory FsDocumentFieldEditController(
-          {required FsDocumentEditController<T> documentEditController,
-          required FsDocumentFieldEditController<T> parent,
-          required CvField field}) =>
-      _FsDocumentFieldEditController<T>(
-          documentEditController: documentEditController,
-          parent: parent,
-          field: field);
+  factory FsDocumentFieldEditController({
+    required FsDocumentEditController<T> documentEditController,
+    required FsDocumentFieldEditController<T> parent,
+    required CvField field,
+  }) => _FsDocumentFieldEditController<T>(
+    documentEditController: documentEditController,
+    parent: parent,
+    field: field,
+  );
 }
 
 abstract class FsDocumentListFieldItemEditController<
-        T extends CvFirestoreDocument>
+  T extends CvFirestoreDocument
+>
     implements FsDocumentListFieldItemViewController<T> {
   @override
   FsDocumentFieldEditController<T> get shadowFieldController;
   @override
   FsDocumentFieldEditController<T> get parent;
 
-  factory FsDocumentListFieldItemEditController(
-          {required FsDocumentFieldEditController<T> parent,
-          required int index}) =>
-      _FsDocumentListFieldItemEditController<T>(
-          parent: parent, listIndex: index);
+  factory FsDocumentListFieldItemEditController({
+    required FsDocumentFieldEditController<T> parent,
+    required int index,
+  }) => _FsDocumentListFieldItemEditController<T>(
+    parent: parent,
+    listIndex: index,
+  );
 }
 
 class _FsDocumentFieldEditController<T extends CvFirestoreDocument>
     extends FsDocumentFieldEditControllerBase<T>
     implements FsDocumentFieldEditController<T> {
-  _FsDocumentFieldEditController(
-      {required super.documentEditController,
-      required super.parent,
-      required super.field});
+  _FsDocumentFieldEditController({
+    required super.documentEditController,
+    required super.parent,
+    required super.field,
+  });
 }
 
 class _FsDocumentListFieldItemEditController<T extends CvFirestoreDocument>
@@ -85,9 +90,10 @@ abstract class FsDocumentFieldEditControllerBase<T extends CvFirestoreDocument>
       var subfields = field.v!.fields;
       return subfields.map((e) {
         return _FsDocumentFieldEditController<T>(
-            documentEditController: documentEditController,
-            field: e,
-            parent: this);
+          documentEditController: documentEditController,
+          field: e,
+          parent: this,
+        );
       }).toList();
     } else {
       return <FsDocumentFieldEditControllerBase<T>>[];
@@ -99,7 +105,9 @@ abstract class FsDocumentFieldEditControllerBase<T extends CvFirestoreDocument>
     var field = this.field;
     if (field is CvListField) {
       return FsDocumentListFieldItemEditController<T>(
-          parent: this, index: index);
+        parent: this,
+        index: index,
+      );
     }
     throw UnimplementedError();
   }
@@ -112,30 +120,36 @@ abstract class FsDocumentEditControllerBase<T extends CvFirestoreDocument>
   @override
   late T editedDocument;
   @override
-  late final Future<T> futureEditedDocument = isNew
-      ? Future<T>.value(editedDocument = cvTypeNewModel<T>(docRef.type))
-      : stream.first.then((doc) {
-          editedDocument = doc;
-          return editedDocument;
-        });
-  FsDocumentEditControllerBase(
-      {required super.firestore, required super.docRef});
+  late final Future<T> futureEditedDocument =
+      isNew
+          ? Future<T>.value(editedDocument = cvTypeNewModel<T>(docRef.type))
+          : stream.first.then((doc) {
+            editedDocument = doc;
+            return editedDocument;
+          });
+  FsDocumentEditControllerBase({
+    required super.firestore,
+    required super.docRef,
+  });
 
   @override
   List<FsDocumentFieldEditController<T>> fieldsEditViews(T doc) {
     return doc.fields.map((e) {
       return _FsDocumentFieldEditController<T>(
-          documentEditController: this, field: e, parent: null);
+        documentEditController: this,
+        field: e,
+        parent: null,
+      );
     }).toList();
   }
 }
 
 abstract class FsDocumentEditController<T extends CvFirestoreDocument>
     implements FsDocumentViewController<T> {
-  factory FsDocumentEditController(
-          {required Firestore firestore,
-          required CvDocumentReference<T> docRef}) =>
-      _FsDocumentEditController(firestore: firestore, docRef: docRef);
+  factory FsDocumentEditController({
+    required Firestore firestore,
+    required CvDocumentReference<T> docRef,
+  }) => _FsDocumentEditController(firestore: firestore, docRef: docRef);
 
   Future<T> get futureEditedDocument;
   List<FsDocumentFieldEditController<T>> fieldsEditViews(T doc);
@@ -161,15 +175,17 @@ class FsDocumentListFieldItemEditControllerBase<T extends CvFirestoreDocument>
       super.parent as FsDocumentFieldEditController<T>;
 
   @override
-  FsDocumentFieldEditController<T> initShadowFieldController(
-      {required FsDocumentViewController<T> documentViewController,
-      required FsDocumentFieldViewController<T> parent,
-      required CvField field}) {
+  FsDocumentFieldEditController<T> initShadowFieldController({
+    required FsDocumentViewController<T> documentViewController,
+    required FsDocumentFieldViewController<T> parent,
+    required CvField field,
+  }) {
     return FsDocumentFieldEditController<T>(
-        documentEditController:
-            documentViewController as FsDocumentEditController<T>,
-        parent: parent as FsDocumentFieldEditController<T>,
-        field: field);
+      documentEditController:
+          documentViewController as FsDocumentEditController<T>,
+      parent: parent as FsDocumentFieldEditController<T>,
+      field: field,
+    );
   }
 
   FsDocumentListFieldItemEditControllerBase({

@@ -35,28 +35,29 @@ class StatEventListQuery {
   final int? maxCount;
 
   /// Constructor
-  StatEventListQuery(
-      {this.name,
-      this.maxCount,
-      bool? descending,
-      this.cursor,
+  StatEventListQuery({
+    this.name,
+    this.maxCount,
+    bool? descending,
+    this.cursor,
 
-      /// inclusive
-      this.minTimestamp,
+    /// inclusive
+    this.minTimestamp,
 
-      /// exclusive
-      this.maxTimestamp})
-      : descending = descending ?? false;
+    /// exclusive
+    this.maxTimestamp,
+  }) : descending = descending ?? false;
 
   /// New query with curor
   StatEventListQuery withCursor(Object nextCursor) {
     return StatEventListQuery(
-        name: name,
-        maxCount: maxCount,
-        descending: descending,
-        cursor: nextCursor,
-        minTimestamp: minTimestamp,
-        maxTimestamp: maxTimestamp);
+      name: name,
+      maxCount: maxCount,
+      descending: descending,
+      cursor: nextCursor,
+      minTimestamp: minTimestamp,
+      maxTimestamp: maxTimestamp,
+    );
   }
 }
 
@@ -102,9 +103,11 @@ abstract class StatEvent {
   Model get dataAsMap;
 
   /// Stat event from client
-  factory StatEvent(
-          {DateTime? timestamp, required String name, required Object data}) =>
-      StatEventBase(timestamp: timestamp, name: name, data: data);
+  factory StatEvent({
+    DateTime? timestamp,
+    required String name,
+    required Object data,
+  }) => StatEventBase(timestamp: timestamp, name: name, data: data);
 }
 
 /// Stat event mixin

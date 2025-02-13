@@ -6,10 +6,7 @@ import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 
 import 'synced_source.dart';
 
-typedef _Key = (
-  String store,
-  String key,
-);
+typedef _Key = (String store, String key);
 
 class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   final _lock = Lock();
@@ -47,11 +44,13 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
       // timestamp can only be later
       if (existing?.minIncrementalChangeId.v != null) {
         if (info.minIncrementalChangeId.v != null) {
-          if (info.minIncrementalChangeId.v!
-                  .compareTo(existing!.minIncrementalChangeId.v!) <
+          if (info.minIncrementalChangeId.v!.compareTo(
+                existing!.minIncrementalChangeId.v!,
+              ) <
               0) {
             throw StateError(
-                'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}');
+              'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}',
+            );
           }
         }
       }
@@ -76,10 +75,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
         }
       }
     }
-    return _sourceRecordsByStoreAndKey[(
-      sourceRef.store!,
-      sourceRef.key!,
-    )];
+    return _sourceRecordsByStoreAndKey[(sourceRef.store!, sourceRef.key!)];
   }
 
   @override
@@ -89,9 +85,10 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
       var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfoRecord();
       var lastChangeId = (metaInfo.lastChangeId.v ?? 0) + 1;
       var ref = SyncedDataSourceRef(
-          store: record.record.v!.store.v,
-          key: record.record.v!.key.v,
-          syncId: record.syncId.v);
+        store: record.record.v!.store.v,
+        key: record.record.v!.key.v,
+        syncId: record.syncId.v,
+      );
       var existing = _lockedGetSourceRecord(ref);
       String syncId;
       if (existing == null) {
@@ -100,26 +97,33 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
         syncId = existing.syncId.v!;
       }
       // Make a copy
-      var newRecord = SyncedSourceRecord()
-        ..copyFrom(record)
-        ..syncId.v = syncId
-        ..syncTimestamp.v = Timestamp.now()
-        ..syncChangeId.v = lastChangeId;
+      var newRecord =
+          SyncedSourceRecord()
+            ..copyFrom(record)
+            ..syncId.v = syncId
+            ..syncTimestamp.v = Timestamp.now()
+            ..syncChangeId.v = lastChangeId;
       _sourceRecordsBySyncId[syncId] = newRecord;
       _sourceRecordsByStoreAndKey[(
-        newRecord.recordStore,
-        newRecord.recordKey
-      )] = newRecord;
-      _lockedPutMetaInfo(CvMetaInfoRecord()
-        ..copyFrom(metaInfo)
-        ..lastChangeId.v = lastChangeId);
+            newRecord.recordStore,
+            newRecord.recordKey,
+          )] =
+          newRecord;
+      _lockedPutMetaInfo(
+        CvMetaInfoRecord()
+          ..copyFrom(metaInfo)
+          ..lastChangeId.v = lastChangeId,
+      );
       return newRecord;
     });
   }
 
   @override
-  Future<SyncedSourceRecordList> getSourceRecordList(
-      {int? afterChangeId, int? limit, bool? includeDeleted}) {
+  Future<SyncedSourceRecordList> getSourceRecordList({
+    int? afterChangeId,
+    int? limit,
+    bool? includeDeleted,
+  }) {
     return _lock.synchronized(() {
       var list = <SyncedSourceRecord>[];
       var all = sorterSourceRecords;
@@ -156,9 +160,10 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
       var syncId = record.syncId.v!;
       _sourceRecordsBySyncId[syncId] = newRecord;
       _sourceRecordsByStoreAndKey[(
-        newRecord.recordStore,
-        newRecord.recordKey
-      )] = newRecord;
+            newRecord.recordStore,
+            newRecord.recordKey,
+          )] =
+          newRecord;
     });
   }
 }

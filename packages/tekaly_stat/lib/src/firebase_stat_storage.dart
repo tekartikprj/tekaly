@@ -18,8 +18,11 @@ class StatStorageOptionsFirebase {
   final fb.FirebaseStorage? storage;
 
   /// Constructor.
-  StatStorageOptionsFirebase(
-      {required this.firestore, this.storage, required this.fsRootDoc});
+  StatStorageOptionsFirebase({
+    required this.firestore,
+    this.storage,
+    required this.fsRootDoc,
+  });
 }
 
 /// Firebase implementation of [StatStorage].
@@ -69,8 +72,10 @@ class StatClientFirebase extends StatClientBase {
       storage.options.fsRootDoc.cv().collection<_FsStatEvent>(clientId);
   @override
   Future<StatEvent> addEvent(StatEvent event) async {
-    var fsEvent =
-        await _clientCollection.add(_firestore, _FsStatEvent.fromEvent(event));
+    var fsEvent = await _clientCollection.add(
+      _firestore,
+      _FsStatEvent.fromEvent(event),
+    );
     return fsEvent.toEvent();
   }
 
@@ -87,16 +92,22 @@ class StatClientFirebase extends StatClientBase {
         .orderBy(_fsStatEventModel.timestamp.name, descending: query.descending)
         .orderById(descending: query.descending);
     if (query.name != null) {
-      fbQuery =
-          fbQuery.where(_fsStatEventModel.name.name, isEqualTo: query.name);
+      fbQuery = fbQuery.where(
+        _fsStatEventModel.name.name,
+        isEqualTo: query.name,
+      );
     }
     if (query.minTimestamp != null) {
-      fbQuery = fbQuery.where(_fsStatEventModel.timestamp.name,
-          isGreaterThanOrEqualTo: Timestamp.fromDateTime(query.minTimestamp!));
+      fbQuery = fbQuery.where(
+        _fsStatEventModel.timestamp.name,
+        isGreaterThanOrEqualTo: Timestamp.fromDateTime(query.minTimestamp!),
+      );
     }
     if (query.maxTimestamp != null) {
-      fbQuery = fbQuery.where(_fsStatEventModel.timestamp.name,
-          isLessThan: Timestamp.fromDateTime(query.maxTimestamp!));
+      fbQuery = fbQuery.where(
+        _fsStatEventModel.timestamp.name,
+        isLessThan: Timestamp.fromDateTime(query.maxTimestamp!),
+      );
     }
     if (query.cursor != null) {
       var cursor = query.cursor as _CursorFirebase;
@@ -107,14 +118,16 @@ class StatClientFirebase extends StatClientBase {
     var fsEvents = await fbQuery.get(_firestore);
     if (fsEvents.isEmpty) {
       return StatEventListResult(
-          events: <StatEvent>[], nextCursor: query.cursor);
+        events: <StatEvent>[],
+        nextCursor: query.cursor,
+      );
     } else {
       var events = fsEvents.map((fsEvent) => fsEvent.toEvent()).toList();
       var last = fsEvents.last;
       return StatEventListResult(
-          events: events,
-          nextCursor:
-              _CursorFirebase(timestamp: last.timestamp.v!, id: last.id));
+        events: events,
+        nextCursor: _CursorFirebase(timestamp: last.timestamp.v!, id: last.id),
+      );
     }
 
     // TODO: implement getEventList
