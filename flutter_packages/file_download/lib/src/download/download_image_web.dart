@@ -1,9 +1,11 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
+import 'dart:js_interop';
 
 import 'package:pub_semver/pub_semver.dart';
 import 'package:tekartik_platform_browser/context_browser.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'package:web/web.dart' as web;
+
 import 'download_image.dart';
 
 Future<void> downloadImage(DownloadImageInfo imageInfo) async {
@@ -14,10 +16,12 @@ Future<void> downloadImage(DownloadImageInfo imageInfo) async {
     window.location.href = imageInfo.url;
     */
 
-    var blob = Blob([imageInfo.data], imageInfo.mimeType);
-    var a = document.createElement('a') as AnchorElement; //Create <a>
+    var blob = web.Blob([imageInfo.data.toJS].toJS,
+        web.BlobPropertyBag(type: imageInfo.mimeType));
+    var a =
+        web.document.createElement('a') as web.HTMLAnchorElement; //Create <a>
     // ignore: unsafe_html
-    a.href = Url.createObjectUrlFromBlob(blob).toString();
+    a.href = web.URL.createObjectURL(blob);
     a.download = imageInfo.filename; //File name Here
     a.click(); //Downloaded file
 
@@ -26,7 +30,8 @@ Future<void> downloadImage(DownloadImageInfo imageInfo) async {
   } else {
     var base64Context = base64.encode(imageInfo.data);
 
-    var a = document.createElement('a') as AnchorElement; //Create <a>
+    var a =
+        web.document.createElement('a') as web.HTMLAnchorElement; //Create <a>
     // ignore: unsafe_html
     a.href =
         'data:${imageInfo.mimeType};base64,$base64Context'; //Image Base64 Goes here
