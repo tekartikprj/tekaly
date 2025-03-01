@@ -14,7 +14,15 @@ updates:
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
+    directory: "packages"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
     directory: "packages/file_download_web"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/firestore_synced"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"

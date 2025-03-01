@@ -136,3 +136,4 @@ dev_dependencies:
   lints: ">=5.0.0"
   test: ">=1.24.0"
   fs_shim: ">=2.3.3+1"
+resolution: workspace

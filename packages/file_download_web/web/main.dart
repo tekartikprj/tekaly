@@ -11,7 +11,7 @@ var textFileInfo = DownloadFileInfo(
 void main() {
   final now = DateTime.now();
   final element = document.querySelector('#output') as HTMLDivElement;
-  element.text =
+  element.textContent =
       'The time is ${now.hour}:${now.minute}'
       ' and your Dart web app is running!';
   var button = document.querySelector('#text-file-button') as HTMLButtonElement;
