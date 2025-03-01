@@ -6,4 +6,6 @@
 
 # Build
 build/
-
+.dart_tool/
+pubspec_overrides.yaml
+pubspec.lock

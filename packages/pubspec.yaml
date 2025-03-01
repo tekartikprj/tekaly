@@ -1,0 +1,10 @@
+name: _
+publish_to: none
+environment:
+  sdk: ^3.6.0
+workspace:
+  - file_download_web
+  - sembast_synced
+  - tekaly_assets
+  - tekaly_stat
+  - firestore_synced
