@@ -29,13 +29,12 @@ dev_dependencies:
       ref: dart3a
       path: packages/lints_flutter
     version: '>=0.1.0'
-dependency_overrides:
-  web: "1.1.0"
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
+resolution: workspace
 
   # To add assets to your package, add an assets section, like this:
   # assets:

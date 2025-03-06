@@ -1,0 +1,13 @@
+name: _
+publish_to: none
+environment:
+  sdk: ^3.6.0
+workspace:
+  - flutter_packages/file_download
+  - flutter_packages/firestore_explorer
+  - test/firestore_explorer_test_app
+  - packages/file_download_web
+  - packages/firestore_synced
+  - packages/sembast_synced
+  - packages/tekaly_assets
+  - packages/tekaly_stat

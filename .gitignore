@@ -1,11 +1,14 @@
 # Alex
-.local/
 .idea/
 *.iml
 .vscode/
+
+# Local
+.local/
 
 # Build
 build/
 .dart_tool/
 pubspec_overrides.yaml
 pubspec.lock
+.flutter*
