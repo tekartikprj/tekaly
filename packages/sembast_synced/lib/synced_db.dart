@@ -4,6 +4,7 @@ export 'src/sync/synced_db_export.dart'
 export 'src/sync/synced_db_import.dart' show SyncedDbImportExt;
 export 'src/sync/synced_db_lib.dart'
     show
+        SyncedDbTimestamp,
         SyncedDb,
         SyncedDbBase,
         SyncedDbMixin,

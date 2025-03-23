@@ -1,18 +1,23 @@
 import 'dart:async';
 
+import 'package:cv/cv.dart';
 import 'package:meta/meta.dart';
 
 import 'model/source_meta_info.dart';
 import 'model/source_record.dart';
 
+/// Synced data source reference
 class SyncedDataSourceRef {
   /// Used first
   final String? syncId;
 
   /// Otherwise user store/key
   final String? store;
+
+  /// Key
   final String? key;
 
+  /// Constructor
   SyncedDataSourceRef({this.syncId, required this.store, required this.key});
 
   @override
@@ -21,7 +26,14 @@ class SyncedDataSourceRef {
 
 /// Default mixin implementation.
 mixin SyncedSourceDefaultMixin implements SyncedSource {
-  void fixAndCheckPutSyncedRecord(SyncedSourceRecord record) {
+  void initBuilders() {
+    cvAddConstructor(CvSyncedSourceRecord.new);
+    cvAddConstructor(CvMetaInfoRecord.new);
+    cvAddConstructor(CvSyncedSourceRecordData.new);
+  }
+
+  /// Fix and check
+  void fixAndCheckPutSyncedRecord(CvSyncedSourceRecord record) {
     if (record.record.v!.store.v == null) {
       throw ArgumentError.notNull(record.record.v!.store.name);
     }
@@ -64,7 +76,7 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<SyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) {
+  Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) {
     throw UnimplementedError('SyncedSource.getSourceRecord');
   }
 
@@ -83,27 +95,27 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<void> putRawRecord(SyncedSourceRecord record) {
+  Future<void> putRawRecord(CvSyncedSourceRecord record) {
     throw UnimplementedError('SyncedSource.putRawRecord');
   }
 
   @override
-  Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record) {
+  Future<CvSyncedSourceRecord?> putSourceRecord(CvSyncedSourceRecord record) {
     throw UnimplementedError('SyncedSource.putSourceRecord');
   }
 
   @override
-  void close() {
-    throw UnimplementedError('SyncedSource.close');
+  Future<void> close() async {
+    // Do nothing by default
   }
 }
 
 abstract class SyncedSource {
   /// Sync id, change Id is generated or looked for if not given, store and key must be set
-  Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record);
+  Future<CvSyncedSourceRecord?> putSourceRecord(CvSyncedSourceRecord record);
 
   /// Get a record using
-  Future<SyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef);
+  Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef);
 
   /// Get the meta info
   Future<CvMetaInfoRecord?> getMetaInfo();
@@ -121,8 +133,9 @@ abstract class SyncedSource {
     bool? includeDeleted,
   });
 
+  /// Put a raw record on the storage
   @visibleForTesting
-  Future<void> putRawRecord(SyncedSourceRecord record);
+  Future<void> putRawRecord(CvSyncedSourceRecord record);
 
   /// Stream of meta info change
   /// If [checkDelay] is set, meta info will be checked every [checkDelay] duration
@@ -131,7 +144,7 @@ abstract class SyncedSource {
   Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay});
 
   /// Close the source.
-  void close();
+  Future<void> close();
 }
 
 extension SyncedSourceExt on SyncedSource {
@@ -140,7 +153,7 @@ extension SyncedSourceExt on SyncedSource {
     int? stepLimit,
     bool? includeDeleted,
   }) async {
-    var list = SyncedSourceRecordList(<SyncedSourceRecord>[], null);
+    var list = SyncedSourceRecordList(<CvSyncedSourceRecord>[], null);
     while (true) {
       var nextList = await getSourceRecordList(
         afterChangeId: afterChangeId,
@@ -163,7 +176,7 @@ extension SyncedSourceExt on SyncedSource {
 }
 
 class SyncedSourceRecordList {
-  final List<SyncedSourceRecord> list;
+  final List<CvSyncedSourceRecord> list;
 
   /// Last change id.
   final int? lastChangeId;

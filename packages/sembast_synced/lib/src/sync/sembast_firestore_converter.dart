@@ -158,13 +158,13 @@ CvMetaInfoRecord? metaInfoRecordFromSnapshot(
 ) => cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
 
 /// Copy the sync id
-SyncedSourceRecord? sourceRecordFromSnapshot(
+CvSyncedSourceRecord? sourceRecordFromSnapshot(
   firestore.DocumentSnapshot snapshot,
 ) =>
-    cvRecordFromSnapshot<SyncedSourceRecord>(snapshot)
+    cvRecordFromSnapshot<CvSyncedSourceRecord>(snapshot)
       ?..syncId.v = snapshot.ref.id;
 
 /// Copy the sync id
-List<SyncedSourceRecord?> sourceRecordFromSnapshots(
+List<CvSyncedSourceRecord?> sourceRecordFromSnapshots(
   List<firestore.DocumentSnapshot> snapshots,
 ) => snapshots.map(sourceRecordFromSnapshot).toList();

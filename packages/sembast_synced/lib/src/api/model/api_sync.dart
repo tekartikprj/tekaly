@@ -1,19 +1,28 @@
 import 'package:cv/cv_json.dart';
 
+/// Api change ref
 class ApiChangeRef extends CvModelBase {
   /// If available
   final syncId = CvField<String>('syncId');
-  // Mandatory
+
+  /// Mandatory store
   final store = CvField<String>('store');
+
+  /// Mandatory key
   final key = CvField<String>('key');
 
   @override
   List<CvField> get fields => <CvField>[syncId, store, key];
 }
 
+/// Api change
 class ApiChange extends ApiChangeRef {
+  /// Change num
   final changeNum = CvField<int>('changeNum');
-  final data = CvField<Model>('data'); // null means deletion
+
+  /// Changed data, null means deletion
+  final data = CvField<Model>('data');
+
   /// Optional timestamp (not set in put/get request but present in list)
   /// If set in put, overrides server timestamp
   final timestamp = CvField<String>('timestamp');
@@ -24,10 +33,15 @@ class ApiChange extends ApiChangeRef {
     data,
     timestamp,
   ];
+}
 
+/// Api change extension
+extension ApiChangeExt on ApiChange {
+  /// True for deleted record
   bool get isDeleted => data.v == null;
 }
 
+/// Put change request
 class ApiPutChangeRequest extends ApiChange {
   /// Target location in destination, typically same for all changes
   final target = CvField<String>('target');
@@ -35,17 +49,23 @@ class ApiPutChangeRequest extends ApiChange {
   List<CvField> get fields => [target, ...super.fields];
 }
 
+/// Put change response
 class ApiPutChangeResponse extends ApiChange {}
 
+/// Put changes request
 class ApiPutChangesRequest extends CvModelBase {
   /// Target location in destination, same for all changes
   final target = CvField<String>('target');
+
+  /// List of changes
   final changes = CvModelListField<ApiChange>('changes');
   @override
   late final List<CvField> fields = <CvField>[target, changes];
 }
 
+/// Put changes response
 class ApiPutChangesResponse extends CvModelBase {
+  /// Change nums
   final changeNums = CvListField<int>('changeNums');
   @override
   late final List<CvField> fields = <CvField>[changeNums];

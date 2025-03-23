@@ -8,10 +8,14 @@ import 'package:sembast/timestamp.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 
+import '../sync/model/source_meta_info.dart';
 import 'model/api_models.dart';
 import 'model/api_sync.dart';
 import 'secure_client.dart';
 import 'sync_api.dart';
+
+/// Api model
+class CvMetaInfoRecordApi extends CvModelBase with CvMetaInfoRecordMixin {}
 
 var _codec = sembastCodecJsonEncodableCodec(null);
 Object? jsonEncodeSembastValueOrNull(Object? value) {
@@ -33,7 +37,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   final String target;
 
   @override
-  void close() {}
+  Future<void> close() async {}
   SyncedSourceApi({required this.apiService, required this.target}) {
     initApiBuilders();
   }
@@ -48,7 +52,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<SyncedSourceRecord?> getSourceRecord(
+  Future<CvSyncedSourceRecord?> getSourceRecord(
     SyncedDataSourceRef sourceRef,
   ) async {
     var request = ApiGetChangeRequest();
@@ -81,7 +85,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
         ..afterChangeNum.v = afterChangeId
         ..limit.v,
     );
-    var list = <SyncedSourceRecord>[];
+    var list = <CvSyncedSourceRecord>[];
     var lastChangeId = apiResponse.lastChangeNum.v;
     for (var change in apiResponse.changes.v ?? <ApiChange>[]) {
       list.add(apiChangeToRecord(change));
@@ -103,14 +107,16 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
         ..minIncrementalChangeNum.v = info.minIncrementalChangeId.v
         ..version.v = info.version.v,
     );
-    return CvMetaInfoRecord()
+    return CvMetaInfoRecordApi()
       ..version.v = apiResponse.version.v
       ..minIncrementalChangeId.v = apiResponse.minIncrementalChangeNum.v
       ..lastChangeId.v = apiResponse.lastChangeNum.v;
   }
 
   @override
-  Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record) async {
+  Future<CvSyncedSourceRecord?> putSourceRecord(
+    CvSyncedSourceRecord record,
+  ) async {
     var request = ApiPutChangeRequest()..target.v = target;
     recordToSyncChange(record, request);
     var apiResponse = await apiService.send<ApiPutChangeResponse>(
@@ -121,7 +127,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<void> putRawRecord(SyncedSourceRecord record) async {
+  Future<void> putRawRecord(CvSyncedSourceRecord record) async {
     var request = ApiPutChangeRequest()..target.v = target;
     recordToSyncChange(record, request);
     await apiService.send<ApiPutChangeResponse>(
@@ -153,7 +159,7 @@ void recordRefToSyncChangeRef(SyncedDataSourceRef record, ApiChangeRef change) {
     ..key.v = record.key;
 }
 
-void recordToSyncChangeRef(SyncedSourceRecord record, ApiChangeRef change) {
+void recordToSyncChangeRef(CvSyncedSourceRecord record, ApiChangeRef change) {
   var recordData = record.record.v!;
   change
     ..syncId.v = record.syncId.v
@@ -161,21 +167,21 @@ void recordToSyncChangeRef(SyncedSourceRecord record, ApiChangeRef change) {
     ..key.v = recordData.key.v;
 }
 
-SyncedSourceRecord apiChangeToRecord(ApiChange change) {
+CvSyncedSourceRecord apiChangeToRecord(ApiChange change) {
   var recordData =
-      SyncedSourceRecordData()
+      CvSyncedSourceRecordData()
         ..store.v = change.store.v
         ..key.v = change.key.v
         ..value.v = jsonDecodeSembastValueOrNull(change.data.v) as Model?
         ..deleted.v = change.data.v == null;
-  return SyncedSourceRecord()
+  return CvSyncedSourceRecord()
     ..syncId.v = change.syncId.v
     ..syncChangeId.v = change.changeNum.v
     ..syncTimestamp.v = parseTimestamp(change.timestamp.v)
     ..record.v = recordData;
 }
 
-void recordToSyncChange(SyncedSourceRecord record, ApiChange change) {
+void recordToSyncChange(CvSyncedSourceRecord record, ApiChange change) {
   recordToSyncChangeRef(record, change);
   var recordData = record.record.v!;
   change
@@ -185,7 +191,7 @@ void recordToSyncChange(SyncedSourceRecord record, ApiChange change) {
 }
 
 CvMetaInfoRecord syncInfoToMeta(ApiSyncInfo info) {
-  return CvMetaInfoRecord()
+  return CvMetaInfoRecordApi()
     ..version.setValue(info.version.v)
     ..minIncrementalChangeId.setValue(info.minIncrementalChangeNum.v)
     ..lastChangeId.setValue(info.lastChangeNum.v);

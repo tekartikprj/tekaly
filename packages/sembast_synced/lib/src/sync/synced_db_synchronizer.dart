@@ -93,7 +93,7 @@ class SyncedSyncStat {
 
 /// Synced sync source record
 class SyncedSyncSourceRecord {
-  SyncedSourceRecord? sourceRecord;
+  CvSyncedSourceRecord? sourceRecord;
   DbSyncRecord? syncRecord;
 }
 
@@ -163,11 +163,11 @@ class SyncedDbSynchronizer {
         }
 
         var sourceRecord =
-            SyncedSourceRecord()
+            CvSyncedSourceRecord()
               //..syncTimestamp.v = dirtySyncRecord.syncTimestamp.v
               ..syncId.v = dirtySyncRecord.syncId.v
               ..record.v =
-                  (SyncedSourceRecordData()
+                  (CvSyncedSourceRecordData()
                     ..store.v = dirtySyncRecord.store.v
                     ..key.v = dirtySyncRecord.key.v
                     ..deleted.v = dirtySyncRecord.deleted.v == true
@@ -334,7 +334,7 @@ class SyncedDbSynchronizer {
 
   Future<void> _syncSourceRecordDown(
     DatabaseClient client,
-    SyncedSourceRecord remoteRecord,
+    CvSyncedSourceRecord remoteRecord,
     SyncedSyncStat stat,
   ) async {
     // create

@@ -1,9 +1,14 @@
 import 'package:cv/cv.dart';
 
+/// Api response
 class ApiErrorResponse extends CvModelBase {
+  /// Response code
   late final code = CvField<String>('code');
-  // Never expires unless forced
+
+  /// Message
   late final message = CvField<String>('message');
+
+  /// stackTrace
   late final stackTrace = CvField<String>('stackTrace');
 
   @override

@@ -39,9 +39,7 @@ class SyncedSourceFirestore
   final bool noAuth;
 
   @override
-  void close() {
-    // Nothing to close
-  }
+  Future<void> close() async {}
 
   SyncedSourceFirestore({
     required this.firestore,
@@ -50,12 +48,11 @@ class SyncedSourceFirestore
     @required this.rootPath,
     this.noAuth = false,
   }) {
+    initBuilders();
+
     dataCollection = firestore.collection(getPath(dataCollectionId));
     metaCollection = firestore.collection(getPath(metaCollectionId));
     metaInfoReference = metaCollection.doc(metaInfoDocumentId);
-
-    cvFirestoreAddBuilder<SyncedSourceRecord>((_) => SyncedSourceRecord());
-    cvFirestoreAddBuilder<CvMetaInfoRecord>((_) => CvMetaInfoRecord());
   }
 
   String getPath(String path) {
@@ -66,7 +63,7 @@ class SyncedSourceFirestore
     }
   }
 
-  Model _prepareRecordMap(SyncedSourceRecord record) {
+  Model _prepareRecordMap(CvSyncedSourceRecord record) {
     // Clear the id
     record.syncId.clear();
     var map = mapSembastToFirestore(record.toMap());
@@ -77,7 +74,7 @@ class SyncedSourceFirestore
 
   @override
   @visibleForTesting
-  Future<void> putRawRecord(SyncedSourceRecord record) async {
+  Future<void> putRawRecord(CvSyncedSourceRecord record) async {
     var id = record.syncId.v!;
     record.syncId.clear();
     var map = mapSembastToFirestore(record.toMap());
@@ -93,12 +90,14 @@ class SyncedSourceFirestore
     }
   }
 
-  String _generateSyncId(SyncedSourceRecord record) {
+  String _generateSyncId(CvSyncedSourceRecord record) {
     return '${record.recordStore}|${record.recordKey}';
   }
 
   @override
-  Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record) async {
+  Future<CvSyncedSourceRecord?> putSourceRecord(
+    CvSyncedSourceRecord record,
+  ) async {
     fixAndCheckPutSyncedRecord(record);
     var newRecord = false;
     var ref = SyncedDataSourceRef(
@@ -215,7 +214,7 @@ class SyncedSourceFirestore
   }
 
   @override
-  Future<SyncedSourceRecord?> getSourceRecord(
+  Future<CvSyncedSourceRecord?> getSourceRecord(
     SyncedDataSourceRef sourceRef,
   ) async {
     /// Try by sync id first
@@ -253,7 +252,7 @@ class SyncedSourceFirestore
     return null;
   }
 
-  Future<SyncedSourceRecord?> txnGetSourceRecordById(
+  Future<CvSyncedSourceRecord?> txnGetSourceRecordById(
     fb.Transaction txn,
     String syncId,
   ) async {
@@ -262,7 +261,7 @@ class SyncedSourceFirestore
     return sourceRecordFromSnapshot(raw);
   }
 
-  Future<SyncedSourceRecord?> getSourceRecordById(
+  Future<CvSyncedSourceRecord?> getSourceRecordById(
     fb.Transaction txn,
     String syncId,
   ) async {
@@ -305,7 +304,7 @@ class SyncedSourceFirestore
         querySnapshot.docs
             .map(
               (snapshot) =>
-                  snapshot.data.fromFirestore().cv<SyncedSourceRecord>()
+                  snapshot.data.fromFirestore().cv<CvSyncedSourceRecord>()
                     ..syncId.v = snapshot.ref.id,
             )
             .toList();

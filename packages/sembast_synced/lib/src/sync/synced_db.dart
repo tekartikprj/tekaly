@@ -1,9 +1,13 @@
 import 'package:sembast/sembast_memory.dart';
+import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
 import 'model/db_sync_meta.dart';
 import 'model/db_sync_record.dart';
+
+/// Synced db timestamp (sembast based)
+typedef SyncedDbTimestamp = DbTimestamp;
 
 mixin SyncedDbMixin implements SyncedDb {
   late final DatabaseFactory databaseFactory;

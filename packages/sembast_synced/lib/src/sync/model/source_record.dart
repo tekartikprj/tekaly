@@ -1,4 +1,4 @@
-import 'package:sembast/timestamp.dart';
+import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
@@ -32,7 +32,7 @@ class SyncedRecordKey {
 }
 
 /// Source in firestore
-class SyncedSourceRecordData extends CvModelBase {
+class CvSyncedSourceRecordData extends CvModelBase {
   final store = CvField<String>(recordStoreFieldKey);
   final key = CvField<String>(recordKeyFieldKey);
   final deleted = CvField<bool>(recordDeletedFieldKey);
@@ -49,25 +49,33 @@ class SyncedSourceRecordData extends CvModelBase {
       SyncedRecordKey(store: store.v!, key: key.v!);
 }
 
-/// Source in firestore
-class SyncedSourceRecord extends CvModelBase {
+/// Mixin
+mixin SyncedSourceRecordMixin implements CvSyncedSourceRecord {
   /// Sync id if any, this is the firestore hence not save in firestore
+  @override
   final syncId = CvField<String>(syncIdKey);
 
   /// Server change id
+  @override
   final syncChangeId = CvField<int>(syncChangeIdKey);
 
   /// Server timestamp
-  final syncTimestamp = CvField<Timestamp>(syncTimestampKey);
-  final record = CvModelField<SyncedSourceRecordData>(
-    recordFieldKey,
-    (_) => SyncedSourceRecordData(),
-  );
+  @override
+  final syncTimestamp = CvField<DbTimestamp>(syncTimestampKey);
+
+  /// The record data
+  @override
+  final record = CvModelField<CvSyncedSourceRecordData>(recordFieldKey);
   //final store = CvField<String>(recordStoreFieldKey);
   //final key = CvField<String>(recordKeyFieldKey);
   //final deleted = CvField<bool>(recordDeletedFieldKey);
   //final value = CvField<Map>(recordValueFieldKey);
 
+  @override
+  List<CvField> get fields => [syncId, syncTimestamp, syncChangeId, record];
+}
+
+extension SyncedSourceRecordExt on CvSyncedSourceRecord {
   String get recordKey => record.v!.key.v!;
   String get recordStore => record.v!.store.v!;
   bool get isDeleted => record.v!.isDeleted;
@@ -75,9 +83,28 @@ class SyncedSourceRecord extends CvModelBase {
   /// Get the reference to the record.
   SyncedDataSourceRef get ref =>
       SyncedDataSourceRef(store: recordStore, key: recordKey, syncId: syncId.v);
-  @override
-  List<CvField> get fields => [syncId, syncTimestamp, syncChangeId, record];
-
   SyncedRecordKey get syncedKey =>
       SyncedRecordKey(store: record.v!.store.v!, key: record.v!.key.v!);
 }
+
+/// Compat
+typedef SyncedSourceRecord = CvSyncedSourceRecord;
+
+/// Source in firestore
+abstract class CvSyncedSourceRecord implements CvModel {
+  factory CvSyncedSourceRecord() => _CvSyncedSourceRecord();
+
+  /// Sync id
+  CvField<String> get syncId;
+
+  /// Server change id
+  CvField<int> get syncChangeId;
+
+  /// Server timestamp
+  CvField<DbTimestamp> get syncTimestamp;
+
+  /// The record data
+  CvModelField<CvSyncedSourceRecordData> get record;
+}
+
+class _CvSyncedSourceRecord extends CvModelBase with SyncedSourceRecordMixin {}

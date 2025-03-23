@@ -12,13 +12,16 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   final _lock = Lock();
   var _lastSyncId = 0;
   CvMetaInfoRecord? _metaInfo;
-  final _sourceRecordsBySyncId = <String, SyncedSourceRecord>{};
-  final _sourceRecordsByStoreAndKey = <_Key, SyncedSourceRecord>{};
+  final _sourceRecordsBySyncId = <String, CvSyncedSourceRecord>{};
+  final _sourceRecordsByStoreAndKey = <_Key, CvSyncedSourceRecord>{};
 
+  SyncedSourceMemory() {
+    initBuilders();
+  }
   @override
-  void close() {}
+  Future<void> close() async {}
 
-  Iterable<SyncedSourceRecord> get sorterSourceRecords =>
+  Iterable<CvSyncedSourceRecord> get sorterSourceRecords =>
       _sourceRecordsBySyncId.values.toList()
         ..sort((r1, r2) => r1.syncChangeId.v!.compareTo(r2.syncChangeId.v!));
   @override
@@ -59,13 +62,13 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<SyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) {
+  Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) {
     return _lock.synchronized(() async {
       return _lockedGetSourceRecord(sourceRef);
     });
   }
 
-  SyncedSourceRecord? _lockedGetSourceRecord(SyncedDataSourceRef sourceRef) {
+  CvSyncedSourceRecord? _lockedGetSourceRecord(SyncedDataSourceRef sourceRef) {
     if (sourceRef.syncId != null) {
       var record = _sourceRecordsBySyncId[sourceRef.syncId!];
       if (record != null) {
@@ -79,7 +82,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<SyncedSourceRecord?> putSourceRecord(SyncedSourceRecord record) {
+  Future<CvSyncedSourceRecord?> putSourceRecord(CvSyncedSourceRecord record) {
     return _lock.synchronized(() {
       fixAndCheckPutSyncedRecord(record);
       var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfoRecord();
@@ -98,7 +101,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
       }
       // Make a copy
       var newRecord =
-          SyncedSourceRecord()
+          CvSyncedSourceRecord()
             ..copyFrom(record)
             ..syncId.v = syncId
             ..syncTimestamp.v = Timestamp.now()
@@ -125,7 +128,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
     bool? includeDeleted,
   }) {
     return _lock.synchronized(() {
-      var list = <SyncedSourceRecord>[];
+      var list = <CvSyncedSourceRecord>[];
       var all = sorterSourceRecords;
       var allLength = all.length;
       limit ??= allLength;
@@ -154,9 +157,9 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
 
   @override
   @visibleForTesting
-  Future<void> putRawRecord(SyncedSourceRecord record) async {
+  Future<void> putRawRecord(CvSyncedSourceRecord record) async {
     return _lock.synchronized(() {
-      var newRecord = SyncedSourceRecord()..copyFrom(record);
+      var newRecord = CvSyncedSourceRecord()..copyFrom(record);
       var syncId = record.syncId.v!;
       _sourceRecordsBySyncId[syncId] = newRecord;
       _sourceRecordsByStoreAndKey[(

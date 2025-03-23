@@ -7,11 +7,13 @@ export 'src/sync/synced_db_lib.dart'
         CvMetaInfoRecord,
         SyncedDbSynchronizer,
         DbSyncMetaInfo,
+        CvSyncedSourceRecord,
         SyncedSourceRecord,
         SyncedSyncStat,
         SyncedSyncSourceRecord,
+        SyncedSourceRecordExt,
         SyncedDataSourceRef,
-        SyncedSourceRecordData;
+        CvSyncedSourceRecordData;
 export 'synced_db.dart';
 
 /*

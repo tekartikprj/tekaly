@@ -52,9 +52,9 @@ void main() {
     test('putRecord format', () async {
       var sourceRecord =
           (await source.putSourceRecord(
-            SyncedSourceRecord()
+            CvSyncedSourceRecord()
               ..record.v =
-                  (SyncedSourceRecordData()
+                  (CvSyncedSourceRecordData()
                     ..store.v = 'test'
                     ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
                     ..key.v = '1'),

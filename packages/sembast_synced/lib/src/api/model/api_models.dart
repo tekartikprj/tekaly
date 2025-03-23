@@ -3,6 +3,7 @@ import 'package:tekaly_sembast_synced/src/api/model/api_error.dart';
 
 import 'api_sync.dart';
 
+/// Init api builder
 void initApiBuilders() {
   cvAddConstructor(ApiChange.new);
   cvAddConstructor(ApiErrorResponse.new);
