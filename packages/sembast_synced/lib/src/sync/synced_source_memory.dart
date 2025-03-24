@@ -82,7 +82,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvSyncedSourceRecord?> putSourceRecord(CvSyncedSourceRecord record) {
+  Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record) {
     return _lock.synchronized(() {
       fixAndCheckPutSyncedRecord(record);
       var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfoRecord();

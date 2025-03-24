@@ -305,20 +305,16 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
 
     test('syncOneFromRemote', () async {
-      var sourceRecord =
-          (await source.putSourceRecord(
-            CvSyncedSourceRecord()
-              //..syncId.v = sourceRecord.syncId.v
-              // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-              ..record.v =
-                  (CvSyncedSourceRecordData()
-                    ..store.v = dbEntityStoreRef.name
-                    ..key.v = 'a1'
-                    ..value.v = {
-                      'name': 'test1',
-                      'timestamp': Timestamp(1, 1000),
-                    }),
-          ))!;
+      var sourceRecord = (await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v =
+              (CvSyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..value.v = {'name': 'test1', 'timestamp': Timestamp(1, 1000)}),
+      ));
       expect(sourceRecord.syncId.v, isNotNull);
       expect(sourceRecord.syncTimestamp.v, isNotNull);
 
@@ -411,18 +407,17 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
                 ..store.v = dbEntityStoreRef.name
                 ..key.v = 'dummy'
                 ..deleted.v = true),
-      ))!; // no value
-      var sourceRecord =
-          (await source.putSourceRecord(
-            CvSyncedSourceRecord()
-              //..syncId.v = sourceRecord.syncId.v
-              // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-              ..record.v =
-                  (CvSyncedSourceRecordData()
-                    ..store.v = dbEntityStoreRef.name
-                    ..key.v = 'a1'
-                    ..deleted.v = true),
-          ))!; //
+      )); // no value
+      var sourceRecord = (await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v =
+              (CvSyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..deleted.v = true),
+      )); //
       expect(
         (await source.getSourceRecord(sourceRecord.ref))!.record.v!.deleted.v,
         isTrue,
@@ -474,17 +469,16 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
 
     test('syncOneRawFromRemote', () async {
-      var sourceRecord =
-          (await source.putSourceRecord(
-            CvSyncedSourceRecord()
-              //..syncId.v = sourceRecord.syncId.v
-              // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-              ..record.v =
-                  (CvSyncedSourceRecordData()
-                    ..store.v = dbEntityStoreRef.name
-                    ..key.v = 'a1'
-                    ..value.v = {'name': 'test1'}),
-          ))!;
+      var sourceRecord = (await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v =
+              (CvSyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = 'a1'
+                ..value.v = {'name': 'test1'}),
+      ));
       expect(sourceRecord.syncId.v, isNotNull);
       expect(sourceRecord.syncTimestamp.v, isNotNull);
 

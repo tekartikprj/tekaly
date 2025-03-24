@@ -114,7 +114,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvSyncedSourceRecord?> putSourceRecord(
+  Future<CvSyncedSourceRecord> putSourceRecord(
     CvSyncedSourceRecord record,
   ) async {
     var request = ApiPutChangeRequest()..target.v = target;

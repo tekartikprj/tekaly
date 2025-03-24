@@ -47,15 +47,14 @@ void main() {
       firestore = source.firestore;
     });
     test('putRecord format', () async {
-      var sourceRecord =
-          (await source.putSourceRecord(
-            CvSyncedSourceRecord()
-              ..record.v =
-                  (CvSyncedSourceRecordData()
-                    ..store.v = 'test'
-                    ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
-                    ..key.v = '1'),
-          ))!;
+      var sourceRecord = (await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          ..record.v =
+              (CvSyncedSourceRecordData()
+                ..store.v = 'test'
+                ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
+                ..key.v = '1'),
+      ));
       expect((await firestore.doc('meta/info').get()).data, {
         'lastChangeId': 1,
       });

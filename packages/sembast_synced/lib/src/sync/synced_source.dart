@@ -100,7 +100,7 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvSyncedSourceRecord?> putSourceRecord(CvSyncedSourceRecord record) {
+  Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record) {
     throw UnimplementedError('SyncedSource.putSourceRecord');
   }
 
@@ -112,7 +112,7 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
 
 abstract class SyncedSource {
   /// Sync id, change Id is generated or looked for if not given, store and key must be set
-  Future<CvSyncedSourceRecord?> putSourceRecord(CvSyncedSourceRecord record);
+  Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record);
 
   /// Get a record using
   Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef);

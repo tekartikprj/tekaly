@@ -1,15 +1,14 @@
-## sembast_synced_test
+## sembast_synced_rpc
 
-test helpers
-
+RPC based solution
 ## Setup
 
 `pubspec.yaml`:
 
 ```yaml
-  tekaly_sembast_synced_test:
+  tekaly_sembast_synced_rpc:
     git:
       url: https://github.com/tekartikprj/tekaly.git
-      path: packages/sembast_synced_test
+      path: packages/sembast_synced_rpc
       ref: dart3a
 ```

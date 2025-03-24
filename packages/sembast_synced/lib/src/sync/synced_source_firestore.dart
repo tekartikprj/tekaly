@@ -95,7 +95,7 @@ class SyncedSourceFirestore
   }
 
   @override
-  Future<CvSyncedSourceRecord?> putSourceRecord(
+  Future<CvSyncedSourceRecord> putSourceRecord(
     CvSyncedSourceRecord record,
   ) async {
     fixAndCheckPutSyncedRecord(record);
@@ -154,7 +154,7 @@ class SyncedSourceFirestore
       }, fb.SetOptions(merge: true));
     });
 
-    return getSourceRecord(ref);
+    return (await getSourceRecord(ref))!;
   }
 
   @override

@@ -340,9 +340,8 @@ class SyncPutChangeCommandHandler extends SyncCommandHandler {
       var newRecord = await syncedSourceFirestore.putSourceRecord(record);
       var response = ApiPutChangeResponse();
 
-      if (newRecord != null) {
-        recordToSyncChange(newRecord, response);
-      }
+      recordToSyncChange(newRecord, response);
+
       await sendResponse(request, response);
     }
   }

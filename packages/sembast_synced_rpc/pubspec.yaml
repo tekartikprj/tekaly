@@ -1,0 +1,45 @@
+name: tekaly_sembast_synced_rpc
+description: RPC solution
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.7.0
+
+# Add regular dependencies here.
+dependencies:
+  tekaly_sembast_synced:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      ref: dart3a
+      path: packages/sembast_synced
+  tekaly_sembast_synced_test:
+    git:
+      url: https://github.com/tekartikprj/tekaly.git
+      ref: dart3a
+      path: packages/sembast_synced_test
+  tekartik_common_utils:
+    git:
+      url: https://github.com/tekartik/common_utils.dart
+      ref: dart3a
+  tekartik_rpc:
+    git:
+      url: https://github.com/tekartik/rpc.dart
+      ref: dart3a
+      path: packages/rpc
+  tekartik_web_socket:
+    git:
+      url: https://github.com/tekartik/web_socket.dart
+      ref: dart3a
+      path: web_socket
+  tkcms_common:
+    git:
+      url: https://github.com/tekartikprj/tkcms.git
+      ref: dart3a
+      path: packages/tkcms_common
+  # path: ^1.8.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.24.0
+resolution: workspace

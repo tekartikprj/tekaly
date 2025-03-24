@@ -122,7 +122,7 @@ class _SyncedSourceSembast
   }
 
   @override
-  Future<CvSyncedSourceRecord?> putSourceRecord(
+  Future<CvSyncedSourceRecord> putSourceRecord(
     CvSyncedSourceRecord record,
   ) async {
     fixAndCheckPutSyncedRecord(record);

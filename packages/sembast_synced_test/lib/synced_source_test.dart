@@ -21,14 +21,13 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     source = await createSyncedSource();
   });
   test('putRecord', () async {
-    var record =
-        (await source.putSourceRecord(
-          CvSyncedSourceRecord()
-            ..record.v =
-                (CvSyncedSourceRecordData()
-                  ..store.v = 'test'
-                  ..key.v = '1'),
-        ))!;
+    var record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v =
+            (CvSyncedSourceRecordData()
+              ..store.v = 'test'
+              ..key.v = '1'),
+    ));
     expect(record.toMap(), {
       'syncId': record.syncId.v,
       'syncTimestamp': record.syncTimestamp.v,
@@ -40,15 +39,14 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     expect(record.syncTimestamp.v, isNotNull);
     expect(record.recordStore, 'test');
     expect(record.syncChangeId.v, 1);
-    record =
-        (await source.putSourceRecord(
-          CvSyncedSourceRecord()
-            ..record.v =
-                (CvSyncedSourceRecordData()
-                  ..store.v = 'test'
-                  ..key.v = '1')
-            ..syncId.v = syncId,
-        ))!;
+    record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v =
+            (CvSyncedSourceRecordData()
+              ..store.v = 'test'
+              ..key.v = '1')
+        ..syncId.v = syncId,
+    ));
     expect(record.toMap(), {
       'syncId': record.syncId.v,
       'syncTimestamp': record.syncTimestamp.v,
@@ -58,15 +56,14 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     expect(record.syncId.v, syncId);
     expect(record.syncChangeId.v, 2);
     // Changing!
-    record =
-        (await source.putSourceRecord(
-          CvSyncedSourceRecord()
-            ..record.v =
-                (CvSyncedSourceRecordData()
-                  ..store.v = 'test2'
-                  ..key.v = '2')
-            ..syncId.v = syncId,
-        ))!;
+    record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v =
+            (CvSyncedSourceRecordData()
+              ..store.v = 'test2'
+              ..key.v = '2')
+        ..syncId.v = syncId,
+    ));
     expect(record.syncChangeId.v, 3);
     expect(record.syncId.v, isNot(syncId));
     expect(record.syncTimestamp.v, isNotNull);
@@ -93,7 +90,7 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
               ..key.v = '1')
         ..syncId.v = syncId,
     );
-    var newSyncId = record!.syncId.v!;
+    var newSyncId = record.syncId.v!;
     record = (await source.getSourceRecord(ref))!;
     expect(record.syncId.v, newSyncId);
     expect(newSyncId, isNot(syncId));
@@ -128,7 +125,7 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     );
     list = await source.getSourceRecordList(includeDeleted: true);
     expect(list.list, hasLength(1));
-    expect(list.list.first.syncId.v, record?.syncId.v);
+    expect(list.list.first.syncId.v, record.syncId.v);
     var record2 = await source.putSourceRecord(
       CvSyncedSourceRecord()
         ..record.v =
@@ -139,8 +136,8 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     list = await source.getSourceRecordList(includeDeleted: true);
     //print(list);
     expect(list.list.map((e) => e.syncId.v), [
-      record?.syncId.v,
-      record2?.syncId.v,
+      record.syncId.v,
+      record2.syncId.v,
     ]);
   });
   test('metaInfo', () async {

@@ -31,15 +31,14 @@ void main() {
       database = source.database;
     });
     test('putRecord format', () async {
-      var sourceRecord =
-          (await source.putSourceRecord(
-            CvSyncedSourceRecord()
-              ..record.v =
-                  (CvSyncedSourceRecordData()
-                    ..store.v = 'test'
-                    ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
-                    ..key.v = '1'),
-          ))!;
+      var sourceRecord = (await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          ..record.v =
+              (CvSyncedSourceRecordData()
+                ..store.v = 'test'
+                ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
+                ..key.v = '1'),
+      ));
       expect((await metaStore.record('info').get(database)), {
         'lastChangeId': 1,
       });
