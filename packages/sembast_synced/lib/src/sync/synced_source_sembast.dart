@@ -3,13 +3,7 @@ import 'package:tekaly_sembast_synced/src/api/import_common.dart';
 import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
-// ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
-import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
-
-//import 'package:tekartik_firebase_firestore/utils/auto_id_generator.dart' as fb;
-
-import 'sembast_firestore_converter.dart';
 
 /// Sembast synced source
 abstract class SyncedSourceSembast implements SyncedSource {
@@ -197,17 +191,13 @@ class _SyncedSourceSembast
     return getMetaInfo();
   }
 
-  Future<T?> getRecord<T extends CvModel>(fb.DocumentReference doc) async {
-    return cvRecordFromSnapshot<T>(await doc.get());
-  }
-
   @override
   Future<CvSyncedSourceRecord?> getSourceRecord(
     SyncedDataSourceRef sourceRef,
   ) async {
     var recordId = sourceRef.sourceSyncId;
 
-    var doc = await txnGetSourceRecordById(database, recordId);
+    var doc = await _clientGetSourceRecordById(database, recordId);
 
     if (doc != null) {
       if (doc.recordStore == sourceRef.store &&
@@ -226,10 +216,10 @@ class _SyncedSourceSembast
     return null;
   }
 
-  Future<CvSyncedSourceRecord?> txnGetSourceRecordById(
-    sembast.DatabaseClient txn,
+  Future<CvSyncedSourceRecord?> _clientGetSourceRecordById(
+    sembast.DatabaseClient client,
     String syncId,
-  ) => dataCollection.record(syncId).get(txn);
+  ) => dataCollection.record(syncId).get(client);
 
   @override
   Future<SyncedSourceRecordList> getSourceRecordList({

@@ -10,10 +10,12 @@ export 'src/sync/synced_db_lib.dart'
         CvSyncedSourceRecord,
         SyncedSourceRecord,
         SyncedSyncStat,
+        SyncedSourceDefaultMixin,
         SyncedSyncSourceRecord,
         SyncedSourceRecordExt,
         SyncedDataSourceRef,
-        CvSyncedSourceRecordData;
+        CvSyncedSourceRecordData,
+        DbSyncRecord;
 export 'synced_db.dart';
 
 /*

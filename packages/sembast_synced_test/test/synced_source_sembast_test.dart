@@ -6,12 +6,10 @@ import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart'
     show syncTimestampKey;
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekaly_sembast_synced/synced_db_sembast.dart';
+import 'package:tekaly_sembast_synced_test/synced_source_test.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
-// ignore: depend_on_referenced_packages
-import 'package:test/test.dart';
-
-import 'synced_source_test.dart';
+import 'package:dev_test/test.dart';
 
 Future<SyncedSourceSembast> newInMemorySyncedSourceSembast() async {
   return SyncedSourceSembast(database: await openNewInMemoryDatabase());

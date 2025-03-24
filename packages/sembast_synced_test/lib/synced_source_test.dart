@@ -1,7 +1,7 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, invalid_use_of_visible_for_testing_member
 
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
-import 'package:test/test.dart';
+import 'package:dev_test/test.dart';
 
 SyncedSourceMemory newInMemorySyncedSourceMemory() {
   return SyncedSourceMemory();

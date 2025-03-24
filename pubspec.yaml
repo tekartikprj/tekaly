@@ -11,3 +11,4 @@ workspace:
   - packages/sembast_synced
   - packages/tekaly_assets
   - packages/tekaly_stat
+  - packages/sembast_synced_test

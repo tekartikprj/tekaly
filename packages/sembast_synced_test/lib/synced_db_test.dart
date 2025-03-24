@@ -1,9 +1,11 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
-import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
+
+import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
-import 'package:test/test.dart';
+import 'package:dev_test/test.dart';
 
 /// Entity in the database.
 class DbEntity extends DbStringRecordBase {

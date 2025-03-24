@@ -2,7 +2,7 @@ import 'package:sembast/sembast.dart';
 import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:test/test.dart';
 
-import 'synced_source_test.dart';
+import 'synced_source_test_common.dart';
 
 void main() {
   test('exportInMemory', () async {
