@@ -9,10 +9,13 @@ const metaVersionIdKey = 'version';
 /// Min increment change id key
 const metaMinIncrementalChangeIdKey = 'minIncrementalChangeId';
 
+/// Compat
+typedef CvMetaInfoRecord = CvMetaInfo;
+
 /// /meta/info
-abstract class CvMetaInfoRecord implements CvModel {
+abstract class CvMetaInfo implements CvModel {
   /// Factory constructor
-  factory CvMetaInfoRecord() => _CvMetaInfoRecord();
+  factory CvMetaInfo() => _CvMetaInfoRecord();
 
   /// Min incremental change id
   CvField<int> get minIncrementalChangeId;
@@ -26,10 +29,10 @@ abstract class CvMetaInfoRecord implements CvModel {
   CvField<int> get version;
 }
 
-class _CvMetaInfoRecord extends CvModelBase with CvMetaInfoRecordMixin {}
+class _CvMetaInfoRecord extends CvModelBase with CvMetaInfoMixin {}
 
 /// Record mixin
-mixin CvMetaInfoRecordMixin implements CvMetaInfoRecord {
+mixin CvMetaInfoMixin implements CvMetaInfo {
   /// Min incremental change id
   @override
   final minIncrementalChangeId = CvField<int>(metaMinIncrementalChangeIdKey);

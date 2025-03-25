@@ -553,7 +553,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       //if (source is SyncedSourceFirestore) {
       // debugSyncedSync = true;
       var meta =
-          CvMetaInfoRecord()
+          CvMetaInfo()
             ..version.v = 1
             ..lastChangeId.v = 2
             ..minIncrementalChangeId.v = 3;
@@ -567,7 +567,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       //if (source is SyncedSourceFirestore) {
       // debugSyncedSync = true;
       await source.putMetaInfo(
-        CvMetaInfoRecord()
+        CvMetaInfo()
           ..version.v = 1
           ..lastChangeId.v = 1
           ..minIncrementalChangeId.v = 0,
@@ -589,7 +589,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
       // We just change the version and the data
       await source.putMetaInfo(
-        CvMetaInfoRecord()
+        CvMetaInfo()
           ..version.v = 2
           ..lastChangeId.v = 1
           ..minIncrementalChangeId.v = 0,

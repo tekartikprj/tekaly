@@ -158,19 +158,16 @@ class SyncedSourceFirestore
   }
 
   @override
-  Future<CvMetaInfoRecord?> getMetaInfo() async =>
-      getRecord<CvMetaInfoRecord>(metaInfoReference);
+  Future<CvMetaInfo?> getMetaInfo() async =>
+      getRecord<CvMetaInfo>(metaInfoReference);
 
-  Future<CvMetaInfoRecord?> txnGetMetaInfo(fb.Transaction txn) async =>
-      _txnGetRecord<CvMetaInfoRecord>(txn, metaInfoReference);
+  Future<CvMetaInfo?> txnGetMetaInfo(fb.Transaction txn) async =>
+      _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
 
   @override
-  Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) async {
+  Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) async {
     await firestore.runTransaction((txn) async {
-      var existing = await _txnGetRecord<CvMetaInfoRecord>(
-        txn,
-        metaInfoReference,
-      );
+      var existing = await _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
       // timestamp can only be later
       if (existing?.minIncrementalChangeId.v != null) {
         if (info.minIncrementalChangeId.v != null) {
@@ -186,7 +183,7 @@ class SyncedSourceFirestore
       }
       _txnSetRecord(txn, metaInfoReference, info, merge: true);
     });
-    return getMetaInfo();
+    return (await getMetaInfo())!;
   }
 
   Future<T?> getRecord<T extends CvModel>(fb.DocumentReference doc) async {
@@ -320,7 +317,7 @@ class SyncedSourceFirestore
   }
 
   @override
-  Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay}) {
+  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) {
     return metaInfoReference
         .onSnapshotSupport(
           options: TrackChangesPullOptions(
@@ -329,7 +326,7 @@ class SyncedSourceFirestore
         )
         .map((snapshot) {
           if (snapshot.exists) {
-            return cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
+            return cvRecordFromSnapshot<CvMetaInfo>(snapshot);
           }
           return null;
         });

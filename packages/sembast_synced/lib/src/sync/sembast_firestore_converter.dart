@@ -153,9 +153,8 @@ T? cvRecordFromSnapshot<T extends CvModel>(
         }()
         : null;
 
-CvMetaInfoRecord? metaInfoRecordFromSnapshot(
-  firestore.DocumentSnapshot snapshot,
-) => cvRecordFromSnapshot<CvMetaInfoRecord>(snapshot);
+CvMetaInfo? metaInfoRecordFromSnapshot(firestore.DocumentSnapshot snapshot) =>
+    cvRecordFromSnapshot<CvMetaInfo>(snapshot);
 
 /// Copy the sync id
 CvSyncedSourceRecord? sourceRecordFromSnapshot(

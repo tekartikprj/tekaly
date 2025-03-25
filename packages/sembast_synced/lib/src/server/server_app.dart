@@ -208,9 +208,9 @@ abstract class FirebaseCommandHandler extends CommandHandler {
     required this.appFirebaseContext,
   });
 
-  Future<CvMetaInfoRecord> getMetaInfo() async {
+  Future<CvMetaInfo> getMetaInfo() async {
     var metaInfo = await syncedSourceFirestore.getMetaInfo();
-    return metaInfo ?? CvMetaInfoRecord();
+    return metaInfo ?? CvMetaInfo();
   }
 }
 
@@ -225,8 +225,7 @@ class SyncGetInfoCommandHandler extends SyncCommandHandler {
     var target = apiRequest.target.v!;
     initSyncSource(target);
 
-    var meta =
-        (await syncedSourceFirestore.getMetaInfo()) ?? CvMetaInfoRecord();
+    var meta = (await syncedSourceFirestore.getMetaInfo()) ?? CvMetaInfo();
     var response = ApiGetSyncInfoResponse();
     metaToSyncInfo(meta, response);
     await sendResponse(request, response);
@@ -246,9 +245,7 @@ class SyncPutInfoCommandHandler extends SyncCommandHandler {
       initSyncSource(target);
 
       var metaInfo = syncInfoToMeta(apiRequest);
-      var meta =
-          (await syncedSourceFirestore.putMetaInfo(metaInfo)) ??
-          CvMetaInfoRecord();
+      var meta = (await syncedSourceFirestore.putMetaInfo(metaInfo));
       var response = ApiPutSyncInfoResponse();
       metaToSyncInfo(meta, response);
       await sendResponse(request, response);

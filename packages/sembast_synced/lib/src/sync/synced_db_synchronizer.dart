@@ -379,16 +379,16 @@ class SyncedDbSynchronizer {
   }
 
   /// Use it internally to cache the source meta info.
-  Future<CvMetaInfoRecord?> getSourceMetaInfo() async {
+  Future<CvMetaInfo?> getSourceMetaInfo() async {
     var sourceMetaInfo = await source.getMetaInfo();
     _lastSyncMetaInfo = sourceMetaInfo;
     return lastSyncMetaInfo;
   }
 
-  CvMetaInfoRecord? _lastSyncMetaInfo;
+  CvMetaInfo? _lastSyncMetaInfo;
 
   /// Last source meta info
-  CvMetaInfoRecord? get lastSyncMetaInfo => _lastSyncMetaInfo;
+  CvMetaInfo? get lastSyncMetaInfo => _lastSyncMetaInfo;
 
   /// Sync down
   Future<SyncedSyncStat> syncDown() async {

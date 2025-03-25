@@ -5,17 +5,15 @@ import 'package:cv/cv.dart';
 // ignore: implementation_imports
 import 'package:sembast/src/api/protected/codec.dart';
 import 'package:sembast/timestamp.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 
-import '../sync/model/source_meta_info.dart';
 import 'model/api_models.dart';
 import 'model/api_sync.dart';
 import 'secure_client.dart';
 import 'sync_api.dart';
 
 /// Api model
-class CvMetaInfoRecordApi extends CvModelBase with CvMetaInfoRecordMixin {}
+class CvMetaInfoRecordApi extends CvModelBase with CvMetaInfoMixin {}
 
 var _codec = sembastCodecJsonEncodableCodec(null);
 Object? jsonEncodeSembastValueOrNull(Object? value) {
@@ -43,7 +41,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvMetaInfoRecord?> getMetaInfo() async {
+  Future<CvMetaInfo?> getMetaInfo() async {
     var apiResponse = await apiService.send<ApiGetSyncInfoResponse>(
       commandSyncGetInfo,
       ApiGetSyncInfoRequest()..target.v = target,
@@ -98,7 +96,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) async {
+  Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) async {
     var apiResponse = await apiService.send<ApiPutSyncInfoResponse>(
       commandSyncPutInfo,
       ApiPutSyncInfoRequest()
@@ -190,14 +188,14 @@ void recordToSyncChange(CvSyncedSourceRecord record, ApiChange change) {
     ..timestamp.v = record.syncTimestamp.v?.toIso8601String();
 }
 
-CvMetaInfoRecord syncInfoToMeta(ApiSyncInfo info) {
+CvMetaInfo syncInfoToMeta(ApiSyncInfo info) {
   return CvMetaInfoRecordApi()
     ..version.setValue(info.version.v)
     ..minIncrementalChangeId.setValue(info.minIncrementalChangeNum.v)
     ..lastChangeId.setValue(info.lastChangeNum.v);
 }
 
-void metaToSyncInfo(CvMetaInfoRecord meta, ApiSyncInfo info) {
+void metaToSyncInfo(CvMetaInfo meta, ApiSyncInfo info) {
   info
     ..lastChangeNum.setValue(meta.lastChangeId.v)
     ..minIncrementalChangeNum.setValue(meta.minIncrementalChangeId.v)

@@ -28,7 +28,7 @@ class SyncedDataSourceRef {
 mixin SyncedSourceDefaultMixin implements SyncedSource {
   void initBuilders() {
     cvAddConstructor(CvSyncedSourceRecord.new);
-    cvAddConstructor(CvMetaInfoRecord.new);
+    cvAddConstructor(CvMetaInfo.new);
     cvAddConstructor(CvSyncedSourceRecordData.new);
   }
 
@@ -45,10 +45,10 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay}) {
+  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) {
     checkDelay ??= const Duration(minutes: 60);
-    late StreamController<CvMetaInfoRecord?> controller;
-    controller = StreamController<CvMetaInfoRecord?>(
+    late StreamController<CvMetaInfo?> controller;
+    controller = StreamController<CvMetaInfo?>(
       onListen: () async {
         while (true) {
           var info = await getMetaInfo();
@@ -71,7 +71,7 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvMetaInfoRecord?> getMetaInfo() {
+  Future<CvMetaInfo?> getMetaInfo() {
     throw UnimplementedError('SyncedSource.getMetaInfo');
   }
 
@@ -90,7 +90,7 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 
   @override
-  Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) {
+  Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) {
     throw UnimplementedError('SyncedSource.putMetaInfo');
   }
 
@@ -118,11 +118,11 @@ abstract class SyncedSource {
   Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef);
 
   /// Get the meta info
-  Future<CvMetaInfoRecord?> getMetaInfo();
+  Future<CvMetaInfo?> getMetaInfo();
 
   /// Update meta info, source should check the existing for the worst case.
   @visibleForTesting
-  Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info);
+  Future<CvMetaInfo?> putMetaInfo(CvMetaInfo info);
 
   /// if [afterChangeId] is not null, only the update after it are fetched
   ///
@@ -141,7 +141,7 @@ abstract class SyncedSource {
   /// If [checkDelay] is set, meta info will be checked every [checkDelay] duration
   /// On firestore if onSnapshot is supported this is unnecessary
   /// Default implementation will check every hour.
-  Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay});
+  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay});
 
   /// Close the source.
   Future<void> close();

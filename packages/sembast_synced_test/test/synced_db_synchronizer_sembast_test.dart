@@ -1,12 +1,10 @@
-import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
+import 'package:tekaly_sembast_synced/synced_db_sembast.dart';
 import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:test/test.dart';
 
-import 'synced_source_sembast_test.dart';
-
 void main() {
-  group('synced_db_source_sync_firestore_test', () {
+  group('synced_db_source_sync_sembast_test', () {
     Future<SyncTestsContext> setupContext() async {
       //    setUp(() async {
       return SyncTestsContext()

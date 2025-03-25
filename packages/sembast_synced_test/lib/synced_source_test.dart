@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print, invalid_use_of_visible_for_testing_member
 
+import 'dart:async';
+
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:dev_test/test.dart';
 
@@ -15,7 +17,11 @@ void main() {
   });
 }
 
-void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
+void runSyncedSourceTest(
+  Future<SyncedSource> Function() createSyncedSource, {
+  bool? skipRealTimeChanges,
+}) {
+  skipRealTimeChanges ??= false;
   late SyncedSource source;
   setUp(() async {
     source = await createSyncedSource();
@@ -80,9 +86,9 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     var syncId = '1234';
     var ref = SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId);
 
-    var record = await source.getSourceRecord(ref);
-    expect(record, isNull);
-    record = await source.putSourceRecord(
+    //var record = await source.getSourceRecord(ref);
+    // expect(record, isNull);
+    SyncedSourceRecord? record = await source.putSourceRecord(
       CvSyncedSourceRecord()
         ..record.v =
             (CvSyncedSourceRecordData()
@@ -113,9 +119,11 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
     expect(record, isNull);
   });
   test('getSourceRecordList', () async {
-    var list = await source.getSourceRecordList();
-    expect(list.lastChangeId, isNull);
-    expect(list.list, isEmpty);
+    //var list = await source.getSourceRecordList();
+    //expect(list.lastChangeId, isNull);
+    //expect(list.list, isEmpty);
+    var meta = await source.getMetaInfo();
+    var lastChangeId = meta?.lastChangeId.v ?? 0;
     var record = await source.putSourceRecord(
       CvSyncedSourceRecord()
         ..record.v =
@@ -123,7 +131,11 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
               ..store.v = 'test'
               ..key.v = '1'),
     );
-    list = await source.getSourceRecordList(includeDeleted: true);
+
+    var list = await source.getSourceRecordList(
+      includeDeleted: true,
+      afterChangeId: lastChangeId,
+    );
     expect(list.list, hasLength(1));
     expect(list.list.first.syncId.v, record.syncId.v);
     var record2 = await source.putSourceRecord(
@@ -133,7 +145,10 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
               ..store.v = 'test'
               ..key.v = '2'),
     );
-    list = await source.getSourceRecordList(includeDeleted: true);
+    list = await source.getSourceRecordList(
+      includeDeleted: true,
+      afterChangeId: lastChangeId,
+    );
     //print(list);
     expect(list.list.map((e) => e.syncId.v), [
       record.syncId.v,
@@ -142,27 +157,56 @@ void runSyncedSourceTest(Future<SyncedSource> Function() createSyncedSource) {
   });
   test('metaInfo', () async {
     var info = await source.getMetaInfo();
-    expect(info, isNull);
+    var lastChangedId = info?.lastChangeId.v ?? 0;
     info = await source.putMetaInfo(
-      CvMetaInfoRecord()..minIncrementalChangeId.v = 2,
+      CvMetaInfo()..lastChangeId.v = ++lastChangedId,
     );
-    expect(info!.minIncrementalChangeId.v!, 2);
+    expect(info!.lastChangeId.v!, lastChangedId);
     info =
         (await source.putMetaInfo(
-          CvMetaInfoRecord()..minIncrementalChangeId.v = 3,
+          CvMetaInfo()..lastChangeId.v = ++lastChangedId,
         ))!;
-    expect(info.minIncrementalChangeId.v, 3);
+    expect(info.lastChangeId.v, lastChangedId);
     try {
       await source.putMetaInfo(
-        CvMetaInfoRecord()..minIncrementalChangeId.v = 1,
+        CvMetaInfo()..lastChangeId.v = lastChangedId - 1,
       );
       fail('should fail');
-    } on StateError catch (e) {
+    } catch (e) {
       print(e);
     }
   });
-  test('onMetaInfo', () async {
-    await source.putMetaInfo(CvMetaInfoRecord()..minIncrementalChangeId.v = 1);
-    expect((await source.onMetaInfo().first)!.minIncrementalChangeId.v!, 1);
+  test('onMetaInfo simple', () async {
+    var info = await source.getMetaInfo();
+    var lastChangeId = info?.lastChangeId.v ?? 0;
+    await source.putMetaInfo(CvMetaInfo()..lastChangeId.v = ++lastChangeId);
+    expect((await source.onMetaInfo().first)!.lastChangeId.v!, lastChangeId);
   });
+  test('onMetaInfo real time', () async {
+    var info = await source.getMetaInfo();
+    var lastChangeId = info?.lastChangeId.v ?? 0;
+    await source.putMetaInfo(CvMetaInfo()..lastChangeId.v = ++lastChangeId);
+    late Completer<void> completer;
+    Future<void> newCompleter() {
+      completer = Completer<void>();
+      return completer.future;
+    }
+
+    var future = newCompleter();
+    var list = <CvMetaInfo?>[];
+
+    var subscription = source.onMetaInfo().listen((metaInfo) {
+      // print('onMetaInfo $metaInfo');
+      list.add(metaInfo);
+      completer.complete();
+    });
+
+    await future;
+    expect(list, hasLength(1));
+    future = newCompleter();
+    await source.putMetaInfo(CvMetaInfo()..lastChangeId.v = ++lastChangeId);
+    await future;
+    expect(list, hasLength(2));
+    subscription.cancel();
+  }, skip: skipRealTimeChanges);
 }

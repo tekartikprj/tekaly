@@ -4,14 +4,12 @@ import 'package:sembast/timestamp.dart';
 import 'package:synchronized/synchronized.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 
-import 'synced_source.dart';
-
 typedef _Key = (String store, String key);
 
 class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   final _lock = Lock();
   var _lastSyncId = 0;
-  CvMetaInfoRecord? _metaInfo;
+  CvMetaInfo? _metaInfo;
   final _sourceRecordsBySyncId = <String, CvSyncedSourceRecord>{};
   final _sourceRecordsByStoreAndKey = <_Key, CvSyncedSourceRecord>{};
 
@@ -25,23 +23,23 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
       _sourceRecordsBySyncId.values.toList()
         ..sort((r1, r2) => r1.syncChangeId.v!.compareTo(r2.syncChangeId.v!));
   @override
-  Future<CvMetaInfoRecord?> getMetaInfo() {
+  Future<CvMetaInfo?> getMetaInfo() {
     return _lock.synchronized(() {
       return _metaInfo;
     });
   }
 
-  CvMetaInfoRecord? _lockedGetMetaInfo() {
+  CvMetaInfo? _lockedGetMetaInfo() {
     return _metaInfo;
   }
 
-  CvMetaInfoRecord? _lockedPutMetaInfo(CvMetaInfoRecord? metaInfo) {
+  CvMetaInfo _lockedPutMetaInfo(CvMetaInfo metaInfo) {
     _metaInfo = metaInfo;
-    return _metaInfo;
+    return _metaInfo!;
   }
 
   @override
-  Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) {
+  Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) {
     return _lock.synchronized(() {
       var existing = _lockedGetMetaInfo();
       // timestamp can only be later
@@ -52,7 +50,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
               ) <
               0) {
             throw StateError(
-              'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}',
+              'minIncrementalChangeId ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}',
             );
           }
         }
@@ -85,7 +83,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record) {
     return _lock.synchronized(() {
       fixAndCheckPutSyncedRecord(record);
-      var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfoRecord();
+      var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfo();
       var lastChangeId = (metaInfo.lastChangeId.v ?? 0) + 1;
       var ref = SyncedDataSourceRef(
         store: record.record.v!.store.v,
@@ -113,7 +111,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
           )] =
           newRecord;
       _lockedPutMetaInfo(
-        CvMetaInfoRecord()
+        CvMetaInfo()
           ..copyFrom(metaInfo)
           ..lastChangeId.v = lastChangeId,
       );

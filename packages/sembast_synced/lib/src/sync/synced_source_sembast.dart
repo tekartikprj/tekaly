@@ -1,9 +1,15 @@
 import 'package:sembast/sembast.dart' as sembast;
+import 'package:sembast/sembast_memory.dart';
 import 'package:tekaly_sembast_synced/src/api/import_common.dart';
 import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
+
+/// Create a new in memory synced source
+Future<SyncedSourceSembast> newInMemorySyncedSourceSembast() async {
+  return SyncedSourceSembast(database: await openNewInMemoryDatabase());
+}
 
 /// Sembast synced source
 abstract class SyncedSourceSembast implements SyncedSource {
@@ -47,7 +53,7 @@ extension on CvSyncedSourceRecord {
 }
 
 /// Sembast record
-class DbMetaInfoRecord extends DbStringRecordBase with CvMetaInfoRecordMixin {}
+class DbMetaInfoRecord extends DbStringRecordBase with CvMetaInfoMixin {}
 
 class DbDataSourceRecord extends DbStringRecordBase
     with SyncedSourceRecordMixin {}
@@ -153,7 +159,7 @@ class _SyncedSourceSembast
   }
 
   @override
-  Future<CvMetaInfoRecord?> getMetaInfo() => txnGetMetaInfoOrNull(database);
+  Future<CvMetaInfo?> getMetaInfo() => txnGetMetaInfoOrNull(database);
 
   Future<DbMetaInfoRecord?> txnGetMetaInfoOrNull(sembast.DatabaseClient txn) =>
       metaInfoReference.get(txn);
@@ -161,7 +167,7 @@ class _SyncedSourceSembast
       (await txnGetMetaInfoOrNull(txn)) ?? metaInfoReference.cv();
 
   @override
-  Future<CvMetaInfoRecord?> putMetaInfo(CvMetaInfoRecord info) async {
+  Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) async {
     await database.transaction((txn) async {
       var existing = await txnGetMetaInfo(txn);
       // minIncrementalChangeId can only be later!
@@ -188,7 +194,7 @@ class _SyncedSourceSembast
       }
       await metaInfoReference.put(txn, existing);
     });
-    return getMetaInfo();
+    return (await getMetaInfo())!;
   }
 
   @override
@@ -271,7 +277,7 @@ class _SyncedSourceSembast
   }
 
   @override
-  Stream<CvMetaInfoRecord?> onMetaInfo({Duration? checkDelay}) {
+  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) {
     return metaInfoReference.onRecord(database);
   }
 }
