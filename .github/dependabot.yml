@@ -6,15 +6,15 @@ enable-beta-ecosystems: true
 
 updates:
   - package-ecosystem: "pub"
+    directory: "."
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
     directory: "flutter_packages/file_download"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
     directory: "flutter_packages/firestore_explorer"
-    schedule:
-      interval: "monthly"
-  - package-ecosystem: "pub"
-    directory: "packages"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
@@ -30,7 +30,19 @@ updates:
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
+    directory: "packages/sembast_synced_rpc"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/sembast_synced_test"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
     directory: "packages/tekaly_assets"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/tekaly_media_cache"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"
