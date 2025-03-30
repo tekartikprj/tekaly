@@ -13,3 +13,4 @@ workspace:
   - packages/tekaly_stat
   - packages/sembast_synced_test
   - packages/sembast_synced_rpc
+  - packages/tekaly_media_cache

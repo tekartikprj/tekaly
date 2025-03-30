@@ -4,6 +4,9 @@ import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 import 'db_sync_record.dart';
 
+/// Compat
+typedef SyncedSourceRecordData = CvSyncedSourceRecordData;
+
 class SyncedRecordKey {
   final String store;
   final String key;
