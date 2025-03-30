@@ -78,7 +78,7 @@ mixin SyncedSourceRecordMixin implements CvSyncedSourceRecord {
   List<CvField> get fields => [syncId, syncTimestamp, syncChangeId, record];
 }
 
-extension SyncedSourceRecordExt on CvSyncedSourceRecord {
+extension CvSyncedSourceRecordExt on CvSyncedSourceRecord {
   String get recordKey => record.v!.key.v!;
   String get recordStore => record.v!.store.v!;
   bool get isDeleted => record.v!.isDeleted;

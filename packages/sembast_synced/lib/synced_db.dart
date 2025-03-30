@@ -9,10 +9,13 @@ export 'src/sync/synced_db_lib.dart'
         SyncedDbBase,
         SyncedDbMixin,
         SyncedDbExtension,
-        //CvMetaInfoRecord,
+        SyncedDataSourceRef,
         SyncedSource,
         SyncedSourceMemory,
         // Compat
         SyncedDbSourceSync,
         SyncedDbSynchronizer,
+        CvSyncedSourceRecord,
+        CvMetaInfo,
+        CvSyncedSourceRecordExt,
         debugSyncedDbSynchronizer;

@@ -12,7 +12,6 @@ export 'src/sync/synced_db_lib.dart'
         SyncedSyncStat,
         SyncedSourceDefaultMixin,
         SyncedSyncSourceRecord,
-        SyncedSourceRecordExt,
         SyncedDataSourceRef,
         CvSyncedSourceRecordData,
         SyncedSourceRecordData,
