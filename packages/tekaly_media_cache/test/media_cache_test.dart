@@ -2,7 +2,7 @@ import 'package:fs_shim/fs.dart';
 import 'package:tekaly_media_cache/media_cache.dart';
 import 'package:tekaly_media_cache/src/media_cache.dart'
     show TekalyMediaCachePrvExt;
-import 'package:tekaly_media_cache/src/media_cache_db.dart';
+import 'package:tekaly_media_cache/src/media_cache_db.dart' show dbMediaStore;
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 import 'package:test/test.dart';
@@ -36,9 +36,36 @@ void main() {
       mediaCache = TekalyMediaCache(rootDirectory: dir.absolute);
       await mediaCache.clear();
     });
+    test('cacheContent onMedia file', () async {
+      var content = utf8.encode('hello');
+      var key = TekalyMediaKey.name('test_key');
+      var completer = Completer<void>();
+      var subscription = mediaCache.onMedia(key).listen((event) {
+        expect(event.key, key);
+        expect(event.bytes, content);
+        expect(event.info.type, 'test_type');
+        expect(event.info.name, 'test_name');
+        completer.complete();
+      });
+
+      await mediaCache.cacheContent(
+        TekalyMediaContent(
+          info: TekalyMediaInfo(
+            key: key,
+            name: 'test_name',
+            type: 'test_type',
+            size: content.length,
+          ),
+          bytes: content,
+        ),
+      );
+      await completer.future;
+      subscription.cancel().unawait();
+    });
     test('cacheContent delete file', () async {
       var content = utf8.encode('hello');
       var key = TekalyMediaKey.name('test_key');
+
       await mediaCache.cacheContent(
         TekalyMediaContent(
           info: TekalyMediaInfo(

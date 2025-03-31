@@ -251,6 +251,9 @@ abstract class TekalyMediaCache {
   /// Get the media content
   Future<TekalyMediaContent?> getMedia(TekalyMediaKey key);
 
+  /// Get the media info
+  Future<TekalyMediaInfo?> getMediaInfo(TekalyMediaKey key);
+
   /// Check if the media is cached
   Future<bool> isMediaCached(TekalyMediaKey key);
 
@@ -272,9 +275,6 @@ abstract class TekalyMediaCache {
   /// The media directory of the cache
   Directory get mediaDirectory;
 
-  /// Internal use
-  Future<Database> get database;
-
   /// To call regularly, call automatically otherwise
   Future<void> clean();
 
@@ -294,7 +294,7 @@ abstract class TekalyMediaCache {
 class _TekalyMediaCache implements TekalyMediaCache {
   final TekalyMediaCacheOptions options;
   final DatabaseFactory databaseFactory;
-  @override
+
   late Future<Database> database;
   final TekalyMediaFetcher mediaFetcher;
   Timer? autoCleanTimer;
@@ -332,6 +332,9 @@ class _TekalyMediaCache implements TekalyMediaCache {
   @override
   Future<void> clean() async {
     await _lock.synchronized(() async {
+      if (_clearingOrClosing) {
+        return;
+      }
       cleanCount++;
 
       /// Find files without dbEntry
@@ -432,6 +435,13 @@ class _TekalyMediaCache implements TekalyMediaCache {
   }
 
   @override
+  Future<TekalyMediaInfo?> getMediaInfo(TekalyMediaKey key) async {
+    var db = await database;
+    var dbMedia = await dbMediaStore.record(key.id).get(db);
+    return dbMedia?.mediaInfo(key: key);
+  }
+
+  @override
   Future<bool> isMediaCached(TekalyMediaKey key) async {
     var db = await database;
     var dbMedia = await dbMediaStore.record(key.id).get(db);
@@ -455,7 +465,9 @@ class _TekalyMediaCache implements TekalyMediaCache {
         var db = await database;
         var file = mediaDirectory.file(filename);
         try {
-          _log('writing file $file');
+          if (debugTekalyMediaCache) {
+            _log('writing $size bytes file $file');
+          }
           await file.writeAsBytes(bytes);
         } catch (_) {
           await file.parent.create(recursive: true);
@@ -552,6 +564,10 @@ class _TekalyMediaCache implements TekalyMediaCache {
   @override
   Future<void> close() async {
     autoCleanTimer?.cancel();
+    await _lock.synchronized(() async {
+      _clearingOrClosing = true;
+    });
+
     var db = await database;
     await db.close();
   }
@@ -575,4 +591,7 @@ extension TekalyMediaCachePrvExt on TekalyMediaCache {
 
   /// Internal use
   int get cleanCount => _self.cleanCount;
+
+  /// Internal use
+  Future<Database> get database => _self.database;
 }
