@@ -254,6 +254,9 @@ abstract class TekalyMediaCache {
   /// Get the media info
   Future<TekalyMediaInfo?> getMediaInfo(TekalyMediaKey key);
 
+  /// Get all  media info
+  Future<List<TekalyMediaInfo>> getAllMediaInfos();
+
   /// Check if the media is cached
   Future<bool> isMediaCached(TekalyMediaKey key);
 
@@ -289,6 +292,12 @@ abstract class TekalyMediaCache {
 
   /// Cache a given content
   Future<void> cacheContent(TekalyMediaContent content);
+
+  /// Delete a media
+  Future<void> deleteMedia(TekalyMediaKey key);
+
+  /// Delete old media (keep 100 by default)
+  Future<void> deleteOldMedias({int? keepCount});
 }
 
 class _TekalyMediaCache implements TekalyMediaCache {
@@ -416,6 +425,25 @@ class _TekalyMediaCache implements TekalyMediaCache {
     var file = mediaDirectory.file(dbMedia.nameValue);
     var bytes = await file.readAsBytes();
     return TekalyMediaContent(info: dbMedia.mediaInfo(key: key), bytes: bytes);
+  }
+
+  @override
+  Future<void> deleteMedia(TekalyMediaKey key) async {
+    await _lock.synchronized(() async {
+      if (_clearingOrClosing) {
+        return;
+      }
+
+      var db = await database;
+      var dbMedia = await dbMediaStore.record(key.id).get(db);
+      if (dbMedia != null) {
+        await dbMediaStore.record(key.id).delete(db);
+        var file = mediaDirectory.file(dbMedia.nameValue);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+    });
   }
 
   @override
@@ -583,6 +611,43 @@ class _TekalyMediaCache implements TekalyMediaCache {
   }
 
   var cleanCount = 0;
+
+  @override
+  Future<void> deleteOldMedias({int? keepCount}) async {
+    await _lock.synchronized(() async {
+      if (_clearingOrClosing) {
+        return;
+      }
+      var db = await database;
+      await db.transaction((txn) async {
+        var oldMedias = await dbMediaStore
+            .query(
+              finder: Finder(
+                sortOrders: [SortOrder(dbMediaModel.cached.key, true)],
+                offset: keepCount ?? 100,
+              ),
+            )
+            .getRecords(txn);
+        for (var dbMedia in oldMedias) {
+          await dbMediaStore.record(dbMedia.id).delete(txn);
+          var file = mediaDirectory.file(dbMedia.nameValue);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        }
+      });
+    });
+  }
+
+  @override
+  Future<List<TekalyMediaInfo>> getAllMediaInfos() async {
+    var db = await database;
+    return (await dbMediaStore.query().getRecords(db))
+        .map(
+          (dbMedia) => dbMedia.mediaInfo(key: TekalyMediaKey.name(dbMedia.id)),
+        )
+        .toList();
+  }
 }
 
 /// TekalyMediaCache extension

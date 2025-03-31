@@ -124,6 +124,68 @@ void main() {
       expect(await mediaCache.isMediaCached(key), isFalse);
     });
 
+    test('cacheContent deleteOldMedia file', () async {
+      var content = utf8.encode('hello');
+      var key1 = TekalyMediaKey.name('test_key');
+      var key2 = TekalyMediaKey.name('test_key2');
+
+      await mediaCache.cacheContent(
+        TekalyMediaContent(
+          info: TekalyMediaInfo(
+            key: key1,
+            name: 'test_name',
+            type: 'test_type',
+            size: content.length,
+          ),
+          bytes: content,
+        ),
+      );
+      await mediaCache.cacheContent(
+        TekalyMediaContent(
+          info: TekalyMediaInfo(
+            key: key2,
+            name: 'test_name2',
+            type: 'test_type',
+            size: content.length,
+          ),
+          bytes: content,
+        ),
+      );
+      expect((await mediaCache.getAllMediaInfos()).length, 2);
+      await mediaCache.deleteOldMedias(keepCount: 1);
+      expect((await mediaCache.getAllMediaInfos()).length, 1);
+    });
+    test('cacheContent deleteOldMedia file', () async {
+      var content = utf8.encode('hello');
+      var key1 = TekalyMediaKey.name('test_key');
+      var key2 = TekalyMediaKey.name('test_key2');
+
+      await mediaCache.cacheContent(
+        TekalyMediaContent(
+          info: TekalyMediaInfo(
+            key: key1,
+            name: 'test_name',
+            type: 'test_type',
+            size: content.length,
+          ),
+          bytes: content,
+        ),
+      );
+      await mediaCache.cacheContent(
+        TekalyMediaContent(
+          info: TekalyMediaInfo(
+            key: key2,
+            name: 'test_name2',
+            type: 'test_type',
+            size: content.length,
+          ),
+          bytes: content,
+        ),
+      );
+      expect((await mediaCache.getAllMediaInfos()).length, 2);
+      await mediaCache.deleteMedia(key1);
+      expect((await mediaCache.getAllMediaInfos()).length, 1);
+    });
     tearDown(() async {
       await mediaCache.close();
     });
