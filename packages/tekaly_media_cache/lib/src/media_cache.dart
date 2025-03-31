@@ -338,6 +338,19 @@ class _TekalyMediaCache implements TekalyMediaCache {
         .asyncMap((dbMedia) => _fileReadMediaContent(key, dbMedia!));
   }
 
+  Future<void> _deleteFile(DbMedia mediaInfo) async {
+    try {
+      var file = mediaDirectory.file(mediaInfo.nameValue);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      if (debugTekalyMediaCache) {
+        _log('_deleteFile error deleting file ${mediaInfo.name}: $e');
+      }
+    }
+  }
+
   @override
   Future<void> clean() async {
     await _lock.synchronized(() async {
@@ -411,7 +424,9 @@ class _TekalyMediaCache implements TekalyMediaCache {
         autoCleanTimer?.cancel();
         var db = await database;
         await db.dropAll();
-        await mediaDirectory.delete(recursive: true);
+        try {
+          await mediaDirectory.delete(recursive: true);
+        } catch (_) {}
       } finally {
         _clearingOrClosing = false;
       }
@@ -438,10 +453,7 @@ class _TekalyMediaCache implements TekalyMediaCache {
       var dbMedia = await dbMediaStore.record(key.id).get(db);
       if (dbMedia != null) {
         await dbMediaStore.record(key.id).delete(db);
-        var file = mediaDirectory.file(dbMedia.nameValue);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        await _deleteFile(dbMedia);
       }
     });
   }
@@ -630,10 +642,7 @@ class _TekalyMediaCache implements TekalyMediaCache {
             .getRecords(txn);
         for (var dbMedia in oldMedias) {
           await dbMediaStore.record(dbMedia.id).delete(txn);
-          var file = mediaDirectory.file(dbMedia.nameValue);
-          if (await file.exists()) {
-            await file.delete();
-          }
+          await _deleteFile(dbMedia);
         }
       });
     });

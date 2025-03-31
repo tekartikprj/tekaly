@@ -18,14 +18,14 @@ void main() {
     var mediaCache = TekalyMediaCache(
       rootDirectory: dir.absolute,
       options: TekalyMediaCacheOptions(
-        firstAutoCleanDuration: const Duration(milliseconds: 300),
-        nextAutoCleanDuration: const Duration(milliseconds: 500),
+        firstAutoCleanDuration: const Duration(milliseconds: 500),
+        nextAutoCleanDuration: const Duration(milliseconds: 1000),
       ),
     );
     expect(mediaCache.cleanCount, 0);
-    await sleep(400);
+    await sleep(700);
     expect(mediaCache.cleanCount, 1);
-    await sleep(500);
+    await sleep(1000);
     expect(mediaCache.cleanCount, 2);
 
     await mediaCache.close();

@@ -26,9 +26,9 @@ class DbMedia extends DbStringRecordBase {
 /// Media info record extension
 extension DbMediaExt on DbMedia {
   /// Convert to media info
-  TekalyMediaInfo mediaInfo({required TekalyMediaKey key}) {
+  TekalyMediaInfo mediaInfo({TekalyMediaKey? key}) {
     return TekalyMediaInfo(
-      key: key,
+      key: key ?? TekalyMediaKey.name(id),
 
       name: nameValue,
       type: type.value,
