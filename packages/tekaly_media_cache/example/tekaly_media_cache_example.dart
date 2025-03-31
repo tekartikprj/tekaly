@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:fs_shim/fs.dart';
 import 'package:tekaly_media_cache/media_cache.dart';
 
@@ -20,6 +22,19 @@ Future<void> main() async {
       'https://www.google.com',
     ),
   );
+  await mediaCache.cacheMedia(
+    TekalyMediaSourceInfo.parse(
+      TekalyMediaKey.name('test_image'),
+      'https://tekartik.com/packages/tekartik_www_home/img/logo_dark_800x182.png',
+    ),
+  );
+  await mediaCache.cacheMedia(
+    TekalyMediaSourceInfo.parse(
+      TekalyMediaKey.name('test_image_alt'),
+      'https://tekartik.com/packages/tekartik_www_home/img/logo_dark_800x182.png',
+      name: 'test_image_alt.png',
+    ),
+  );
   var content = await mediaCache.getMedia(TekalyMediaKey.name('test'));
   print(
     'Content: ${content?.info.name} ${content?.info.type} ${content?.info.size}',
@@ -32,5 +47,7 @@ Future<void> main() async {
     ),
   );
 
+  await mediaCache.dump();
   await mediaCache.clean();
+  await mediaCache.close();
 }

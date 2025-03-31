@@ -9,5 +9,8 @@ export 'src/media_cache.dart'
         TekalyMediaKey,
         TekalyMediaContent,
         TekalyMediaInfo,
+        TekalyMediaSourceInfoExt,
+        debugTekalyMediaCache,
+        TekalyMediaCacheOptions,
         TekalyMediaFetcher,
         TekalyMediaSourceInfo;
