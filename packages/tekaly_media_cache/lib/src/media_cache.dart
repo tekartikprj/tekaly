@@ -2,23 +2,97 @@ import 'dart:typed_data';
 
 import 'package:fs_shim/fs_shim.dart';
 import 'package:sembast/timestamp.dart';
+import 'package:tekaly_media_cache/src/media_cache_session.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_app_http/app_http.dart';
 import 'package:tekartik_app_sembast/sembast.dart';
 import 'package:path/path.dart';
-
+// ignore: unused_import
+import 'package:tekartik_common_utils/dev_utils.dart';
 import 'media_cache_db.dart';
 
+var debugTekalyMediaCache = false; // devWarning(true);
+void _log(String message) {
+  if (debugTekalyMediaCache) {
+    print('/media_cache $message');
+  }
+}
+
+String? mediaNameFromUri(Uri uri) {
+  var segments = uri.pathSegments;
+  if (segments.isNotEmpty) {
+    return segments.last;
+  }
+  return null;
+}
+
+/// Never null
+String nonNullMediaName(String? name) {
+  if (name == null || name.isEmpty) {
+    return 'media_default';
+  }
+  return name;
+}
+
+extension TekalyMediaSourceInfoExt on TekalyMediaSourceInfo {
+  String get nameValue => nonNullMediaName(name ?? mediaNameFromUri(uri));
+}
+
+/// Only in memory can be subclasses
+abstract class TekalyMediaSourceInfo {
+  TekalyMediaKey get key;
+  Uri get uri;
+  String? get name;
+  String? get type;
+
+  factory TekalyMediaSourceInfo(
+    TekalyMediaKey key,
+    Uri uri, {
+    required String? name,
+    required String? type,
+  }) => _TekalyMediaSourceInfo(key: key, uri: uri, name: name, type: type);
+  factory TekalyMediaSourceInfo.parse(
+    TekalyMediaKey key,
+    String uri, {
+    String? name,
+    String? type,
+  }) {
+    return TekalyMediaSourceInfo(key, Uri.parse(uri), name: name, type: type);
+  }
+}
+
+class _TekalyMediaSourceInfo implements TekalyMediaSourceInfo {
+  @override
+  final TekalyMediaKey key;
+  @override
+  final Uri uri;
+  @override
+  final String? type;
+  @override
+  final String? name;
+  _TekalyMediaSourceInfo({
+    required this.key,
+    required this.uri,
+    required this.name,
+    required this.type,
+  });
+
+  @override
+  String toString() {
+    return 'Source($key, $nameValue, $type, $uri)';
+  }
+}
+
 abstract class TekalyMediaFetcher {
-  Future<Uint8List> fetch(Uri uri);
+  Future<Uint8List> fetch(TekalyMediaSourceInfo uri);
 }
 
 class TekalyMediaFetcherDefault implements TekalyMediaFetcher {
   @override
-  Future<Uint8List> fetch(Uri uri) async {
+  Future<Uint8List> fetch(TekalyMediaSourceInfo uri) async {
     var client = httpClientFactoryUniversal.newClient();
     try {
-      return await httpClientReadBytes(client, httpMethodGet, uri);
+      return await httpClientReadBytes(client, httpMethodGet, uri.uri);
     } finally {
       client.close();
     }
@@ -62,6 +136,19 @@ class _TekalyMediaKeyName implements TekalyMediaKey {
   String get id => name;
   final String name;
   _TekalyMediaKeyName(this.name);
+  @override
+  String toString() => 'Key($name)';
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is _TekalyMediaKeyName) {
+      return other.name == name;
+    }
+    return false;
+  }
 }
 
 abstract class TekalyMediaCache {
@@ -81,19 +168,21 @@ abstract class TekalyMediaCache {
   }
 
   Future<TekalyMediaContent?> getMedia(TekalyMediaKey key);
+  Future<bool> isMediaCached(TekalyMediaKey key);
 
   Stream<TekalyMediaContent> onMedia(TekalyMediaKey key);
-  Future<TekalyMediaContent> cacheMedia(
-    TekalyMediaKey key,
-    Uri uri, {
-    String? name,
-    String? type,
-  });
+  Future<TekalyMediaContent> cacheMedia(TekalyMediaSourceInfo src);
+
+  /// New session helper
+  TekalyMediaCacheSession initSession();
 
   /// The root directory of the cache
   Directory get rootDirectory;
 
+  /// To call regularly
   Future<void> clean();
+
+  Future<void> clear();
 }
 
 class _TekalyMediaCache implements TekalyMediaCache {
@@ -112,6 +201,9 @@ class _TekalyMediaCache implements TekalyMediaCache {
     _init();
   }
 
+  @override
+  TekalyMediaCacheSession initSession() => TekalyMediaCacheSession(this);
+
   Context get p => rootDirectory.fs.path;
 
   @override
@@ -121,7 +213,7 @@ class _TekalyMediaCache implements TekalyMediaCache {
         .record(key.id)
         .onRecord(db)
         .where((record) => record != null)
-        .asyncMap((dbMedia) => _mediaContent(dbMedia!));
+        .asyncMap((dbMedia) => _fileReadMediaContent(dbMedia!));
   }
 
   @override
@@ -154,13 +246,18 @@ class _TekalyMediaCache implements TekalyMediaCache {
     }
   }
 
+  /// Close and delete the database
+  /// Unsafe
+  @override
   Future<void> clear() async {
     var db = await database;
-    await db.close();
+    await dbMediaStore.delete(db);
+
     await rootDirectory.delete(recursive: true);
+    await _init();
   }
 
-  Future<TekalyMediaContent> _mediaContent(DbMedia dbMedia) async {
+  Future<TekalyMediaContent> _fileReadMediaContent(DbMedia dbMedia) async {
     var file = mediaDirectory.file(dbMedia.nameValue);
     var bytes = await file.readAsBytes();
     return TekalyMediaContent(info: dbMedia.mediaInfo, bytes: bytes);
@@ -173,25 +270,30 @@ class _TekalyMediaCache implements TekalyMediaCache {
     if (dbMedia == null) {
       return null;
     }
-    return await _mediaContent(dbMedia);
+    return await _fileReadMediaContent(dbMedia);
   }
 
   @override
-  Future<TekalyMediaContent> cacheMedia(
-    TekalyMediaKey key,
-    Uri uri, {
-    String? name,
-    String? type,
-  }) async {
+  Future<bool> isMediaCached(TekalyMediaKey key) async {
+    var db = await database;
+    var dbMedia = await dbMediaStore.record(key.id).get(db);
+    return (dbMedia?.cached.isNotNull ?? false);
+  }
+
+  @override
+  Future<TekalyMediaContent> cacheMedia(TekalyMediaSourceInfo src) async {
+    var key = src.key;
     try {
-      var bytes = await mediaFetcher.fetch(uri);
+      if (debugTekalyMediaCache) {
+        _log('cacheMedia $src');
+      }
+      var bytes = await mediaFetcher.fetch(src);
       var size = bytes.lengthInBytes;
-      var segments = uri.pathSegments;
-      var filename =
-          name ?? (segments.isNotEmpty ? url.basename(segments.last) : key.id);
+      var filename = src.nameValue;
       var db = await database;
       var file = mediaDirectory.file(filename);
       try {
+        _log('writing file $file');
         await file.writeAsBytes(bytes);
       } catch (_) {
         await file.parent.create(recursive: true);
@@ -199,23 +301,27 @@ class _TekalyMediaCache implements TekalyMediaCache {
       }
       var record = DbMedia();
       record.name.value = filename;
-      record.type.setValue(type);
+      record.type.setValue(src.type);
       record.size.value = size;
       record.cached.setValue(Timestamp.now());
       await dbMediaStore.record(key.id).put(db, record);
       return TekalyMediaContent(info: record.mediaInfo, bytes: bytes);
     } catch (e) {
-      print('error caching media $key: $e');
+      print('error caching media $src');
       rethrow;
     }
   }
 
-  Future<void> _init() async {
+  String get _dbPath {
     var dbName = 'tekaly_media_cache.db';
-    var path = p.join(rootDirectory.path, 'tekaly_media_cache.db');
-    print('open database $path');
+    var path = p.join(rootDirectory.path, dbName);
+    return path;
+  }
+
+  Future<void> _init() async {
+    print('open database $_dbPath');
     database = () async {
-      return await databaseFactory.openDatabase(dbName);
+      return await databaseFactory.openDatabase(_dbPath);
     }();
     await database;
   }

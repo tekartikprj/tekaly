@@ -1,7 +1,7 @@
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:sembast/timestamp.dart';
 
-import 'tekaly_media_cache.dart';
+import 'media_cache.dart';
 
 class DbMedia extends DbStringRecordBase {
   final name = CvField<String>('name');

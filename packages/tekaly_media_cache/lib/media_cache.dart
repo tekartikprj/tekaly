@@ -3,10 +3,11 @@
 /// More dartdocs go here.
 library;
 
-export 'src/tekaly_media_cache.dart'
+export 'src/media_cache.dart'
     show
         TekalyMediaCache,
         TekalyMediaKey,
         TekalyMediaContent,
         TekalyMediaInfo,
-        TekalyMediaFetcher;
+        TekalyMediaFetcher,
+        TekalyMediaSourceInfo;

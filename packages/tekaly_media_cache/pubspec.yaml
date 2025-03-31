@@ -26,6 +26,10 @@ dependencies:
       url: https://github.com/tekartik/app_common_utils.dart
       ref: dart3a
       path: app_sembast
+  tekartik_common_utils:
+    git:
+      url: https://github.com/tekartik/common_utils.dart
+      ref: dart3a
 
 
 dev_dependencies:
