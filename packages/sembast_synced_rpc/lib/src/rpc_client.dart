@@ -28,6 +28,7 @@ class _SyncedSourceRpcClient
     required this.webSocketChannelClientFactory,
   }) {
     initSembastSyncedRpcBuilders();
+    initBuilders();
     rpcClient = AutoConnectRpcClient.autoConnect(
       uri,
       onConnect: (client) {},

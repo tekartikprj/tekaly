@@ -8,9 +8,13 @@ var textFileInfo = DownloadFileInfo(
   filename: 'test.txt',
   data: utf8.encode('Hello World'),
 );
+var textFileInfo2 = DownloadFileInfo(
+  filename: 'test2.txt',
+  data: utf8.encode('Hello World'),
+);
 void main() {
   test('downloadFile', () async {
-    await downloadFile(textFileInfo);
+    await downloadFile(textFileInfo2);
   });
   test('mimeType', () {
     expect(filenameMimeType('test.txt'), 'text/plain');

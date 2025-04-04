@@ -1,4 +1,5 @@
-export 'src/sync/auto_synced_db.dart' show AutoSynchronizedSyncedDbOptions;
+export 'src/sync/auto_synced_db.dart'
+    show AutoSynchronizedSyncedDbOptions, AutoSynchronizedDb;
 export 'src/sync/synced_db_export.dart'
     show SyncedDbExportInfo, SyncedDbExportExt;
 export 'src/sync/synced_db_import.dart' show SyncedDbImportExt;

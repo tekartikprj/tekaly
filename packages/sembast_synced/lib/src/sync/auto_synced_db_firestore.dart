@@ -39,7 +39,7 @@ class AutoSynchronizedFirestoreSyncedDbOptions
 }
 
 /// Auto synchronized firestore synced db
-abstract class AutoSynchronizedFirestoreSyncedDb {
+abstract class AutoSynchronizedFirestoreSyncedDb implements AutoSynchronizedDb {
   SyncedDb get syncedDb;
 
   final AutoSynchronizedFirestoreSyncedDbOptions options;
