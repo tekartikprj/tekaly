@@ -52,6 +52,15 @@ class _SyncedSourceRpcClient
   }
 
   @override
+  Future<void> putRawRecord(CvSyncedSourceRecord record) async {
+    await _sendRequest<PutSourceRecordApiResult>(
+      (PutSourceRecordApiQuery()..record.v = modelToJsonMap(record)).request(
+        requestPutSourceRecordCommand,
+      ),
+    );
+  }
+
+  @override
   Future<CvSyncedSourceRecord> putSourceRecord(
     CvSyncedSourceRecord record,
   ) async {

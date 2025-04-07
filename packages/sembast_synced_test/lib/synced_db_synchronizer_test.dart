@@ -2,12 +2,11 @@
 
 import 'dart:async';
 
+import 'package:dev_test/test.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
-
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
-import 'package:dev_test/test.dart';
 
 import 'synced_db_test.dart';
 import 'synced_source_test.dart';
@@ -30,22 +29,27 @@ void main() {
 class SyncTestsContext {
   late SyncedSource source;
   late SyncedDb syncedDb;
+  Future<void> dispose() async {
+    await Future.wait([source.close(), syncedDb.close()]);
+  }
 }
 
 void syncTests(Future<SyncTestsContext> Function() setupContext) {
   cvAddConstructor(DbEntity.new);
-  group('non_auto_synced_db_source_sync_firestore_test', () {
+  group('non_auto_synced_db_source_sync_test', () {
     late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
+    late SyncTestsContext context;
     setUp(() async {
-      var context = await setupContext();
+      context = await setupContext();
       source = context.source;
       syncedDb = context.syncedDb;
       //debugSyncedSync = true;
       sync = SyncedDbSynchronizer(db: syncedDb, source: source);
     });
     tearDown(() async {
+      await context.dispose();
       await sync.close();
       await source.close();
       await syncedDb.close();
@@ -65,7 +69,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       } on TimeoutException catch (_) {}
     });
   });
-  group('auto_synced_db_source_sync_firestore_test', () {
+  group('auto_synced_db_source_sync_test', () {
     late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
@@ -101,7 +105,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(meta.lastChangeId.v, 1);
     });
   });
-  group('synced_db_source_sync_firestore_test', () {
+  group('synced_db_source_sync_test', () {
     late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
