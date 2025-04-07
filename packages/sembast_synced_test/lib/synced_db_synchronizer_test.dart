@@ -51,8 +51,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     tearDown(() async {
       await context.dispose();
       await sync.close();
-      await source.close();
-      await syncedDb.close();
     });
     test('auto syncNone', () async {
       var meta = await syncedDb.getSyncMetaInfo();
@@ -73,17 +71,17 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
+    late SyncTestsContext context;
     setUp(() async {
-      var context = await setupContext();
+      context = await setupContext();
       source = context.source;
       syncedDb = context.syncedDb;
       //debugSyncedSync = true;
       sync = SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
     });
     tearDown(() async {
+      await context.dispose();
       await sync.close();
-      await source.close();
-      await syncedDb.close();
     });
 
     test('auto sync done', () async {
@@ -109,15 +107,16 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     late SyncedDbSynchronizer sync;
     late SyncedSource source;
     late SyncedDb syncedDb;
+    late SyncTestsContext context;
     setUp(() async {
-      var context = await setupContext();
+      context = await setupContext();
       source = context.source;
       syncedDb = context.syncedDb;
       sync = SyncedDbSynchronizer(db: syncedDb, source: source);
     });
-    tearDown(() {
-      source.close();
-      syncedDb.close();
+    tearDown(() async {
+      await context.dispose();
+
       sync.close();
     });
     test('syncNone', () async {
@@ -653,6 +652,21 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
       stat = await sync.sync();
       expect(stat, SyncedSyncStat());
+    });
+    test('multi sync', () async {
+      var syncedDb2 = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames);
+      var sync2 = SyncedDbSynchronizer(db: syncedDb2, source: source);
+      var db1 = await syncedDb.database;
+      var db2 = await syncedDb2.database;
+      await (dbEntityStoreRef.record('r1').cv()..name.v = 'text1').put(db1);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+      var stat2 = await sync2.sync();
+      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
+      var record = (await dbEntityStoreRef.record('r1').get(db2))!;
+      expect(record.name.v, 'text1');
+      syncedDb2.close();
+      await sync2.close();
     });
   });
 }

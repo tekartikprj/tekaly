@@ -218,16 +218,24 @@ class SyncedDbSynchronizer {
     }
   }
 
+  // ignore: unused_field
+  var _closing = false;
+
   /// Needed for autoSync.
   /// Wait for last sync to terminate.
   Future<void> close() async {
     _autoSyncSourceSubscription?.cancel().unawait();
     _autoSyncDbSubscription?.cancel().unawait();
+    await _syncLock.synchronized(() {
+      _closing = true;
+    });
     await _lazyLauncher.wait();
   }
 
   late final _lazyLauncher = LazyLauncher<SyncedSyncStat>(() async {
-    return await sync();
+    return _syncLock.synchronized(() {
+      return _sync();
+    });
   });
 
   /// Trigger a lazy sync
