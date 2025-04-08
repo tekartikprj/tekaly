@@ -2,10 +2,13 @@ import 'package:tekaly_sembast_synced/synced_db_sembast.dart';
 import 'package:tekaly_sembast_synced_rpc/rpc_client.dart';
 import 'package:tekaly_sembast_synced_rpc/rpc_server.dart';
 import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
+import 'package:tekartik_common_utils/common_utils_import.dart';
 // ignore: depend_on_referenced_packages
 import 'package:test/test.dart';
 
 void main() async {
+  //debugRpcServer = devTrue;
+  //debugRpcClient = devTrue;
   group('synced_db_synchronizer_test', () {
     Future<SyncTestsContext> setupContext() async {
       var factory = webSocketChannelFactoryMemory;

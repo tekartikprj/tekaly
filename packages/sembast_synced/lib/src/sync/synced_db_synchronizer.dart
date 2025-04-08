@@ -2,10 +2,9 @@ import 'dart:math';
 
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/database_utils.dart';
+import 'package:tekartik_app_common_utils/lazy_runner.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
-// ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
-// ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/list_utils.dart';
 import 'package:tekartik_common_utils/stream/stream_join.dart';
 
@@ -19,19 +18,27 @@ var _debugSyncedSync = false;
 
 /// Debug Synced sync
 bool get debugSyncedSync => _debugSyncedSync;
+
 @Deprecated('Debug Synced sync')
 set debugSyncedSync(bool debugSyncedSync) => _debugSyncedSync = debugSyncedSync;
+
 @Deprecated('Debug Synced sync')
 set debugSyncedDbSynchronizer(bool debugSyncedSync) =>
     _debugSyncedSync = debugSyncedSync;
 
 /// Synced sync stat
 class SyncedSyncStat {
+  /// Local created count
+  int localCreatedCount;
+
+  /// Remote updated count
+  int remoteUpdatedCount;
+
   /// Local updated count
   int localUpdatedCount;
 
   /// Remote updated count
-  int remoteUpdatedCount;
+  int remoteCreatedCount;
 
   /// Remote deleted count
   int remoteDeletedCount;
@@ -39,22 +46,36 @@ class SyncedSyncStat {
   /// Local deleted count
   int localDeletedCount;
 
+  /// No action done
+  final bool notExecuted;
+
   /// Default constructor
   SyncedSyncStat({
+    this.notExecuted = false,
+
+    this.localCreatedCount = 0,
     this.localUpdatedCount = 0,
     this.localDeletedCount = 0,
+    this.remoteCreatedCount = 0,
     this.remoteUpdatedCount = 0,
     this.remoteDeletedCount = 0,
   });
 
   @override
   int get hashCode =>
-      localUpdatedCount + remoteUpdatedCount + remoteDeletedCount;
+      localUpdatedCount +
+      localDeletedCount +
+      localCreatedCount +
+      remoteUpdatedCount +
+      remoteDeletedCount +
+      remoteCreatedCount;
 
   /// Modify this
   void add(SyncedSyncStat other) {
+    localCreatedCount += other.localCreatedCount;
     localUpdatedCount += other.localUpdatedCount;
     localDeletedCount += other.localDeletedCount;
+    remoteCreatedCount += other.remoteCreatedCount;
     remoteUpdatedCount += other.remoteUpdatedCount;
     remoteDeletedCount += other.remoteDeletedCount;
   }
@@ -62,6 +83,13 @@ class SyncedSyncStat {
   @override
   bool operator ==(Object other) {
     if (other is SyncedSyncStat) {
+      if (other.localCreatedCount != localCreatedCount) {
+        return false;
+      }
+      if (other.remoteCreatedCount != remoteCreatedCount) {
+        return false;
+      }
+
       if (other.localUpdatedCount != localUpdatedCount) {
         return false;
       }
@@ -82,8 +110,10 @@ class SyncedSyncStat {
   @override
   String toString() {
     var map = asModel({
+      if (localCreatedCount > 0) 'localCreatedCount': localCreatedCount,
       if (localUpdatedCount > 0) 'localUpdatedCount': localUpdatedCount,
       if (localDeletedCount > 0) 'localDeletedCount': localDeletedCount,
+      if (remoteCreatedCount > 0) 'remoteCreatedCount': remoteCreatedCount,
       if (remoteUpdatedCount > 0) 'remoteUpdatedCount': remoteUpdatedCount,
       if (remoteDeletedCount > 0) 'remoteDeletedCount': remoteDeletedCount,
     });
@@ -95,6 +125,9 @@ class SyncedSyncStat {
 class SyncedSyncSourceRecord {
   CvSyncedSourceRecord? sourceRecord;
   DbSyncRecord? syncRecord;
+
+  bool get hasSyncId => syncRecord?.syncId.v != null;
+  bool get isNewLocalRecord => !hasSyncId;
 }
 
 /// Compat
@@ -229,18 +262,25 @@ class SyncedDbSynchronizer {
     await _syncLock.synchronized(() {
       _closing = true;
     });
-    await _lazyLauncher.wait();
+    await _lazyLauncher.close();
   }
 
-  late final _lazyLauncher = LazyLauncher<SyncedSyncStat>(() async {
-    return _syncLock.synchronized(() {
-      return _sync();
-    });
-  });
+  late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
+    action: (count) async {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('start lazy sync');
+      }
+      return await _syncLock.synchronized(() {
+        return _sync();
+      });
+    },
+  );
 
   /// Trigger a lazy sync
   Future<SyncedSyncStat> lazySync() async {
-    return await _lazyLauncher.launch();
+    return (await _lazyLauncher.triggerAndWait()) ??
+        SyncedSyncStat(notExecuted: true);
   }
 
   /// Sync up and down
@@ -299,6 +339,7 @@ class SyncedDbSynchronizer {
 
         await db.syncTransaction((txn) async {
           for (var syncSourceRecord in list) {
+            var isNew = syncSourceRecord.isNewLocalRecord;
             var responseRecord = syncSourceRecord.sourceRecord!;
             var originalSyncRecord = syncSourceRecord.syncRecord!;
             var newSyncRecord =
@@ -323,7 +364,11 @@ class SyncedDbSynchronizer {
               stat.remoteDeletedCount++;
               await dataRecordRef.delete(txn);
             } else {
-              stat.remoteUpdatedCount++;
+              if (isNew) {
+                stat.remoteCreatedCount++;
+              } else {
+                stat.remoteUpdatedCount++;
+              }
               await dataRecordRef.put(
                 txn,
                 asModel(responseRecord.record.v!.value.v ?? {}),
@@ -345,12 +390,6 @@ class SyncedDbSynchronizer {
     CvSyncedSourceRecord remoteRecord,
     SyncedSyncStat stat,
   ) async {
-    // create
-    if (remoteRecord.isDeleted) {
-      stat.localDeletedCount++;
-    } else {
-      stat.localUpdatedCount++;
-    }
     await db.dbSyncRecordStoreRef.add(
       client,
       (DbSyncRecord()
@@ -365,8 +404,14 @@ class SyncedDbSynchronizer {
         .store(remoteRecord.record.v!.store.v)
         .record(remoteRecord.record.v!.key.v!);
     if (remoteRecord.isDeleted) {
+      stat.localDeletedCount++;
       await ref.delete(client);
     } else {
+      if (ref.existsSync(client)) {
+        stat.localUpdatedCount++;
+      } else {
+        stat.localCreatedCount++;
+      }
       await ref.put(
         client,
         remoteRecord.record.v!.value.v!.cast<String, Object?>(),
@@ -457,6 +502,7 @@ class SyncedDbSynchronizer {
     return _SyncDownInfo();
   }
 */
+
   /// Sync dirty records up
   Future<SyncedSyncStat> _syncDown() async {
     var db = await this.db.database;
@@ -664,7 +710,7 @@ class SyncedDbSynchronizer {
 
   /// Wait for current sync to terminate
   Future<void> lazyWaitSync() async {
-    return await _lazyLauncher.wait();
+    await _lazyLauncher.waitCurrent();
   }
 }
 
@@ -674,8 +720,10 @@ class _LazyLauncherTrigger<T> {
   final LazyLauncher<T> lazyLauncher;
   final triggerTime = _lazyLauncherStopwatch.elapsed;
   Duration? startTime;
+
   //Future<T> _launch;
   _LazyLauncherTrigger(this.lazyLauncher);
+
   Future<T> launch() => _launch;
 
   late final Future<T> _launch = _doLaunch();
@@ -702,6 +750,7 @@ class _LazyLauncherTrigger<T> {
 /// Lazy launcher
 class LazyLauncher<T> {
   final _lock = Lock();
+
   // ignore: unused_field
   _LazyLauncherTrigger<T>? _runningTrigger;
   Duration? _lastTriggerRunTime;

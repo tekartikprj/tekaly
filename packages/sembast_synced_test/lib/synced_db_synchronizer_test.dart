@@ -7,12 +7,14 @@ import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
+import 'package:tekartik_common_utils/common_utils_import.dart';
 
 import 'synced_db_test.dart';
 import 'synced_source_test.dart';
 
 var syncedStoreNames = [dbEntityStoreName];
 void main() {
+  // debugSyncedDbSynchronizer = devTrue;
   group('synced_db_source_sync_memory_test', () {
     Future<SyncTestsContext> setupContext() async {
       //    setUp(() async {
@@ -76,12 +78,13 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       context = await setupContext();
       source = context.source;
       syncedDb = context.syncedDb;
-      //debugSyncedSync = true;
+      // debugSyncedDbSynchronizer = true;
       sync = SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
     });
     tearDown(() async {
-      await context.dispose();
+      /// Close first
       await sync.close();
+      await context.dispose();
     });
 
     test('auto sync done', () async {
@@ -152,7 +155,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'syncChangeId': 1,
         },
       ]);
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
       var sourceRecord =
           (await source.getSourceRecord(
             SyncedDataSourceRef(store: 'entity', key: 'a1'),
@@ -187,7 +190,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             ..name.v = 'test1'
             ..timestamp.v = Timestamp(1, 1000))
           .put(db);
-      expect(await sync.sync(), SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(await sync.sync(), SyncedSyncStat(remoteCreatedCount: 1));
       await recordRef.delete(db);
       var syncRecords = await syncedDb.getSyncRecords();
       expect(syncRecords.first.deleted.v, isTrue);
@@ -279,7 +282,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'syncChangeId': 1,
         },
       ]);
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
       var sourceRecord =
           (await source.getSourceRecord(
             SyncedDataSourceRef(store: storeName, key: 'a1'),
@@ -328,7 +331,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
       /// Full sync
       var stat = await sync.syncDown();
-      expect(stat, SyncedSyncStat(localUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
       var metaInfo = (await syncedDb.getSyncMetaInfo())!;
       expect(metaInfo.toMap(), {
@@ -492,7 +495,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
       /// Full sync
       var stat = await sync.syncDown();
-      expect(stat, SyncedSyncStat(localUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
       expect((await dbEntityStoreRef.find(await syncedDb.database)), [
         dbEntityStoreRef.record('a1').cv()..name.v = 'test1',
@@ -513,7 +516,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var ref = dbEntityStoreRef.record('a1');
       await (ref.cv()..name.v = 'test1').put(db);
       var stat = await sync.syncUp();
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
       await (ref.cv()..name.v = 'test2').put(db);
       stat = await sync.syncUp();
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
@@ -535,7 +538,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
       /// Full sync
       var stat = await sync.syncDown();
-      expect(stat, SyncedSyncStat(localUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
       /// update
       await source.putSourceRecord(
@@ -588,7 +591,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       );
 
       var stat = await sync.syncDown();
-      expect(stat, SyncedSyncStat(localUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
       // We just change the version and the data
       await source.putMetaInfo(
@@ -622,10 +625,10 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var db = await syncedDb.database;
       await (dbEntityStoreRef.record('a2').cv()).put(db);
       var stat = await sync.sync();
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
       await (dbEntityStoreRef.record('a1').cv()).put(db);
       stat = await sync.sync();
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
     });
 
     test('sync3Step2', () async {
@@ -637,7 +640,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       sync.stepLimitUp = 2;
       sync.stepLimitDown = 2;
       var stat = await sync.sync();
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 3));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 3));
       /*
       await (dbEntityStoreRef.record('a1').cv()).put(db);
       stat = await sync.sync();
@@ -649,24 +652,73 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var db = await syncedDb.database;
       await (dbEntityStoreRef.record('r1').cv()).put(db);
       var stat = await sync.sync();
-      expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
       stat = await sync.sync();
       expect(stat, SyncedSyncStat());
     });
-    test('multi sync', () async {
-      var syncedDb2 = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames);
-      var sync2 = SyncedDbSynchronizer(db: syncedDb2, source: source);
-      var db1 = await syncedDb.database;
-      var db2 = await syncedDb2.database;
-      await (dbEntityStoreRef.record('r1').cv()..name.v = 'text1').put(db1);
-      var stat1 = await sync.sync();
-      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
-      var stat2 = await sync2.sync();
-      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
-      var record = (await dbEntityStoreRef.record('r1').get(db2))!;
-      expect(record.name.v, 'text1');
-      syncedDb2.close();
+  });
+  group('multi sync', () async {
+    late SyncedDbSynchronizer sync;
+    late SyncedDbSynchronizer sync2;
+    late SyncedSource source;
+    late SyncedDb syncedDb;
+    late SyncedDb syncedDb2;
+    late SyncTestsContext context;
+    late Database db1;
+    late Database db2;
+    var record1 = dbEntityStoreRef.record('r1');
+    var record2 = dbEntityStoreRef.record('r2');
+    setUp(() async {
+      context = await setupContext();
+      source = context.source;
+      syncedDb = context.syncedDb;
+      syncedDb2 = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames);
+      sync = SyncedDbSynchronizer(db: syncedDb, source: source);
+      sync2 = SyncedDbSynchronizer(db: syncedDb2, source: source);
+      db1 = await syncedDb.database;
+      db2 = await syncedDb2.database;
+    });
+    tearDown(() async {
+      /// Close first
+      await sync.close();
       await sync2.close();
+
+      await syncedDb2.close();
+      await context.dispose();
+    });
+
+    test('simple multi sync one record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
+      var stat2 = await sync2.sync();
+      expect(stat2, SyncedSyncStat(localCreatedCount: 1));
+      var record = (await record1.get(db2))!;
+      expect(record.name.v, 'text1');
+      await record1.delete(db2);
+      stat2 = await sync2.sync();
+      expect(stat2, SyncedSyncStat(remoteDeletedCount: 1));
+      stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(localDeletedCount: 1));
+    });
+
+    test('first multi sync two record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      await (record2.cv()..name.v = 'text2').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
+      var stat2 = await sync2.sync();
+      expect(
+        stat2,
+        SyncedSyncStat(localCreatedCount: 1, remoteCreatedCount: 1),
+      );
+      var record = (await record1.get(db2))!;
+      expect(record.name.v, 'text1');
+      await record1.delete(db2);
+      stat2 = await sync2.sync();
+      expect(stat2, SyncedSyncStat(remoteDeletedCount: 1));
+      stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(localCreatedCount: 1, localDeletedCount: 1));
     });
   });
 }
