@@ -8,9 +8,14 @@ import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
+import 'package:tekartik_common_utils/env_utils.dart';
 
 import 'synced_db_test_common.dart';
 import 'synced_source_test.dart';
+
+/// Web steps might not handled microseconds
+Timestamp exampleTimestamp1() =>
+    kDartIsWeb ? Timestamp(1, 1000000) : Timestamp(1, 1000);
 
 var syncedStoreNames = [dbEntityStoreName];
 void main() {
@@ -97,7 +102,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var db = await syncedDb.database;
       await (dbEntityStoreRef.record('a1').cv()
             ..name.v = 'test1'
-            ..timestamp.v = Timestamp(1, 1000))
+            ..timestamp.v = exampleTimestamp1())
           .put(db);
       meta =
           (await syncedDb.dbSyncMetaInfoRef
@@ -132,7 +137,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var db = await syncedDb.database;
       await (dbEntityStoreRef.record('a1').cv()
             ..name.v = 'test1'
-            ..timestamp.v = Timestamp(1, 1000))
+            ..timestamp.v = exampleTimestamp1())
           .put(db);
       var syncRecords = await syncedDb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
@@ -171,7 +176,10 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
                 ..store.v = dbEntityStoreRef.name
                 ..key.v = 'a1'
                 ..deleted.v = false
-                ..value.v = {'name': 'test1', 'timestamp': Timestamp(1, 1000)}),
+                ..value.v = {
+                  'name': 'test1',
+                  'timestamp': exampleTimestamp1(),
+                }),
       );
       var sourceMeta = (await source.getMetaInfo())!;
       expect(sourceMeta.toMap(), {'lastChangeId': 1});
@@ -188,7 +196,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var recordRef = dbEntityStoreRef.record('a1');
       await (recordRef.cv()
             ..name.v = 'test1'
-            ..timestamp.v = Timestamp(1, 1000))
+            ..timestamp.v = exampleTimestamp1())
           .put(db);
       expect(await sync.sync(), SyncedSyncStat(remoteCreatedCount: 1));
       await recordRef.delete(db);
@@ -319,7 +327,10 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
               (CvSyncedSourceRecordData()
                 ..store.v = dbEntityStoreRef.name
                 ..key.v = 'a1'
-                ..value.v = {'name': 'test1', 'timestamp': Timestamp(1, 1000)}),
+                ..value.v = {
+                  'name': 'test1',
+                  'timestamp': exampleTimestamp1(),
+                }),
       ));
       expect(sourceRecord.syncId.v, isNotNull);
       expect(sourceRecord.syncTimestamp.v, isNotNull);
@@ -355,7 +366,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'a1',
           {
             'name': 'test1',
-            'timestamp': {'@Timestamp': Timestamp(1, 1000).toIso8601String()},
+            'timestamp': {'@Timestamp': exampleTimestamp1().toIso8601String()},
           },
         ],
         {'store': 'syncMeta'},
