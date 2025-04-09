@@ -9,7 +9,7 @@ import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
-import 'synced_db_test.dart';
+import 'synced_db_test_common.dart';
 import 'synced_source_test.dart';
 
 var syncedStoreNames = [dbEntityStoreName];

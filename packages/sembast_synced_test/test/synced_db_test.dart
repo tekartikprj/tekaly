@@ -1,23 +1,12 @@
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
-import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_sembast_synced_test/synced_db_test_common.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:dev_test/test.dart';
 
-/// Entity in the database.
-class DbEntity extends DbStringRecordBase {
-  final name = CvField<String>('name');
-  final timestamp = CvField<Timestamp>('timestamp');
-
-  @override
-  List<CvField> get fields => [name, timestamp];
-}
-
-var dbEntityStoreRef = cvStringStoreFactory.store<DbEntity>('entity');
-String get dbEntityStoreName => dbEntityStoreRef.name;
 void main() {
   cvAddConstructor(DbEntity.new);
   group('synced_db', () {
