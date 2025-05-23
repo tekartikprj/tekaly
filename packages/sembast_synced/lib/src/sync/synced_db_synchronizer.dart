@@ -279,8 +279,7 @@ class SyncedDbSynchronizer {
 
   /// Trigger a lazy sync
   Future<SyncedSyncStat> lazySync() async {
-    return (await _lazyLauncher.triggerAndWait()) ??
-        SyncedSyncStat(notExecuted: true);
+    return (await _lazyLauncher.triggerAndWait());
   }
 
   /// Sync up and down
