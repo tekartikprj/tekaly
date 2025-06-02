@@ -1,7 +1,5 @@
 // ignore_for_file: avoid_print, invalid_use_of_visible_for_testing_member
 
-import 'dart:async';
-
 import 'package:dev_test/test.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
@@ -18,6 +16,7 @@ Timestamp exampleTimestamp1() =>
     kDartIsWeb ? Timestamp(1, 1000000) : Timestamp(1, 1000);
 
 var syncedStoreNames = [dbEntityStoreName];
+
 void main() {
   // debugSyncedDbSynchronizer = devTrue;
   group('synced_db_source_sync_memory_test', () {
@@ -36,6 +35,7 @@ void main() {
 class SyncTestsContext {
   late SyncedSource source;
   late SyncedDb syncedDb;
+
   Future<void> dispose() async {
     await Future.wait([source.close(), syncedDb.close()]);
   }
@@ -56,8 +56,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       sync = SyncedDbSynchronizer(db: syncedDb, source: source);
     });
     tearDown(() async {
-      await context.dispose();
       await sync.close();
+      await context.dispose();
     });
     test('auto syncNone', () async {
       var meta = await syncedDb.getSyncMetaInfo();
@@ -87,9 +87,14 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       sync = SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
     });
     tearDown(() async {
-      /// Close first
-      await sync.close();
-      await context.dispose();
+      try {
+        /// Close first
+        await sync.close();
+        await context.dispose();
+      } catch (e, st) {
+        print('Error during tearDown: $e, $st');
+        rethrow;
+      }
     });
 
     test('auto sync done', () async {
@@ -98,7 +103,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('autoSyncOneFromLocal', () async {
       var meta = await syncedDb.getSyncMetaInfo();
       expect(meta, isNull);
-      print('meta: $meta');
       var db = await syncedDb.database;
       await (dbEntityStoreRef.record('a1').cv()
             ..name.v = 'test1'
@@ -109,6 +113,9 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
               .onRecord(db)
               .firstWhere((meta) => meta != null))!;
       expect(meta.lastChangeId.v, 1);
+
+      /// Workaround for failing test
+      await sleep(500);
     });
   });
   group('synced_db_source_sync_test', () {

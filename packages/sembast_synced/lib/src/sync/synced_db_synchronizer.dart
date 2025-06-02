@@ -285,7 +285,15 @@ class SyncedDbSynchronizer {
   /// Sync up and down
   Future<SyncedSyncStat> sync() {
     return _syncLock.synchronized(() {
-      return _sync();
+      try {
+        return _sync();
+      } catch (e, st) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('sync error $e $st');
+        }
+        rethrow;
+      }
     });
   }
 
