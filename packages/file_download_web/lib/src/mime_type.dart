@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 var _mimeTypeMap = {
   '.css': 'text/css',
   '.dart': 'application/dart',
+  '.gif': 'image/gif',
   '.html': 'text/html',
   '.ico': 'image/x-icon',
   '.jpg': 'image/jpeg',

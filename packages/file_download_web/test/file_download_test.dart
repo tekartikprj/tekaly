@@ -18,5 +18,6 @@ void main() {
   });
   test('mimeType', () {
     expect(filenameMimeType('test.txt'), 'text/plain');
+    expect(filenameMimeType('test2.gif'), 'image/gif');
   });
 }
