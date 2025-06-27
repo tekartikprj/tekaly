@@ -363,21 +363,19 @@ class _TekalyMediaCache implements TekalyMediaCache {
       /// and dbEntry without files
       try {
         var db = await database;
-        var foundFilenames =
-            (await mediaDirectory.exists())
-                ? (await mediaDirectory.list().toList())
-                    .map((e) {
-                      return basename(e.path);
-                    })
-                    .nonNulls
-                    .where((path) => path.isNotEmpty)
-                : <String>[];
-        var filenames =
-            (await dbMediaStore.find(db))
-                .map((media) => media.name.v)
-                .nonNulls
-                .where((name) => name.isNotEmpty)
-                .toSet();
+        var foundFilenames = (await mediaDirectory.exists())
+            ? (await mediaDirectory.list().toList())
+                  .map((e) {
+                    return basename(e.path);
+                  })
+                  .nonNulls
+                  .where((path) => path.isNotEmpty)
+            : <String>[];
+        var filenames = (await dbMediaStore.find(db))
+            .map((media) => media.name.v)
+            .nonNulls
+            .where((name) => name.isNotEmpty)
+            .toSet();
         var toDelete = List.of(foundFilenames)
           ..removeWhere((name) => filenames.contains(name));
 
@@ -439,7 +437,10 @@ class _TekalyMediaCache implements TekalyMediaCache {
   ) async {
     var file = mediaDirectory.file(dbMedia.nameValue);
     var bytes = await file.readAsBytes();
-    return TekalyMediaContent(info: dbMedia.mediaInfo(key: key), bytes: bytes);
+    return TekalyMediaContent(
+      info: dbMedia.mediaInfo(key: key),
+      bytes: bytes,
+    );
   }
 
   @override
@@ -588,10 +589,9 @@ class _TekalyMediaCache implements TekalyMediaCache {
   static const _autoCleanDuration = Duration(seconds: 15);
 
   void scheduleAutoClean() {
-    var duration =
-        firstAutoCleanDone
-            ? (options.nextAutoCleanDuration ?? _autoCleanDuration)
-            : (options.firstAutoCleanDuration ?? _firstAutoCleanDuration);
+    var duration = firstAutoCleanDone
+        ? (options.nextAutoCleanDuration ?? _autoCleanDuration)
+        : (options.firstAutoCleanDuration ?? _firstAutoCleanDuration);
     autoCleanTimer?.cancel();
     firstAutoCleanDone = true;
 

@@ -23,14 +23,13 @@ Future<void> main() async {
 Future<void> run() async {
   WidgetsFlutterBinding.ensureInitialized();
   initFsBuilders();
-  var sembastFactory =
-      kIsWeb
-          ? databaseFactoryWeb
-          : createDatabaseFactoryIo(
-            rootPath: normalize(
-              absolute('.local', 'tk_firestore_explorer_test_app'),
-            ),
-          );
+  var sembastFactory = kIsWeb
+      ? databaseFactoryWeb
+      : createDatabaseFactoryIo(
+          rootPath: normalize(
+            absolute('.local', 'tk_firestore_explorer_test_app'),
+          ),
+        );
   firestore = newFirestoreServiceSembast(
     databaseFactory: sembastFactory,
   ).firestore(newFirebaseAppLocal());
