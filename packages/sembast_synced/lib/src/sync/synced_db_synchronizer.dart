@@ -195,16 +195,14 @@ class SyncedDbSynchronizer {
           }
         }
 
-        var sourceRecord =
-            CvSyncedSourceRecord()
-              //..syncTimestamp.v = dirtySyncRecord.syncTimestamp.v
-              ..syncId.v = dirtySyncRecord.syncId.v
-              ..record.v =
-                  (CvSyncedSourceRecordData()
-                    ..store.v = dirtySyncRecord.store.v
-                    ..key.v = dirtySyncRecord.key.v
-                    ..deleted.v = dirtySyncRecord.deleted.v == true
-                    ..value.v = value);
+        var sourceRecord = CvSyncedSourceRecord()
+          //..syncTimestamp.v = dirtySyncRecord.syncTimestamp.v
+          ..syncId.v = dirtySyncRecord.syncId.v
+          ..record.v = (CvSyncedSourceRecordData()
+            ..store.v = dirtySyncRecord.store.v
+            ..key.v = dirtySyncRecord.key.v
+            ..deleted.v = dirtySyncRecord.deleted.v == true
+            ..value.v = value);
         list.add(
           SyncedSyncSourceRecord()
             ..sourceRecord = sourceRecord
@@ -227,21 +225,19 @@ class SyncedDbSynchronizer {
     this.autoSync = false,
   }) {
     if (autoSync) {
-      _autoSyncSourceSubscription = streamJoin2(
-        source.onMetaInfo(),
-        db.onSyncMetaInfo(),
-      ).listen((event) {
-        var remote = event.$1;
-        var local = event.$2;
-        var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
-        var localLastChangeId = local?.lastChangeId.v ?? 0;
-        // devPrint('remote $remote, local: $local');
-        if (remoteLastChangeId != localLastChangeId) {
-          lazySync();
-        } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
-          lazySync();
-        }
-      });
+      _autoSyncSourceSubscription =
+          streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
+            var remote = event.$1;
+            var local = event.$2;
+            var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
+            var localLastChangeId = local?.lastChangeId.v ?? 0;
+            // devPrint('remote $remote, local: $local');
+            if (remoteLastChangeId != localLastChangeId) {
+              lazySync();
+            } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
+              lazySync();
+            }
+          });
       _autoSyncDbSubscription = db.onDirty().listen((dirty) {
         // devPrint('localDirty $dirty');
         if (dirty) {
@@ -682,11 +678,10 @@ class SyncedDbSynchronizer {
         }
       }
       Future<void> saveMetaInfo() async {
-        var metaInfo =
-            this.db.dbSyncMetaInfoRef.cv()
-              ..lastChangeId.v = newLastChangeId
-              ..lastTimestamp.v = newLastTimestamp
-              ..sourceVersion.setValue(initialSourceMeta?.version.v);
+        var metaInfo = this.db.dbSyncMetaInfoRef.cv()
+          ..lastChangeId.v = newLastChangeId
+          ..lastTimestamp.v = newLastTimestamp
+          ..sourceVersion.setValue(initialSourceMeta?.version.v);
         await metaInfo.put(txn);
         if (debugSyncedSync) {
           // ignore: avoid_print

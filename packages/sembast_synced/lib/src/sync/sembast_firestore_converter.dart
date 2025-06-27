@@ -145,13 +145,12 @@ Map<String, Object?> mapFirestoreToSembast(Map<String, Object?> map) =>
 /// Snapshot to a cv record
 T? cvRecordFromSnapshot<T extends CvModel>(
   firestore.DocumentSnapshot snapshot,
-) =>
-    (snapshot.exists)
-        ? () {
-          var data = firestoreToSembast(snapshot.data) as Map<String, Object?>;
-          return cvBuildModel<T>(data)..fromMap(data);
-        }()
-        : null;
+) => (snapshot.exists)
+    ? () {
+        var data = firestoreToSembast(snapshot.data) as Map<String, Object?>;
+        return cvBuildModel<T>(data)..fromMap(data);
+      }()
+    : null;
 
 CvMetaInfo? metaInfoRecordFromSnapshot(firestore.DocumentSnapshot snapshot) =>
     cvRecordFromSnapshot<CvMetaInfo>(snapshot);

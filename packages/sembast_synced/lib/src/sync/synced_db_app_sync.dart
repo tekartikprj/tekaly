@@ -106,8 +106,8 @@ class SyncedDbAppSyncExport
   @override
   Future<void> sync() async {
     var meta = await db.getSyncMetaInfo();
-    var newMeta =
-        SyncedDbExportMeta()..fromMap(await fetcher.fetchExportMeta());
+    var newMeta = SyncedDbExportMeta()
+      ..fromMap(await fetcher.fetchExportMeta());
     var newLastChangeId = newMeta.lastChangeId.v!;
     if ((meta?.sourceVersion.v != newMeta.sourceVersion.v) ||
         (newMeta.lastChangeId.v! > (meta?.lastChangeId.v ?? 0))) {

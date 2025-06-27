@@ -37,12 +37,11 @@ class _SyncedSourceRpcClient
   }
 
   Future<T> _sendRequest<T extends ApiResult>(ApiRequest request) async {
-    var response =
-        (await rpcClient.sendServiceRequest<Map>(
-          syncedSourceRpcServiceName,
-          request.apiCommand,
-          request.data.v,
-        )).cv<ApiResponse>();
+    var response = (await rpcClient.sendServiceRequest<Map>(
+      syncedSourceRpcServiceName,
+      request.apiCommand,
+      request.data.v,
+    )).cv<ApiResponse>();
     if (response.error.isNotNull) {
       throw ApiException(error: response.error.v);
     } else {

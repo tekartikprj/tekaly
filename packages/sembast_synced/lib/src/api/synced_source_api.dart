@@ -166,12 +166,11 @@ void recordToSyncChangeRef(CvSyncedSourceRecord record, ApiChangeRef change) {
 }
 
 CvSyncedSourceRecord apiChangeToRecord(ApiChange change) {
-  var recordData =
-      CvSyncedSourceRecordData()
-        ..store.v = change.store.v
-        ..key.v = change.key.v
-        ..value.v = jsonDecodeSembastValueOrNull(change.data.v) as Model?
-        ..deleted.v = change.data.v == null;
+  var recordData = CvSyncedSourceRecordData()
+    ..store.v = change.store.v
+    ..key.v = change.key.v
+    ..value.v = jsonDecodeSembastValueOrNull(change.data.v) as Model?
+    ..deleted.v = change.data.v == null;
   return CvSyncedSourceRecord()
     ..syncId.v = change.syncId.v
     ..syncChangeId.v = change.changeNum.v

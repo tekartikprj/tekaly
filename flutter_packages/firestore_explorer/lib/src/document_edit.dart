@@ -62,11 +62,10 @@ class _FsDocumentEditState extends State<FsDocumentEdit> {
                   }
                   var doc = snapshot.data!;
                   return Column(
-                    children:
-                        controller
-                            .fieldsEditViews(doc)
-                            .map((e) => FsDocumentFieldEdit(controller: e))
-                            .toList(),
+                    children: controller
+                        .fieldsEditViews(doc)
+                        .map((e) => FsDocumentFieldEdit(controller: e))
+                        .toList(),
                   );
                 },
               ),
@@ -141,10 +140,9 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
-                    controller:
-                        textEditingController ??= TextEditingController(
-                          text: field.value?.toString() ?? '',
-                        ),
+                    controller: textEditingController ??= TextEditingController(
+                      text: field.value?.toString() ?? '',
+                    ),
                     decoration: buildInputDecoration(labelText: field.name),
                     onSubmitted: (value) {
                       setState(() {

@@ -52,8 +52,9 @@ class _SyncedSourceRpcService extends RpcServiceBase {
             includeDeleted: query.includeDeleted.v,
           );
           return GetSourceRecordListApiResult()
-            ..records.v =
-                recordList.list.map((item) => item.toJsonMap()).toList()
+            ..records.v = recordList.list
+                .map((item) => item.toJsonMap())
+                .toList()
             ..lastChangeId.setValue(recordList.lastChangeId);
         case requestGetMetaInfoCommand:
           var metaInfoRecord = await rpcServer.delegate.getMetaInfo();

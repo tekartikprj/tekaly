@@ -109,20 +109,19 @@ abstract class SyncedDbBase with SyncedDbMixin {
 
   @override
   Future<Database> get database async =>
-      _database ??=
-          (await rawDatabase.then((db) {
-            // Setup triggers
-            for (var store in _syncStores) {
-              store.rawRef.addOnChangesListener(db, onChanges);
-            }
-            if (_syncStores.isEmpty) {
-              db.addAllStoresOnChangesListener(
-                onChangesAny,
-                excludedStoreNames: syncedExcludedStoreNames,
-              );
-            }
-            return db;
-          }))!;
+      _database ??= (await rawDatabase.then((db) {
+        // Setup triggers
+        for (var store in _syncStores) {
+          store.rawRef.addOnChangesListener(db, onChanges);
+        }
+        if (_syncStores.isEmpty) {
+          db.addAllStoresOnChangesListener(
+            onChangesAny,
+            excludedStoreNames: syncedExcludedStoreNames,
+          );
+        }
+        return db;
+      }))!;
 
   @override
   late var dbSyncMetaInfoRef = dbSyncMetaStoreRef.record('info');
@@ -439,10 +438,9 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
   );
 
   @override
-  late final rawDatabase =
-      openedDatabase != null
-          ? Future.value(openedDatabase)
-          : databaseFactory.openDatabase(name);
+  late final rawDatabase = openedDatabase != null
+      ? Future.value(openedDatabase)
+      : databaseFactory.openDatabase(name);
 }
 
 DbSyncRecord syncRecordFrom(RecordRef<String, Map<String, Object?>> record) {

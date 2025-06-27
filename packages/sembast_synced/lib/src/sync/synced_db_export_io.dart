@@ -25,10 +25,10 @@ extension SyncedDbExportIoExt on SyncedDb {
     var sdb = await database;
     var lines = await exportDatabaseLines(
       sdb,
-      storeNames:
-          getNonEmptyStoreNames(sdb).toList()..removeWhere(
-            (element) => [dbSyncRecordStoreRef.name].contains(element),
-          ),
+      storeNames: getNonEmptyStoreNames(sdb).toList()
+        ..removeWhere(
+          (element) => [dbSyncRecordStoreRef.name].contains(element),
+        ),
     );
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member
@@ -41,13 +41,10 @@ extension SyncedDbExportIoExt on SyncedDb {
       await file.writeAsString(
         '${exportLinesToJsonStringList(lines).join('\n')}\n',
       );
-      var exportMeta =
-          SyncedDbExportMeta()
-            ..sourceVersion.setValue(syncMeta.sourceVersion.v)
-            ..lastTimestamp.setValue(
-              syncMeta.lastTimestamp.v?.toIso8601String(),
-            )
-            ..lastChangeId.setValue(syncMeta.lastChangeId.v);
+      var exportMeta = SyncedDbExportMeta()
+        ..sourceVersion.setValue(syncMeta.sourceVersion.v)
+        ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())
+        ..lastChangeId.setValue(syncMeta.lastChangeId.v);
       //print(jsonPretty(exportMeta.toModel()));
       await fileMeta.writeAsString(jsonEncode(exportMeta.toMap()));
     }

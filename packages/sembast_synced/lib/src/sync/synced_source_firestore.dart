@@ -231,18 +231,14 @@ class SyncedSourceFirestore
         }
       }
     }
-    var querySnapshot =
-        await dataCollection
-            .where(
-              '$recordFieldKey.$recordStoreFieldKey',
-              isEqualTo: sourceRef.store,
-            )
-            .where(
-              '$recordFieldKey.$recordKeyFieldKey',
-              isEqualTo: sourceRef.key,
-            )
-            .limit(1)
-            .get();
+    var querySnapshot = await dataCollection
+        .where(
+          '$recordFieldKey.$recordStoreFieldKey',
+          isEqualTo: sourceRef.store,
+        )
+        .where('$recordFieldKey.$recordKeyFieldKey', isEqualTo: sourceRef.key)
+        .limit(1)
+        .get();
     if (querySnapshot.docs.isNotEmpty) {
       return sourceRecordFromSnapshot(querySnapshot.docs.first);
     }
@@ -297,21 +293,18 @@ class SyncedSourceFirestore
 
      */
 
-    var unfilteredList =
-        querySnapshot.docs
-            .map(
-              (snapshot) =>
-                  snapshot.data.fromFirestore().cv<CvSyncedSourceRecord>()
-                    ..syncId.v = snapshot.ref.id,
-            )
-            .toList();
-    var list =
-        unfilteredList
-            .where(
-              (element) =>
-                  (includeDeleted ?? false) ? true : !element.isDeleted,
-            )
-            .toList();
+    var unfilteredList = querySnapshot.docs
+        .map(
+          (snapshot) =>
+              snapshot.data.fromFirestore().cv<CvSyncedSourceRecord>()
+                ..syncId.v = snapshot.ref.id,
+        )
+        .toList();
+    var list = unfilteredList
+        .where(
+          (element) => (includeDeleted ?? false) ? true : !element.isDeleted,
+        )
+        .toList();
     var lastChangeNum = unfilteredList.lastOrNull?.syncChangeId.v;
     return SyncedSourceRecordList(list, lastChangeNum);
   }

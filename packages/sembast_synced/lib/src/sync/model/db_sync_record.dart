@@ -59,9 +59,8 @@ class DbSyncRecord extends DbIntRecordBase {
 
 DbSyncRecord? dbSyncRecordFromSnapshot(
   RecordSnapshot<int, Map<String, Object?>>? snapshot,
-) =>
-    snapshot == null
-        ? null
-        : (DbSyncRecord()
-          ..id = snapshot.key
-          ..fromMap(snapshot.value));
+) => snapshot == null
+    ? null
+    : (DbSyncRecord()
+        ..id = snapshot.key
+        ..fromMap(snapshot.value));

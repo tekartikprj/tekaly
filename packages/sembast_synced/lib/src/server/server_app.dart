@@ -275,16 +275,14 @@ class SyncGetChangesCommandHandler extends SyncCommandHandler {
 
       var syncInfo = ApiSyncInfo();
       metaToSyncInfo(metaInfo, syncInfo);
-      var response =
-          ApiGetChangesResponse()
-            ..syncInfo.v = syncInfo
-            ..lastChangeNum.v = recordList.lastChangeId
-            ..changes.v =
-                recordList.list.map((e) {
-                  var apiChange = ApiChange();
-                  recordToSyncChange(e, apiChange);
-                  return apiChange;
-                }).toList();
+      var response = ApiGetChangesResponse()
+        ..syncInfo.v = syncInfo
+        ..lastChangeNum.v = recordList.lastChangeId
+        ..changes.v = recordList.list.map((e) {
+          var apiChange = ApiChange();
+          recordToSyncChange(e, apiChange);
+          return apiChange;
+        }).toList();
       if (recordList.isNotEmpty) {
         response.lastChangeNum.v = response.changes.v!.last.changeNum.v;
       }

@@ -98,12 +98,11 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
         syncId = existing.syncId.v!;
       }
       // Make a copy
-      var newRecord =
-          CvSyncedSourceRecord()
-            ..copyFrom(record)
-            ..syncId.v = syncId
-            ..syncTimestamp.v = Timestamp.now()
-            ..syncChangeId.v = lastChangeId;
+      var newRecord = CvSyncedSourceRecord()
+        ..copyFrom(record)
+        ..syncId.v = syncId
+        ..syncTimestamp.v = Timestamp.now()
+        ..syncChangeId.v = lastChangeId;
       _sourceRecordsBySyncId[syncId] = newRecord;
       _sourceRecordsByStoreAndKey[(
             newRecord.recordStore,

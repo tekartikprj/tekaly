@@ -97,12 +97,11 @@ class _SyncedSourceSembast
       var sourceSyncId = record.sourceSyncId;
 
       /// Copy fields
-      record =
-          dataCollection.record(sourceSyncId).cv()
-            // No longer set in the record
-            //..syncId.setValue(record.syncId.v)
-            ..syncChangeId.setValue(record.syncChangeId.v)
-            ..record.setValue(record.record.v);
+      record = dataCollection.record(sourceSyncId).cv()
+        // No longer set in the record
+        //..syncId.setValue(record.syncId.v)
+        ..syncChangeId.setValue(record.syncChangeId.v)
+        ..record.setValue(record.record.v);
     }
 
     /// Set timestamp (info only?)
@@ -238,10 +237,9 @@ class _SyncedSourceSembast
       finder: Finder(
         sortOrders: [SortOrder(syncChangeIdKey)],
         limit: limit,
-        filter:
-            afterChangeId != null
-                ? Filter.greaterThan(syncChangeIdKey, afterChangeId)
-                : null,
+        filter: afterChangeId != null
+            ? Filter.greaterThan(syncChangeIdKey, afterChangeId)
+            : null,
       ),
     );
 
@@ -261,17 +259,15 @@ class _SyncedSourceSembast
 
      */
 
-    var list =
-        dbSourceRecords
-            .where(
-              (element) =>
-                  (includeDeleted ?? false) ? true : !element.isDeleted,
-            )
-            .map((record) {
-              record._fixSyncId();
-              return record;
-            })
-            .toList();
+    var list = dbSourceRecords
+        .where(
+          (element) => (includeDeleted ?? false) ? true : !element.isDeleted,
+        )
+        .map((record) {
+          record._fixSyncId();
+          return record;
+        })
+        .toList();
     var lastChangeNum = dbSourceRecords.lastOrNull?.syncChangeId.v;
     return SyncedSourceRecordList(list, lastChangeNum);
   }

@@ -45,26 +45,25 @@ class _FsDocumentListScreenState extends State<FsDocumentListScreen> {
           ],
         ),
       ),
-      body:
-          (fixedDocuments.isEmpty)
-              ? buildItemList(fixedDocumentsIds)
-              : ListView(
-                children: [
-                  ListView(
-                    shrinkWrap: true,
-                    children: [
-                      ...fixedDocuments.map((docRef) {
-                        return DocumentListItem(
-                          model: docRef.cv(),
-                          firestore: firestore,
-                          docRef: docRef,
-                        );
-                      }),
-                    ],
-                  ),
-                  buildItemList(fixedDocumentsIds, shrinkWrap: true),
-                ],
-              ),
+      body: (fixedDocuments.isEmpty)
+          ? buildItemList(fixedDocumentsIds)
+          : ListView(
+              children: [
+                ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ...fixedDocuments.map((docRef) {
+                      return DocumentListItem(
+                        model: docRef.cv(),
+                        firestore: firestore,
+                        docRef: docRef,
+                      );
+                    }),
+                  ],
+                ),
+                buildItemList(fixedDocumentsIds, shrinkWrap: true),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await goToFsDocumentEditScreen(

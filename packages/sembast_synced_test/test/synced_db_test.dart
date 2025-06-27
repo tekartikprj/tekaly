@@ -24,11 +24,10 @@ void main() {
     });
     test('add/delete record', () async {
       var db = await syncedDb.database;
-      var key =
-          (await dbEntityStoreRef.add(
-            db,
-            DbEntity()..name.v = 'test',
-          )).rawRef.key;
+      var key = (await dbEntityStoreRef.add(
+        db,
+        DbEntity()..name.v = 'test',
+      )).rawRef.key;
       expect(await syncedDb.getSyncRecords(), [
         DbSyncRecord()
           ..store.v = dbEntityStoreRef.name
@@ -46,11 +45,10 @@ void main() {
     });
     test('add/put/delete record', () async {
       var db = await syncedDb.database;
-      var key =
-          (await dbEntityStoreRef.add(
-            db,
-            DbEntity()..name.v = 'test',
-          )).rawRef.key;
+      var key = (await dbEntityStoreRef.add(
+        db,
+        DbEntity()..name.v = 'test',
+      )).rawRef.key;
       var ref = dbEntityStoreRef.record(key);
       expect(await syncedDb.getSyncRecords(), [
         DbSyncRecord()
@@ -77,11 +75,10 @@ void main() {
     test('delete/put record', () async {
       // syncedDbDebug = devWarning(true);
       var db = await syncedDb.database;
-      var key =
-          (await dbEntityStoreRef.add(
-            db,
-            DbEntity()..name.v = 'test',
-          )).rawRef.key;
+      var key = (await dbEntityStoreRef.add(
+        db,
+        DbEntity()..name.v = 'test',
+      )).rawRef.key;
       await syncedDb.clearSyncRecords(null);
       var ref = dbEntityStoreRef.record(key);
 

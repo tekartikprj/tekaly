@@ -120,13 +120,12 @@ abstract class FsDocumentEditControllerBase<T extends CvFirestoreDocument>
   @override
   late T editedDocument;
   @override
-  late final Future<T> futureEditedDocument =
-      isNew
-          ? Future<T>.value(editedDocument = cvTypeNewModel<T>(docRef.type))
-          : stream.first.then((doc) {
-            editedDocument = doc;
-            return editedDocument;
-          });
+  late final Future<T> futureEditedDocument = isNew
+      ? Future<T>.value(editedDocument = cvTypeNewModel<T>(docRef.type))
+      : stream.first.then((doc) {
+          editedDocument = doc;
+          return editedDocument;
+        });
   FsDocumentEditControllerBase({
     required super.firestore,
     required super.docRef,

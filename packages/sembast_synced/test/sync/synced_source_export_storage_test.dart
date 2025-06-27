@@ -17,11 +17,15 @@ void main() {
         rootPath: rootPath,
       ),
     );
-    var meta =
-        await storage.bucket().file('my_test/export_meta.json').readAsString();
+    var meta = await storage
+        .bucket()
+        .file('my_test/export_meta.json')
+        .readAsString();
     expect(meta, '{"lastChangeId":0}');
-    var content =
-        await storage.bucket().file('my_test/export_0.jsonl').readAsString();
+    var content = await storage
+        .bucket()
+        .file('my_test/export_0.jsonl')
+        .readAsString();
     expect(content, '{"sembast_export":1,"version":1}\n');
     var db = await syncedDb.database;
     await stringMapStoreFactory.store('my_store').record('my_key').put(db, {
@@ -34,11 +38,15 @@ void main() {
         rootPath: rootPath,
       ),
     );
-    meta =
-        await storage.bucket().file('my_test/export_meta.json').readAsString();
+    meta = await storage
+        .bucket()
+        .file('my_test/export_meta.json')
+        .readAsString();
     expect(meta, '{"lastChangeId":0}');
-    content =
-        await storage.bucket().file('my_test/export_0.jsonl').readAsString();
+    content = await storage
+        .bucket()
+        .file('my_test/export_0.jsonl')
+        .readAsString();
     expect(
       content,
       '{"sembast_export":1,"version":1}\n'
@@ -69,14 +77,18 @@ void main() {
       exportContext: importExportContext,
     );
     expect(result.exportSize, 188);
-    var meta =
-        await storage.bucket().file('my_test/export_meta.json').readAsString();
+    var meta = await storage
+        .bucket()
+        .file('my_test/export_meta.json')
+        .readAsString();
 
     var dbMeta = (await syncedDb.getSyncMetaInfo())!;
     var timestamp = dbMeta.lastTimestamp.v!.toIso8601String();
     expect(meta, '{"lastChangeId":1,"lastTimestamp":"$timestamp"}');
-    var content =
-        await storage.bucket().file('my_test/export_1.jsonl').readAsString();
+    var content = await storage
+        .bucket()
+        .file('my_test/export_1.jsonl')
+        .readAsString();
     expect(
       content,
       '{"sembast_export":1,"version":1}\n'
