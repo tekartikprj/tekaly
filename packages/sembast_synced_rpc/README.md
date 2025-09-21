@@ -10,5 +10,4 @@ RPC based solution
     git:
       url: https://github.com/tekartikprj/tekaly.git
       path: packages/sembast_synced_rpc
-      ref: dart3a
 ```

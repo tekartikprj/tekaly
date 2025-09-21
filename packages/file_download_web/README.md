@@ -6,6 +6,5 @@ File download for web helper
     git:
       url: https://github.com/tekartikprj/tekaly
       path: packages/file_download_web
-      ref: dart3a
     version: '>=0.1.0'
 ```

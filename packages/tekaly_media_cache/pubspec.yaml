@@ -14,22 +14,18 @@ dependencies:
   tekartik_app_cv_sembast:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
-      ref: dart3a
       path: app_cv_sembast
   tekartik_app_http:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
-      ref: dart3a
       path: app_http
   tekartik_app_sembast:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
-      ref: dart3a
       path: app_sembast
   tekartik_common_utils:
     git:
       url: https://github.com/tekartik/common_utils.dart
-      ref: dart3a
 
 
 dev_dependencies:

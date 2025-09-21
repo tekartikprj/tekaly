@@ -39,12 +39,10 @@ dependencies:
     git:
       url: https://github.com/tekartikprj/tekaly
       path: flutter_packages/firestore_explorer
-      ref: dart3a
     version: '>=0.0.1'
   tekartik_firebase_firestore_sembast:
     git:
       path: firestore_sembast
-      ref: dart3a
       url: https://github.com/tekartik/firebase_firestore.dart
 dev_dependencies:
   flutter_test:

@@ -11,27 +11,22 @@ dependencies:
   tekartik_firebase_firestore:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart
-      ref: dart3a
       path: firestore
   tekaly_sembast_synced:
     git:
       url: https://github.com/tekartikprj/tekaly
-      ref: dart3a
       path: packages/sembast_synced
   tekartik_app_cv_firestore:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
-      ref: dart3a
       path: app_cv_firestore
   tekartik_app_sembast_firestore_type_adapters:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
-      ref: dart3a
       path: app_sembast_firestore_type_adapters
   tekartik_firebase_firestore_sembast:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart
-      ref: dart3a
       path: firestore_sembast
   # path: ^1.8.0
 

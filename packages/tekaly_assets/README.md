@@ -11,7 +11,6 @@ Common assets
     git:
       url: https://github.com/tekartikprj/tekaly.git
       path: packages/tekaly_assets
-      ref: dart3a
 ```
 
 ## Usage
@@ -24,7 +23,6 @@ dependency:
   tekartik_web_splash:
     git:
       url: https://github.com/tekartik/app_web_utils.dart
-      ref: dart3a
       path: packages/web_splash
 
 flutter:

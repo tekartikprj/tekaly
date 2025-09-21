@@ -12,28 +12,23 @@ dependencies:
   tekaly_sembast_synced:
     git:
       url: https://github.com/tekartikprj/tekaly
-      ref: dart3a
       path: packages/sembast_synced
   dev_test: ">=1.0.0+4"
   tekartik_app_cv_sembast:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
-      ref: dart3a
       path: app_cv_sembast
   tekartik_firebase_firestore:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart
-      ref: dart3a
       path: firestore
   tekartik_firebase_firestore_sembast:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart
-      ref: dart3a
       path: firestore_sembast
   tekartik_common_utils:
     git:
       url: https://github.com/tekartik/common_utils.dart
-      ref: dart3a
 
 dev_dependencies:
   lints: ">=5.0.0"

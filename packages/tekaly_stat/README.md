@@ -11,5 +11,4 @@ Stat helper (view, read)
     git:
       url: https://github.com/tekartikprj/tekaly.git
       path: packages/tekaly_stat
-      ref: dart3a
 ```

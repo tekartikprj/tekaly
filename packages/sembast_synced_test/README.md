@@ -11,5 +11,4 @@ test helpers
     git:
       url: https://github.com/tekartikprj/tekaly.git
       path: packages/sembast_synced_test
-      ref: dart3a
 ```

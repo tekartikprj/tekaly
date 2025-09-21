@@ -11,5 +11,4 @@ Simple media cache.
     git:
       url: https://github.com/tekartikprj/tekaly.git
       path: packages/tekaly_media_cache
-      ref: dart3a
 ```

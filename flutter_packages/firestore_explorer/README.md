@@ -7,6 +7,5 @@
     git:
       url: https://github.com/tekartikprj/tekaly
       path: flutter_packages/firestore_explorer
-      ref: dart3a
     version: '>=0.1.0'
 ```
