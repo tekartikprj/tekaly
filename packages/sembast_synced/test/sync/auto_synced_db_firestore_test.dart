@@ -1,4 +1,5 @@
 import 'package:sembast/sembast_memory.dart';
+import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
 import 'package:test/test.dart';
@@ -46,7 +47,12 @@ Future<void> main() async {
       var db = syncedDb.database;
       await syncedDb.initialSynchronizationDone();
       await record.add(db, {'test': 1});
-      await syncedDb.synchronize();
+      var stat = await syncedDb.synchronize();
+
+      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
+      stat = await syncedDb.synchronize();
+      expect(stat, SyncedSyncStat());
+
       await syncedDb.close();
       await databaseFactory.deleteDatabase(SyncedDb.nameDefault);
       syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(options: options);

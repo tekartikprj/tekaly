@@ -1,5 +1,6 @@
 import 'package:sembast/sembast.dart';
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
+import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
@@ -62,10 +63,10 @@ abstract class AutoSynchronizedFirestoreSyncedDb implements AutoSynchronizedDb {
   /// Close the db
   Future<void> close();
 
-  Future<void> synchronize();
+  Future<SyncedSyncStat> synchronize();
 
   /// Lazy synchronize if needed (timing undefined)
-  Future<void> lazySynchronize();
+  Future<SyncedSyncStat> lazySynchronize();
 
   /// Wait for current lazy synchronization to be done
   /// Future<void> waitSynchronized();
@@ -114,14 +115,14 @@ class _AutoSynchronizedFirestoreSyncedDb
   }();
 
   @override
-  Future<void> lazySynchronize() async {
+  Future<SyncedSyncStat> lazySynchronize() async {
     await ready;
-    await synchronizer.lazySync();
+    return await synchronizer.lazySync();
   }
 
   @override
-  Future<void> synchronize() async {
+  Future<SyncedSyncStat> synchronize() async {
     await ready;
-    await synchronizer.sync();
+    return await synchronizer.sync();
   }
 }
