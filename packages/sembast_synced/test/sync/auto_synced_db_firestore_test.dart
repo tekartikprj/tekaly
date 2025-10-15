@@ -1,5 +1,4 @@
 import 'package:sembast/sembast_memory.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
 import 'package:test/test.dart';

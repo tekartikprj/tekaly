@@ -1,6 +1,5 @@
 import 'package:sembast/sembast.dart';
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
