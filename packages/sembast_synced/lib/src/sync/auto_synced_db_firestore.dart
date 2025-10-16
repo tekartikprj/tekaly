@@ -101,6 +101,7 @@ class _AutoSynchronizedFirestoreSyncedDb
       databaseFactory: options.databaseFactory,
       syncedExcludedStoreNames: options.synchronizedExcludedStores,
       syncedStoreNames: options.synchronizedStores,
+      name: options.sembastDbName,
     );
     database = await syncedDb.database;
     synchronizer = SyncedDbSynchronizer(

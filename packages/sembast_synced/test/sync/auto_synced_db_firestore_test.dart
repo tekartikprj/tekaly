@@ -20,10 +20,12 @@ Future<void> main() async {
         firestore: firestore,
         databaseFactory: databaseFactory,
         rootDocumentPath: rootPath,
+        sembastDbName: 'custom.db',
       );
       syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(options: options);
       expect(syncedDb, isNotNull);
       var db = syncedDb.database;
+      expect(db.path, 'custom.db');
       await syncedDb.initialSynchronizationDone();
       await record.add(db, {'test': 1});
       await syncedDb.synchronize();
@@ -42,8 +44,10 @@ Future<void> main() async {
         databaseFactory: databaseFactory,
       );
       syncedDb = await AutoSynchronizedFirestoreSyncedDb.open(options: options);
+
       expect(syncedDb, isNotNull);
       var db = syncedDb.database;
+      expect(db.path, 'synced.db');
       await syncedDb.initialSynchronizationDone();
       await record.add(db, {'test': 1});
       var stat = await syncedDb.synchronize();
