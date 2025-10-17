@@ -23,6 +23,10 @@ String _generateSyncId(String store, String key) {
   return '$store|$key';
 }
 
+String refSyncId(SyncedDataSourceRef ref) {
+  return ref.syncId ?? _generateSyncId(ref.store!, ref.key!);
+}
+
 String _sourceSyncId({String? syncId, String? store, String? key}) {
   assert((syncId != null) || (store != null && key != null));
   return (store == null || key == null) ? syncId! : _generateSyncId(store, key);

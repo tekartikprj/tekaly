@@ -24,6 +24,22 @@ class SyncedDataSourceRef {
   String toString() => 'syncId: $syncId, store: $store, key: $key';
 }
 
+/// Common implementation
+String syncedDbStoreKeySyncId(String store, String key) {
+  return '$store|$key';
+}
+
+String _refSyncId(SyncedDataSourceRef ref) {
+  return ref.syncId ?? syncedDbStoreKeySyncId(ref.store!, ref.key!);
+}
+
+extension SyncedDataSourceRefExt on SyncedDataSourceRef {
+  /// Common source sync id
+  String get _sourceSyncId => _refSyncId(this);
+  SyncedDataSourceRef fixedSourceSyncId() =>
+      SyncedDataSourceRef(syncId: _sourceSyncId, store: store, key: key);
+}
+
 /// Default mixin implementation.
 mixin SyncedSourceDefaultMixin implements SyncedSource {
   void initBuilders() {

@@ -1,28 +1,34 @@
 // ignore_for_file: avoid_print
 
 import 'package:sembast/timestamp.dart';
-import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart'
-    show syncTimestampKey;
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
-import 'package:tekaly_sembast_synced/synced_db_sembast.dart';
 import 'package:tekaly_sembast_synced_test/synced_source_test.dart';
 
 import 'package:dev_test/test.dart';
 
+SyncedSourceMemoryCompat newInMemorySyncedSourceMemoryCompat() {
+  return SyncedSourceMemoryCompat();
+}
+
+Future<SyncedSourceMemoryCompat>
+setupNewInMemorySyncedSourceMemoryCompat() async {
+  return newInMemorySyncedSourceMemoryCompat();
+}
+
 void main() {
-  group('synced_source_sembast_common_test', () {
-    runSyncedSourceTest(() async {
-      return newInMemorySyncedSourceSembast();
-    });
+  group('common', () {
+    runSyncedSourceTest(
+      setupNewInMemorySyncedSourceMemoryCompat,
+      skipRealTimeChanges: true,
+    );
+    //runStrictSyncedSourceTest(setupNewInMemorySyncedSourceMemoryCompat);
   });
-  var metaStore = stringMapStoreFactory.store('meta');
-  var dataStore = stringMapStoreFactory.store('data');
+
   group('synced_source_sembast_test', () {
-    late SyncedSourceSembast source;
-    late Database database;
+    late SyncedSourceMemoryCompat source;
+
     setUp(() async {
-      source = await newInMemorySyncedSourceSembast();
-      database = source.database;
+      source = await setupNewInMemorySyncedSourceMemoryCompat();
     });
     test('putRecord format', () async {
       var sourceRecord = (await source.putSourceRecord(
@@ -32,22 +38,22 @@ void main() {
             ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
             ..key.v = '1'),
       ));
-      expect((await metaStore.record('info').get(database)), {
-        'lastChangeId': 1,
-      });
 
       var syncId = sourceRecord.syncId.v!;
-      expect(sourceRecord.syncId.v, syncId);
+      expect(syncId, '1');
 
       var readRecord = await source.getSourceRecord(
         SyncedDataSourceRef(store: 'test', key: '1'),
       );
+      syncId = readRecord!.syncId.v!;
+      expect(syncId, '1');
       print('readRecord: $readRecord');
       expect(readRecord, sourceRecord);
-      var map = (await dataStore.record(syncId).get(database))!;
-      var syncTimestamp = map[syncTimestampKey];
+      var syncTimestamp = readRecord.syncTimestamp.v;
       expect(syncTimestamp, isA<SyncedDbTimestamp>());
+      var map = readRecord.toMap();
       expect(map, {
+        'syncId': '1',
         'record': {
           'store': 'test',
           'key': '1',

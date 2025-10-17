@@ -91,7 +91,15 @@ class SyncedSourceFirestore
   }
 
   String _generateSyncId(CvSyncedSourceRecord record) {
-    return '${record.recordStore}|${record.recordKey}';
+    return _storeKeySyncId(record.recordStore, record.recordKey);
+  }
+
+  String _storeKeySyncId(String store, String key) {
+    return '$store|$key';
+  }
+
+  String refSyncId(SyncedDataSourceRef ref) {
+    return ref.syncId ?? _storeKeySyncId(ref.store!, ref.key!);
   }
 
   @override

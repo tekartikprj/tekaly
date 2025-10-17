@@ -11,6 +11,13 @@ import 'package:tekartik_common_utils/env_utils.dart';
 import 'synced_db_test_common.dart';
 import 'synced_source_test.dart';
 
+Future<SyncTestsContext> setupNewInMemorySyncTestsContext() async {
+  //    setUp(() async {
+  return SyncTestsContext()
+    ..syncedDb = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames)
+    ..source = newInMemorySyncedSourceMemory();
+}
+
 /// Web steps might not handled microseconds
 Timestamp exampleTimestamp1() =>
     kDartIsWeb ? Timestamp(1, 1000000) : Timestamp(1, 1000);
@@ -19,16 +26,8 @@ var syncedStoreNames = [dbEntityStoreName];
 
 void main() {
   // debugSyncedDbSynchronizer = devTrue;
-  group('synced_db_source_sync_memory_test', () {
-    Future<SyncTestsContext> setupContext() async {
-      //    setUp(() async {
-      return SyncTestsContext()
-        ..syncedDb = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames)
-        ..source = newInMemorySyncedSourceMemory();
-    }
-
-    //  });
-    syncTests(setupContext);
+  group('synced_db_source_sync_memory_test_internal', () {
+    syncTests(setupNewInMemorySyncTestsContext);
   });
 }
 

@@ -9,11 +9,64 @@ SyncedSourceMemory newInMemorySyncedSourceMemory() {
   return SyncedSourceMemory();
 }
 
+Future<SyncedSourceMemory> setupNewInMemorySyncedSourceMemory() async {
+  return newInMemorySyncedSourceMemory();
+}
+
 void main() {
-  group('synced_source_test', () {
-    runSyncedSourceTest(() async {
-      return newInMemorySyncedSourceMemory();
+  group('synced_source_default_memory', () {
+    runSyncedSourceTest(
+      setupNewInMemorySyncedSourceMemory,
+      skipRealTimeChanges: true,
+    );
+    strictSyncedSourceTest(setupNewInMemorySyncedSourceMemory);
+  });
+}
+
+void strictSyncedSourceTest(
+  Future<SyncedSource> Function() createSyncedSource, {
+  bool? skipRealTimeChanges,
+}) {
+  late SyncedSource source;
+  setUp(() async {
+    source = await createSyncedSource();
+  });
+  tearDown(() async {
+    await source.close();
+  });
+  test('putRecord format', () async {
+    var resultRecord = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..value.v = {'int': 1, 'timestamp': SyncedDbTimestamp(2, 3000)}
+          ..key.v = '1'),
+    ));
+    var readRecord = await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '1'),
+    );
+    expect(readRecord, resultRecord);
+    var syncTimestamp = readRecord!.syncTimestamp.v;
+    expect(syncTimestamp, isNotNull);
+    var map = (readRecord.toMap());
+    expect(map, {
+      'syncId': 'test|1',
+      'syncTimestamp': syncTimestamp,
+      'syncChangeId': 1,
+      'record': {
+        'store': 'test',
+        'key': '1',
+        'value': {'int': 1, 'timestamp': SyncedDbTimestamp(2, 3000)},
+        'deleted': false,
+      },
     });
+    var service = SyncedDbReadMinService.syncedSource(syncedSource: source);
+    expect(
+      (await service.getRecordData(
+        syncedDbStoreFactory.store('test').record('1'),
+      )),
+      {'int': 1, 'timestamp': SyncedDbTimestamp(2, 3000)},
+    );
   });
 }
 
@@ -26,6 +79,7 @@ void runSyncedSourceTest(
   setUp(() async {
     source = await createSyncedSource();
   });
+
   test('putRecord', () async {
     var record = (await source.putSourceRecord(
       CvSyncedSourceRecord()
@@ -33,6 +87,7 @@ void runSyncedSourceTest(
           ..store.v = 'test'
           ..key.v = '1'),
     ));
+    print('syncId: ${record.syncId.v}');
     expect(record.toMap(), {
       'syncId': record.syncId.v,
       'syncTimestamp': record.syncTimestamp.v,
@@ -44,6 +99,7 @@ void runSyncedSourceTest(
     expect(record.syncTimestamp.v, isNotNull);
     expect(record.recordStore, 'test');
     expect(record.syncChangeId.v, 1);
+
     record = (await source.putSourceRecord(
       CvSyncedSourceRecord()
         ..record.v = (CvSyncedSourceRecordData()
@@ -51,12 +107,14 @@ void runSyncedSourceTest(
           ..key.v = '1')
         ..syncId.v = syncId,
     ));
+
     expect(record.toMap(), {
       'syncId': record.syncId.v,
       'syncTimestamp': record.syncTimestamp.v,
       'syncChangeId': 2,
       'record': {'store': 'test', 'key': '1', 'deleted': false},
     });
+
     expect(record.syncId.v, syncId);
     expect(record.syncChangeId.v, 2);
     // Changing!
@@ -96,6 +154,7 @@ void runSyncedSourceTest(
     record = (await source.getSourceRecord(ref))!;
     expect(record.syncId.v, newSyncId);
     expect(newSyncId, isNot(syncId));
+
     // Without syncId
     record = (await source.getSourceRecord(
       SyncedDataSourceRef(store: 'test', key: '1'),

@@ -9,6 +9,15 @@ import 'model/db_sync_record.dart';
 /// Synced db timestamp (sembast based)
 typedef SyncedDbTimestamp = DbTimestamp;
 
+/// Synced db store factory
+final syncedDbStoreFactory = stringMapStoreFactory;
+
+/// Store ref
+typedef SyncedDbStoreRef = StoreRef<String, Model>;
+
+/// Record ref
+typedef SyncedDbRecordRef = RecordRef<String, Model>;
+
 mixin SyncedDbMixin implements SyncedDb {
   late final DatabaseFactory databaseFactory;
   @override

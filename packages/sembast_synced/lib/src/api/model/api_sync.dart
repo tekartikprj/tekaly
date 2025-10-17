@@ -72,11 +72,16 @@ class ApiPutChangesResponse extends CvModelBase {
 }
 
 class ApiGetChangesRequest extends CvModelBase {
+  /// Target location in destination.
   final target = CvField<String>('target');
 
   /// Exclusive min, changes are at least +1 (or 1 if null)
   final afterChangeNum = CvField<int>('afterChangeNum');
+
+  /// Include deleted records.
   final includeDeleted = CvField<bool>('includeDeleted');
+
+  /// Limit the number of changes.
   final limit = CvField<int>('limit'); // overr
   @override
   late final List<CvField> fields = <CvField>[

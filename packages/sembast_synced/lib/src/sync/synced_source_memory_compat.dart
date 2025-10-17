@@ -2,18 +2,20 @@ import 'package:cv/cv.dart';
 import 'package:meta/meta.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:synchronized/synchronized.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 
 typedef _Key = (String store, String key);
 
-class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
+class SyncedSourceMemoryCompat
+    with SyncedSourceDefaultMixin
+    implements SyncedSource {
   final _lock = Lock();
+  var _lastSyncId = 0;
   CvMetaInfo? _metaInfo;
   final _sourceRecordsBySyncId = <String, CvSyncedSourceRecord>{};
   final _sourceRecordsByStoreAndKey = <_Key, CvSyncedSourceRecord>{};
 
-  SyncedSourceMemory() {
+  SyncedSourceMemoryCompat() {
     initBuilders();
   }
   @override
@@ -85,17 +87,15 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
       fixAndCheckPutSyncedRecord(record);
       var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfo();
       var lastChangeId = (metaInfo.lastChangeId.v ?? 0) + 1;
-      var store = record.record.v!.store.v!;
-      var key = record.record.v!.key.v!;
       var ref = SyncedDataSourceRef(
-        store: store,
-        key: key,
+        store: record.record.v!.store.v,
+        key: record.record.v!.key.v,
         syncId: record.syncId.v,
       );
       var existing = _lockedGetSourceRecord(ref);
       String syncId;
       if (existing == null) {
-        syncId = syncedDbStoreKeySyncId(store, key);
+        syncId = '${++_lastSyncId}';
       } else {
         syncId = existing.syncId.v!;
       }

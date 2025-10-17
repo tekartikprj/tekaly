@@ -10,3 +10,4 @@ export 'synced_source.dart';
 export 'synced_source_export.dart';
 export 'synced_source_firestore.dart';
 export 'synced_source_memory.dart';
+export 'synced_source_memory_compat.dart';

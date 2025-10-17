@@ -12,14 +12,14 @@ import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart'
 
 import 'package:dev_test/test.dart';
 
-// var debugFirestore = false;
-var debugFirestore = false; // devWarning(true);
+var _debugFirestore = false;
+// var debugFirestore = devTrue;
 SyncedSourceFirestore newInMemorySyncedSourceFirestore() {
   fb.Firestore firestore;
   SyncedSourceFirestore source;
 
   firestore = fb.newFirestoreMemory();
-  if (debugFirestore) {
+  if (_debugFirestore) {
     firestore = fb.FirestoreLogger(
       firestore: firestore,
       options: fb.FirestoreLoggerOptions.all(

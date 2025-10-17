@@ -1,3 +1,5 @@
+export 'package:sembast/sembast.dart';
+
 export 'src/sync/auto_synced_db.dart'
     show AutoSynchronizedSyncedDbOptions, AutoSynchronizedDb;
 export 'src/sync/synced_db_export.dart'
@@ -14,6 +16,10 @@ export 'src/sync/synced_db_lib.dart'
         SyncedDataSourceRef,
         SyncedSource,
         SyncedSourceMemory,
+        SyncedSourceMemoryCompat,
+        syncedDbStoreFactory,
+        SyncedDbStoreRef,
+        SyncedDbRecordRef,
         // Compat
         SyncedDbSourceSync,
         SyncedDbSynchronizer,
@@ -21,3 +27,4 @@ export 'src/sync/synced_db_lib.dart'
         CvMetaInfo,
         CvSyncedSourceRecordExt,
         debugSyncedDbSynchronizer;
+export 'src/sync/synced_db_min_service.dart' show SyncedDbReadMinService;
