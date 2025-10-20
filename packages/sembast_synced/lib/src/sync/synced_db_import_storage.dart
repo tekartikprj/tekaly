@@ -3,6 +3,7 @@ import 'package:tekaly_sembast_synced/sembast_synced.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase_rest.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_import_string_fetcher.dart';
+import 'package:tekartik_common_utils/env_utils.dart';
 import 'package:tekartik_firebase_storage_rest/storage_json.dart';
 import 'package:tekartik_http/http_client.dart';
 
@@ -28,10 +29,19 @@ class _StorageFetcher implements SyncedDbStringFetcher {
 
   @override
   Future<String> getString(String path) async {
-    return await storage
-        .bucket(bucket)
-        .file(url.join(rootPath, path))
-        .readAsString();
+    var filePath = url.join(rootPath, path);
+    try {
+      return await storage
+          .bucket(bucket ?? storage.app.options.storageBucket)
+          .file(filePath)
+          .readAsString();
+    } catch (e) {
+      if (isDebug) {
+        // ignore: avoid_print
+        print('Error getting string at $bucket/$filePath: $e');
+      }
+      rethrow;
+    }
   }
 }
 
