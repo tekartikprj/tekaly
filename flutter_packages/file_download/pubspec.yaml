@@ -11,8 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   web:
-  pub_semver: ">=2.1.4"
-  file_picker: '>=8.1.2'
+  pub_semver: ">=2.2.0"
+  file_picker: ">=10.3.3"
   tekartik_platform_browser:
     git:
       url: https://github.com/tekartik/platform.dart
@@ -21,7 +21,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ">=5.0.0"
+  flutter_lints: ">=6.0.0"
   tekartik_lints_flutter:
     git:
       url: https://github.com/tekartik/common_flutter.dart

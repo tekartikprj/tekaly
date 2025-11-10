@@ -13,7 +13,7 @@ dependencies:
       url: https://github.com/tekartik/app_flutter_utils.dart
       path: app_widget
     version: '>=0.2.1'
-  cv: ">=1.1.0+4"
+  cv: ">=1.1.10"
   rxdart:
   tekartik_app_rx_utils:
     git:
@@ -41,7 +41,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ">=5.0.0"
+  flutter_lints: ">=6.0.0"
   tekartik_firebase_firestore_sembast:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart

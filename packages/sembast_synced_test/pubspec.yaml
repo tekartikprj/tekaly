@@ -8,12 +8,12 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  sembast: ">=3.7.4+3"
+  sembast: ">=3.8.5+1"
   tekaly_sembast_synced:
     git:
       url: https://github.com/tekartikprj/tekaly
       path: packages/sembast_synced
-  dev_test: ">=1.0.0+4"
+  dev_test: ">=1.0.1"
   tekartik_app_cv_sembast:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
@@ -31,6 +31,6 @@ dependencies:
       url: https://github.com/tekartik/common_utils.dart
 
 dev_dependencies:
-  lints: ">=5.0.0"
-  test: ">=1.24.0"
+  lints: ">=6.0.0"
+  test: ">=1.26.2"
 resolution: workspace

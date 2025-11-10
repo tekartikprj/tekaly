@@ -45,7 +45,7 @@ class SyncedSourceFirestore
     required this.firestore,
 
     /// Document path
-    @required this.rootPath,
+    required this.rootPath,
     this.noAuth = false,
   }) {
     initBuilders();
