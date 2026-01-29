@@ -134,9 +134,19 @@ class SyncedSyncSourceRecord {
 typedef SyncedDbSourceSync = SyncedDbSynchronizer;
 
 /// Synced db synchronized
-class SyncedDbSynchronizer {
+class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
+  SyncedDbSynchronizer({
+    required SyncedDb db,
+    required super.source,
+    super.autoSync = false,
+  }) : super(db: db);
+}
+
+/// Synced db synchronized
+abstract class SyncedDbSynchronizerCommon {
   /// The database being synchronized
-  final SyncedDb db;
+  late final SyncedDb db = _dbCommon as SyncedDb;
+  late final SyncedDbCommon _dbCommon;
 
   /// The source being synchronized
   final SyncedSource source;
@@ -219,12 +229,18 @@ class SyncedDbSynchronizer {
   StreamSubscription? _autoSyncDbSubscription;
 
   /// Synchronizer
-  SyncedDbSynchronizer({
-    required this.db,
+  SyncedDbSynchronizerCommon({
+    required SyncedDbCommon db,
     required this.source,
     this.autoSync = false,
   }) {
+    _dbCommon = db;
     if (autoSync) {
+      if (db is SyncedDb) {
+        _dbCommon = db;
+      } else {
+        throw ArgumentError('db must be a SyncedDb when autoSync is true');
+      }
       _autoSyncSourceSubscription =
           streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
             var remote = event.$1;

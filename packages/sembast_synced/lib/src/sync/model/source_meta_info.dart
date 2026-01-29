@@ -1,4 +1,4 @@
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
+import 'package:cv/cv.dart';
 
 /// Last change id (or change num)
 const metaLastChangeIdKey = 'lastChangeId';

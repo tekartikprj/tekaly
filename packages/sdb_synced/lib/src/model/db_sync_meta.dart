@@ -1,27 +1,9 @@
 // /syncedM/info
-import 'package:sembast/timestamp.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
+import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
 /// Sync meta info
-abstract class DbSyncMetaInfoCommon implements CvModel {
-  /// source
-  CvField<String> get source;
-
-  /// sourceVersion
-  CvField<int> get sourceVersion;
-
-  /// Source id if any TODO
-  CvField<String> get sourceId;
-
-  /// Last timestamp
-  CvField<Timestamp> get lastTimestamp;
-
-  /// Last change id, 0 if none after first sync
-  CvField<int> get lastChangeId;
-}
-
-/// Sync meta info
-class DbSyncMetaInfo extends DbStringRecordBase
+class DbSyncMetaInfo extends ScvStringRecordBase
     implements DbSyncMetaInfoCommon {
   /// source
   @override
@@ -37,7 +19,7 @@ class DbSyncMetaInfo extends DbStringRecordBase
 
   /// Last timestamp
   @override
-  final lastTimestamp = CvField<Timestamp>('lastTimestamp');
+  final lastTimestamp = cvEncodedTimestampField('lastTimestamp');
 
   /// Last change id, 0 if none after first sync
   @override

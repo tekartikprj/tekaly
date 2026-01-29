@@ -1,6 +1,5 @@
-import 'package:sembast/timestamp.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
-
+import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
+import 'db_sync_meta.dart';
 import 'source_record.dart';
 
 const syncTimestampKey = 'syncTimestamp';
@@ -15,56 +14,34 @@ const syncIdKey = 'syncId';
 
 final dbSyncRecordModel = DbSyncRecord();
 
-abstract class DbSyncRecordCommon implements CvModel {
+final dbSyncMetaStoreRef = scvStringStoreFactory.store<DbSyncMetaInfo>(
+  'syncMeta',
+);
+
+final dbSyncRecordStoreRef = scvIntStoreFactory.store<DbSyncRecord>(
+  'syncRecord',
+);
+
+class DbSyncRecord extends ScvIntRecordBase {
   /// Local store
-  CvField<String> get store;
-
-  /// Local key
-  CvField<String> get key;
-
-  /// Local key
-  CvField<bool> get deleted;
-
-  /// Local dirty/deleted/added
-  CvField<bool> get dirty;
-
-  /// Source id
-  CvField<String> get syncId;
-
-  /// Source timestamp
-  CvField<Timestamp> get syncTimestamp;
-
-  /// Source change id
-  CvField<int> get syncChangeId;
-}
-
-class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
-  /// Local store
-  @override
   final store = CvField<String>(recordStoreFieldKey);
 
   /// Local key
-  @override
   final key = CvField<String>(recordKeyFieldKey);
 
   /// Local key
-  @override
   final deleted = CvField<bool>(recordDeletedFieldKey);
 
   /// Local dirty/deleted/added
-  @override
   final dirty = CvField<bool>(recordDirtyFieldKey);
 
   /// Source id
-  @override
   final syncId = CvField<String>(syncIdKey);
 
   /// Source timestamp
-  @override
-  final syncTimestamp = CvField<Timestamp>(syncTimestampKey);
+  final syncTimestamp = cvEncodedTimestampField(syncTimestampKey);
 
   /// Source change id
-  @override
   final syncChangeId = CvField<int>(syncChangeIdKey);
 
   /// The synced key
@@ -72,8 +49,8 @@ class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
       SyncedRecordKey(store: store.v!, key: key.v!);
 
   /// helper
-  RecordRef<String, Map<String, Object?>> get dataRecordRef =>
-      stringMapStoreFactory.store(store.v).record(key.v!);
+  SdbRecordRef<String, SdbModel> get rawDataRecordRef =>
+      SdbStoreRef<String, SdbModel>(store.v!).record(key.v!);
 
   @override
   List<CvField> get fields => [
@@ -86,11 +63,3 @@ class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
     syncChangeId,
   ];
 }
-
-DbSyncRecord? dbSyncRecordFromSnapshot(
-  RecordSnapshot<int, Map<String, Object?>>? snapshot,
-) => snapshot == null
-    ? null
-    : (DbSyncRecord()
-        ..id = snapshot.key
-        ..fromMap(snapshot.value));
