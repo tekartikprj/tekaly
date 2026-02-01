@@ -122,11 +122,16 @@ class SyncedSyncStat {
 }
 
 /// Synced sync source record
-class SyncedSyncSourceRecord {
-  CvSyncedSourceRecord? sourceRecord;
+class SyncedSyncSourceRecord extends SyncedSyncSourceRecordCommon {
   DbSyncRecord? syncRecord;
+}
 
-  bool get hasSyncId => syncRecord?.syncId.v != null;
+/// Synced sync source record
+class SyncedSyncSourceRecordCommon {
+  CvSyncedSourceRecord? sourceRecord;
+  DbSyncRecordCommon? syncRecordCommon;
+  bool get hasSyncId => syncRecordCommon?.syncId.v != null;
+
   bool get isNewLocalRecord => !hasSyncId;
 }
 
@@ -135,35 +140,13 @@ typedef SyncedDbSourceSync = SyncedDbSynchronizer;
 
 /// Synced db synchronized
 class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
-  SyncedDbSynchronizer({
-    required SyncedDb db,
-    required super.source,
-    super.autoSync = false,
-  }) : super(db: db);
-}
-
-/// Synced db synchronized
-abstract class SyncedDbSynchronizerCommon {
   /// The database being synchronized
-  late final SyncedDb db = _dbCommon as SyncedDb;
-  late final SyncedDbCommon _dbCommon;
+  late final SyncedDb db = dbCommon as SyncedDb;
 
-  /// The source being synchronized
-  final SyncedSource source;
-
-  /// Default to 10 up
-  int? stepLimitUp;
-
-  /// Default to 100 down
-  int? stepLimitDown;
-  final _syncLock = Lock();
   final _firstSyncDoneCompleter = Completer<void>.sync();
 
   /// True when the first sync is done (could take forever the first time if offline)
   Future<void> firstSyncDownDone() => _firstSyncDoneCompleter.future;
-
-  /// Auto sync
-  final bool autoSync;
 
   /// Get local dirty source records
   Future<List<SyncedSyncSourceRecord>> getLocalDirtySourceRecords() async {
@@ -218,7 +201,6 @@ abstract class SyncedDbSynchronizerCommon {
             ..sourceRecord = sourceRecord
             ..syncRecord = dirtySyncRecord,
         );
-        // sourceRecord = await source.putSourceRecord(sourceRecord);
       }
     });
     return list;
@@ -229,18 +211,12 @@ abstract class SyncedDbSynchronizerCommon {
   StreamSubscription? _autoSyncDbSubscription;
 
   /// Synchronizer
-  SyncedDbSynchronizerCommon({
-    required SyncedDbCommon db,
-    required this.source,
-    this.autoSync = false,
-  }) {
-    _dbCommon = db;
+  SyncedDbSynchronizer({
+    required SyncedDb db,
+    required super.source,
+    super.autoSync = false,
+  }) : super(db: db) {
     if (autoSync) {
-      if (db is SyncedDb) {
-        _dbCommon = db;
-      } else {
-        throw ArgumentError('db must be a SyncedDb when autoSync is true');
-      }
       _autoSyncSourceSubscription =
           streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
             var remote = event.$1;
@@ -271,7 +247,7 @@ abstract class SyncedDbSynchronizerCommon {
   Future<void> close() async {
     _autoSyncSourceSubscription?.cancel().unawait();
     _autoSyncDbSubscription?.cancel().unawait();
-    await _syncLock.synchronized(() {
+    await syncLock.synchronized(() {
       _closing = true;
     });
     await _lazyLauncher.close();
@@ -283,7 +259,7 @@ abstract class SyncedDbSynchronizerCommon {
         // ignore: avoid_print
         print('start lazy sync');
       }
-      return await _syncLock.synchronized(() {
+      return await syncLock.synchronized(() {
         return _sync();
       });
     },
@@ -296,7 +272,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Sync up and down
   Future<SyncedSyncStat> sync() {
-    return _syncLock.synchronized(() {
+    return syncLock.synchronized(() {
       try {
         return _sync();
       } catch (e, st) {
@@ -314,7 +290,7 @@ abstract class SyncedDbSynchronizerCommon {
     var stat = SyncedSyncStat();
     var upStat = await _syncUp();
     stat.add(upStat);
-    var downStat = await _syncDown();
+    var downStat = await doSyncDown();
     stat.add(downStat);
     if (debugSyncedSync) {
       // ignore: avoid_print
@@ -332,7 +308,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Sync dirty records up
   Future<SyncedSyncStat> syncUp({bool fullSync = false}) async {
-    return _syncLock.synchronized(() {
+    return syncLock.synchronized(() {
       return _syncUp(fullSync: fullSync);
     });
   }
@@ -462,68 +438,8 @@ abstract class SyncedDbSynchronizerCommon {
   /// Last source meta info
   CvMetaInfo? get lastSyncMetaInfo => _lastSyncMetaInfo;
 
-  /// Sync down
-  Future<SyncedSyncStat> syncDown() async {
-    return _syncLock.synchronized(() {
-      return _syncDown();
-    });
-  }
-
-  /*
-  Future<_SyncDownInfo> _getSyncDownInfo(CvMetaInfoRecord sourceMeta) async {
-    var localMetaSyncInfo = (await this.db.dbSyncMetaInfoRef.get(db));
-    var hasInitialLastChangeId = localMetaSyncInfo?.lastChangeId.v != null;
-    var initialLastChangeId = localMetaSyncInfo?.lastChangeId.v ?? 0;
-    var fullSync = initialLastChangeId == 0;
-
-    var newLastChangeId = initialLastChangeId;
-    Timestamp? newLastTimestamp;
-    if (debugSyncedSync) {
-      // ignore: avoid_print
-      print('localMetaSyncInfo: $localMetaSyncInfo');
-    }
-
-    var fetchLastChangeId = initialLastChangeId;
-
-    /// Read with deleted
-    final initialSourceMeta = await getSourceMetaInfo();
-
-    var needReFetch = false;
-    var newSourceVersion = false;
-
-    if ((initialSourceMeta?.version.v ?? 0) !=
-        (localMetaSyncInfo?.sourceVersion.v ?? 0)) {
-      newSourceVersion = true;
-      fullSync = true;
-      fetchLastChangeId = 0;
-    }
-    // If reading records is empty, we can use this number.
-    var sourceMetaLastChangeNum = initialSourceMeta?.lastChangeId.v;
-    var sourceMeta = initialSourceMeta;
-    if (debugSyncedSync) {
-      // ignore: avoid_print
-      print('sourceMeta: $sourceMeta');
-    }
-
-    /// Full sync min incremental change does not match
-    if (initialLastChangeId < (sourceMeta?.minIncrementalChangeId.v ?? 0)) {
-      needReFetch = true;
-    }
-
-    /// Full sync new version!
-    if (initialLastChangeId != 0 && newSourceVersion) {
-      needReFetch = true;
-    }
-
-    if (needReFetch) {
-      fullSync = true;
-    }
-    return _SyncDownInfo();
-  }
-*/
-
   /// Sync dirty records up
-  Future<SyncedSyncStat> _syncDown() async {
+  Future<SyncedSyncStat> doSyncDown() async {
     var db = await this.db.database;
     var stat = SyncedSyncStat();
 
@@ -730,6 +646,37 @@ abstract class SyncedDbSynchronizerCommon {
   Future<void> lazyWaitSync() async {
     await _lazyLauncher.waitCurrent();
   }
+
+  /// Sync down
+  Future<SyncedSyncStat> syncDown() async {
+    return syncLock.synchronized(() {
+      return doSyncDown();
+    });
+  }
+}
+
+/// Synced db synchronized
+abstract class SyncedDbSynchronizerCommon {
+  /// The source being synchronized
+  final SyncedSource source;
+
+  /// Default to 10 up
+  int? stepLimitUp;
+
+  /// Default to 100 down
+  int? stepLimitDown;
+
+  final syncLock = Lock();
+  SyncedDbSynchronizerCommon({
+    required this.source,
+    this.autoSync = false,
+    required SyncedDbCommon db,
+  }) : dbCommon = db;
+
+  final SyncedDbCommon dbCommon;
+
+  /// Auto sync
+  final bool autoSync;
 }
 
 var _lazyLauncherStopwatch = Stopwatch()..start();

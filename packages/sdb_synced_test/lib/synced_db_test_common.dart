@@ -12,6 +12,8 @@ class DbEntity extends ScvStringRecordBase {
 
 var dbEntityStoreRef = scvStringStoreFactory.store<DbEntity>('entity');
 String get dbEntityStoreName => dbEntityStoreRef.name;
+
+/// Database schema (synced)
 var dbEntitySchema = SdbDatabaseSchema(
   stores: [dbEntityStoreRef.schema(), ...syncedSdbMetaSchema.stores],
 );

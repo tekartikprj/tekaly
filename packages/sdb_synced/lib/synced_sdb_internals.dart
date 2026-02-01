@@ -10,11 +10,12 @@ export 'package:tekaly_sembast_synced/synced_db_internals.dart'
         CvMetaInfo,
         SyncedSource,
         SyncedDbSynchronizerCommon,
+        debugSyncedSync,
         SyncedDbCommon;
 
 export 'src/model/db_sync_meta.dart' show DbSyncMetaInfo;
 export 'src/model/db_sync_record.dart'
-    show DbSyncRecord, dbSyncRecordStoreRef, dbSyncMetaStoreRef;
+    show SdbSyncRecord, dbSyncRecordStoreRef, dbSyncMetaStoreRef;
 export 'src/sync/synced_sdb.dart'
     show
         SyncedSdb,

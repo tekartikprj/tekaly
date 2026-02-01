@@ -29,7 +29,7 @@ void cvInitSyncedDbBuilders() {
   if (!_buildersInitialized) {
     _buildersInitialized = true;
 
-    cvAddConstructor(DbSyncRecord.new);
+    cvAddConstructor(SdbSyncRecord.new);
     cvAddConstructor(DbSyncMetaInfo.new);
   }
 }
@@ -108,16 +108,29 @@ abstract class SyncedDbBase with SyncedDbMixin {
     }
   }
 
+  List<String> get _metaStoreNames => [
+    dbSyncRecordStoreRef.name,
+    dbSyncMetaStoreRef.name,
+  ];
   @override
   Future<SdbDatabase> get database async =>
       _database ??= (await rawDatabase.then((db) {
+        var extraStoreNames = _metaStoreNames;
         // Setup triggers
         for (var store in _syncStores) {
-          store.addOnChangesListener(db, onChanges);
+          store.addOnChangesListener(
+            db,
+            onChanges,
+            extraStoreNames: extraStoreNames,
+          );
         }
         if (_syncStores.isEmpty) {
           for (var store in _allStoresButMeta(db)) {
-            store.addOnChangesListener(db, onChanges);
+            store.addOnChangesListener(
+              db,
+              onChanges,
+              extraStoreNames: extraStoreNames,
+            );
           }
         }
         return db;
@@ -153,7 +166,7 @@ abstract class SyncedSdb implements SyncedDbCommon {
 
   // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
-  ScvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef;
+  ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef;
 
   /// Synced store
   // List<CvStoreRef<String, DbStringRecordBase>> get syncStores;
@@ -237,7 +250,7 @@ extension SyncedDbExtension on SyncedSdb {
   static final _dirtyFilter = SdbFilter.equals(recordDirtyFieldKey, true);
 
   /// Get dirty record
-  Future<List<DbSyncRecord>> txnGetDirtySyncRecords(SdbClient client) async {
+  Future<List<SdbSyncRecord>> txnGetDirtySyncRecords(SdbClient client) async {
     // TODO optimize with index
     return (await dbSyncRecordStoreRef.findRecords(
       client,
@@ -255,48 +268,55 @@ extension SyncedDbExtension on SyncedSdb {
     );
   }
 
-  Iterable<SdbStoreRef> _allStores(SdbDatabase db) {
-    var storeNames = db.storeNames;
-    return storeNames.map((e) => SdbStoreRef<String, SdbModel>(e));
-  }
-
   Iterable<SdbStoreRef<String, SdbModel>> _allStoresButMeta(SdbDatabase db) =>
       allStoreNamesButSynced(
         db,
       ).map((e) => SdbStoreRef<String, SdbModel>(e)).toList();
 
   /// Run in transaction.
-  Future<T> transaction<T>(
-    FutureOr<T> Function(SdbTransaction transaction) action, {
-    required SdbTransactionMode mode,
+  Future<T> transaction<T>({
+    List<String>? storeNames,
+    required FutureOr<T> Function(SdbTransaction transaction) run,
+    SdbTransactionMode? mode,
   }) async {
     var db = await database;
-    return db.inStoresTransaction(_allStores(db).toList(), mode, (txn) {
-      return action(txn);
-    });
+
+    /// Run in transaction all stores!
+    /// hopefully for a short period of time
+    return db.inTransaction(
+      storeNames: storeNames ?? db.storeNames.toList(),
+      mode: mode,
+      run: run,
+    );
   }
 
   /// Disable change tracking during syncTransaction
-  Future<T> syncTransaction<T>(
-    FutureOr<T> Function(SdbTransaction transaction) action,
-  ) async {
+  Future<T> syncTransaction<T>({
+    List<String>? storeNames,
+    SdbTransactionMode? mode,
+    required FutureOr<T> Function(SdbTransaction transaction) run,
+  }) async {
     return syncTransactionLock.synchronized(() async {
       try {
-        return await transaction((txn) async {
-          try {
-            trackChangesDisabled = true;
-            var result = await action(txn);
-            return result;
-          } finally {
-            trackChangesDisabled = false;
-          }
-        }, mode: SdbTransactionMode.readWrite);
+        return await transaction(
+          storeNames: storeNames,
+          mode: mode,
+          run: (txn) async {
+            try {
+              trackChangesDisabled = true;
+              var result = await run(txn);
+              return result;
+            } finally {
+              trackChangesDisabled = false;
+            }
+          },
+        );
       } finally {}
     });
   }
 
   /// Raw access
-  Future<void> txnPutSyncRecord(SdbClient? client, DbSyncRecord record) async {
+  Future<void> txnPutSyncRecord(SdbClient? client, SdbSyncRecord record) async {
     client ??= await database;
     await record.put(client);
   }
@@ -320,12 +340,12 @@ extension SyncedDbExtension on SyncedSdb {
   }
 
   /// Get sync records
-  Future<List<DbSyncRecord>> getSyncRecords({SdbClient? client}) async {
+  Future<List<SdbSyncRecord>> getSyncRecords({SdbClient? client}) async {
     client ??= await database;
     return (await dbSyncRecordStoreRef.findRecords(client)).toList();
   }
 
-  Future<DbSyncRecord?> getSyncRecord(
+  Future<SdbSyncRecord?> getSyncRecord(
     SdbClient client,
     SdbRecordRef<dynamic, Map<String, Object?>> record,
   ) async {
@@ -338,7 +358,7 @@ extension SyncedDbExtension on SyncedSdb {
     );
   }
 
-  Future<DbSyncRecord?> getSyncRecordAny(
+  Future<SdbSyncRecord?> getSyncRecordAny(
     SdbClient client,
     SdbRecordRef record,
   ) async {
@@ -434,7 +454,17 @@ class SyncedSdbOptions {
 }
 
 final syncedSdbMetaSchema = SdbDatabaseSchema(
-  stores: [dbSyncMetaStoreRef.schema(), dbSyncRecordStoreRef.schema()],
+  stores: [
+    dbSyncMetaStoreRef.schema(),
+    dbSyncRecordStoreRef.schema(
+      autoIncrement: true,
+      indexes: [
+        dbSyncRecordBySyncIndexRef.schema(
+          keyPath: dbSyncRecordModel.syncId.name,
+        ),
+      ],
+    ),
+  ],
 );
 
 /// Default implementation
@@ -493,18 +523,18 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedSdb {
       sync.dbSyncMetaStoreRef;
 
   @override
-  ScvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef =>
+  ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef =>
       sync.dbSyncRecordStoreRef;
 }
 
-DbSyncRecord syncRecordFrom(SdbRecordRef<String, SdbModel> record) {
-  return DbSyncRecord()
+SdbSyncRecord syncRecordFrom(SdbRecordRef<String, SdbModel> record) {
+  return SdbSyncRecord()
     ..key.v = record.key
     ..store.v = record.store.name;
 }
 
-DbSyncRecord syncRecordFromAny(SdbRecordRef record) {
-  return DbSyncRecord()
+SdbSyncRecord syncRecordFromAny(SdbRecordRef record) {
+  return SdbSyncRecord()
     ..key.v = record.key as String
     ..store.v = record.store.name;
 }

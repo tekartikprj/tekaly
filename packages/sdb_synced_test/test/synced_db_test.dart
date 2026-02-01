@@ -30,14 +30,14 @@ void main() {
         DbEntity()..name.v = 'test',
       )).rawRef.key;
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
+        SdbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = true,
       ]);
       await dbEntityStoreRef.record(key).delete(db);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
+        SdbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = true

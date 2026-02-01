@@ -25,7 +25,7 @@ class _SyncedDbMock extends SyncedDbBase {
 
   @override
   // TODO: implement dbSyncRecordStoreRef
-  ScvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef =>
+  ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef =>
       throw UnimplementedError();
 }
 
