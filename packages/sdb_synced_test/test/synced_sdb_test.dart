@@ -3,17 +3,14 @@
 import 'package:dev_test/test.dart';
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
-import 'package:tekaly_sdb_synced_test/synced_db_test_common.dart';
+import 'package:tekaly_sdb_synced_test/synced_sdb_test_common.dart';
 
 void main() {
   cvAddConstructor(DbEntity.new);
   group('synced_db', () {
     late SyncedSdb syncedDb;
     setUp(() async {
-      syncedDb = SyncedSdb.newInMemory(
-        options: dbEntityOptions,
-        syncedStoreNames: [dbEntityStoreName],
-      );
+      syncedDb = SyncedSdb.newInMemory(options: dbEntityOptions);
     });
     tearDown(() async {
       await syncedDb.close();
@@ -21,6 +18,7 @@ void main() {
     test('stores', () async {
       expect(syncedDb.dbSyncMetaStoreRef.name, 'syncMeta');
       expect(syncedDb.dbSyncRecordStoreRef.name, 'syncRecord');
+      await syncedDb.database;
       expect(syncedDb.syncedStoreNames, ['entity']);
     });
     test('add/delete record', () async {

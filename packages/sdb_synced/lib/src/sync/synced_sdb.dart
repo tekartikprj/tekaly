@@ -7,12 +7,12 @@ import 'package:tekartik_common_utils/common_utils_import.dart';
 /// Synced db timestamp (sembast based)
 typedef SyncedDbTimestamp = ScvTimestamp;
 
-mixin SyncedDbMixin implements SyncedSdb {
+mixin SyncedSdbMixin implements SyncedSdb {
   late final SdbFactory databaseFactory;
+
+  /// Computed on open, actual store names synced
   @override
-  late final List<String> syncedStoreNames;
-  @override
-  late final List<String>? syncedExcludedStoreNames;
+  late List<String> syncedStoreNames;
 
   /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
   @override
@@ -21,7 +21,7 @@ mixin SyncedDbMixin implements SyncedSdb {
   }
 }
 
-var syncedDbDebug = false; // devWarning(true);
+var syncedSdbDebug = false; // devWarning(true);
 
 var _buildersInitialized = false;
 
@@ -34,8 +34,9 @@ void cvInitSyncedDbBuilders() {
   }
 }
 
-abstract class SyncedDbBase with SyncedDbMixin {
-  SyncedDbBase() {
+abstract class SyncedSdbBase with SyncedSdbMixin {
+  final SyncedSdbOptions options;
+  SyncedSdbBase({required this.options}) {
     cvInitSyncedDbBuilders();
   }
 
@@ -53,6 +54,10 @@ abstract class SyncedDbBase with SyncedDbMixin {
     SdbTransaction txn,
     List<SdbRecordChange<String, SdbModel>> changes,
   ) async {
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('onChanges: $changes');
+    }
     await onChangesAny(txn, changes);
   }
 
@@ -63,7 +68,7 @@ abstract class SyncedDbBase with SyncedDbMixin {
   ) async {
     for (var change in changes) {
       var changeRef = change.ref;
-      if (syncedDbDebug) {
+      if (syncedSdbDebug) {
         // ignore: avoid_print
         print(
           'change: ${change.oldSnapshot} => ${change.newSnapshot} $trackChangesDisabled',
@@ -116,6 +121,18 @@ abstract class SyncedDbBase with SyncedDbMixin {
   Future<SdbDatabase> get database async =>
       _database ??= (await rawDatabase.then((db) {
         var extraStoreNames = _metaStoreNames;
+        var systemStoreNames = syncedDbSystemStoreNames;
+        var storeNames = <String>{};
+        var optionsSyncedStoreNames = options.syncedStoreNames;
+        var optionsSyncedExcludedStoreNames = options.syncedExcludedStoreNames;
+        if (optionsSyncedStoreNames != null) {
+          storeNames.addAll(optionsSyncedStoreNames);
+        }
+        if (optionsSyncedExcludedStoreNames != null) {
+          storeNames.removeAll(optionsSyncedExcludedStoreNames);
+        }
+        storeNames.removeAll(systemStoreNames);
+        syncedStoreNames = storeNames.toList();
         // Setup triggers
         for (var store in _syncStores) {
           store.addOnChangesListener(
@@ -160,7 +177,7 @@ abstract class SyncedDbBase with SyncedDbMixin {
 }
 
 /// Synced db
-abstract class SyncedSdb implements SyncedDbCommon {
+abstract class SyncedSdb implements SyncedSdbCommon {
   /// Default name
   static String nameDefault = 'synced_sdb.db';
 
@@ -168,17 +185,12 @@ abstract class SyncedSdb implements SyncedDbCommon {
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
   ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef;
 
-  /// Synced store
-  // List<CvStoreRef<String, DbStringRecordBase>> get syncStores;
-
-  List<String>? get syncedStoreNames;
-
-  /// USed if synced store names is empty, to excluded some stores
-  List<String>? get syncedExcludedStoreNames;
-
   ScvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef;
 
   ScvRecordRef<String, DbSyncMetaInfo> get dbSyncMetaInfoRef;
+
+  /// Computed on open, actual store names synced
+  List<String> get syncedStoreNames;
 
   @protected
   Lock get syncTransactionLock;
@@ -187,37 +199,24 @@ abstract class SyncedSdb implements SyncedDbCommon {
   Future<void> initialSynchronizationDone();
 
   /// Good for in memory manipulation of incomping data and unit test !
-  factory SyncedSdb.newInMemory({
-    required SyncedSdbOptions options,
-    List<String>? syncedStoreNames,
-  }) => _SyncedDbInMemory(syncedStoreNames: syncedStoreNames, options: options);
+  factory SyncedSdb.newInMemory({required SyncedSdbOptions options}) =>
+      _SyncedSdbInMemory(options: options);
 
   /// Constructor
   factory SyncedSdb({
     String? name,
     required SdbFactory databaseFactory,
-    required SyncedSdbOptions schema,
-    List<String>? syncedExcludedStoreNames,
-    List<String>? syncedStoreNames,
-  }) => _SyncedDbImpl(
+    required SyncedSdbOptions options,
+  }) => _SyncedSdbImpl(
     name: name,
     databaseFactory: databaseFactory,
-    options: schema,
-    syncedExcludedStoreNames: syncedExcludedStoreNames,
-    syncedStoreNames: syncedStoreNames,
+    options: options,
   );
 
   factory SyncedSdb.fromOpenedDb({
     SdbDatabase? openedDatabase,
-    List<String>? syncedStoreNames,
-    List<String>? syncedExcludedStoreNames,
     required SyncedSdbOptions options,
-  }) => _SyncedDbImpl(
-    options: options,
-    openedDatabase: openedDatabase,
-    syncedStoreNames: syncedStoreNames,
-    syncedExcludedStoreNames: syncedExcludedStoreNames,
-  );
+  }) => _SyncedSdbImpl(options: options, openedDatabase: openedDatabase);
 
   static SyncedSdb openDatabase({
     String? name,
@@ -225,13 +224,8 @@ abstract class SyncedSdb implements SyncedDbCommon {
     List<String>? syncedExcludedStoreNames,
     List<String>? syncedStoreNames,
     required SyncedSdbOptions options,
-  }) => SyncedSdb(
-    schema: options,
-    name: name,
-    databaseFactory: databaseFactory,
-    syncedExcludedStoreNames: syncedExcludedStoreNames,
-    syncedStoreNames: syncedStoreNames,
-  );
+  }) =>
+      SyncedSdb(options: options, name: name, databaseFactory: databaseFactory);
 
   Future<SdbDatabase> get rawDatabase;
 
@@ -260,12 +254,7 @@ extension SyncedDbExtension on SyncedSdb {
 
   Iterable<String> allStoreNamesButSynced(SdbDatabase db) {
     var storeNames = db.storeNames;
-    return storeNames.where(
-      (name) =>
-          !(syncedStoreNames != null && syncedStoreNames!.contains(name)) &&
-          !(syncedExcludedStoreNames != null &&
-              syncedExcludedStoreNames!.contains(name)),
-    );
+    return storeNames.where((name) => !(syncedStoreNames.contains(name)));
   }
 
   Iterable<SdbStoreRef<String, SdbModel>> _allStoresButMeta(SdbDatabase db) =>
@@ -306,12 +295,12 @@ extension SyncedDbExtension on SyncedSdb {
               trackChangesDisabled = true;
               var result = await run(txn);
               return result;
-            } finally {
-              trackChangesDisabled = false;
-            }
+            } finally {}
           },
         );
-      } finally {}
+      } finally {
+        trackChangesDisabled = false;
+      }
     });
   }
 
@@ -434,23 +423,47 @@ extension SyncedDbExtension on SyncedSdb {
   Future<void> get ready => database;
 }
 
-class _SyncedDbInMemory extends _SyncedDbImpl {
+class _SyncedSdbInMemory extends _SyncedSdbImpl {
   static SdbFactory get inMemoryDatabaseFactory => newSdbFactoryMemory();
 
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
   @visibleForTesting
-  _SyncedDbInMemory({
-    required super.syncedStoreNames,
-    super.syncedExcludedStoreNames,
-    required super.options,
-  }) : super(databaseFactory: inMemoryDatabaseFactory);
+  _SyncedSdbInMemory({required super.options})
+    : super(databaseFactory: inMemoryDatabaseFactory);
 }
 
 class SyncedSdbOptions {
   final SdbDatabaseSchema schema;
   final int version;
 
-  SyncedSdbOptions({required this.schema, required this.version});
+  /// Synced store names, null means all
+  final List<String>? syncedStoreNames;
+
+  /// USed if synced store names is empty, to excluded some stores
+  final List<String>? syncedExcludedStoreNames;
+
+  SyncedSdbOptions({
+    required this.schema,
+    required this.version,
+    this.syncedStoreNames,
+    this.syncedExcludedStoreNames,
+  });
+
+  /// Copy with
+  SyncedSdbOptions copyWith({
+    SdbDatabaseSchema? schema,
+    int? version,
+    List<String>? syncedStoreNames,
+    List<String>? syncedExcludedStoreNames,
+  }) {
+    return SyncedSdbOptions(
+      schema: schema ?? this.schema,
+      version: version ?? this.version,
+      syncedStoreNames: syncedStoreNames ?? this.syncedStoreNames,
+      syncedExcludedStoreNames:
+          syncedExcludedStoreNames ?? this.syncedExcludedStoreNames,
+    );
+  }
 }
 
 final syncedSdbMetaSchema = SdbDatabaseSchema(
@@ -468,34 +481,30 @@ final syncedSdbMetaSchema = SdbDatabaseSchema(
 );
 
 /// Default implementation
-class _SyncedDbImpl extends SyncedDbBase implements SyncedSdb {
-  final SyncedSdbOptions options;
-
+class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
   String name;
 
   final SdbDatabase? openedDatabase;
 
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
   @visibleForTesting
-  _SyncedDbImpl({
+  _SyncedSdbImpl({
     SdbFactory? databaseFactory,
     this.openedDatabase,
-    required this.options,
-    List<String>? syncedStoreNames,
-    required List<String>? syncedExcludedStoreNames,
+    required SyncedSdbOptions options,
+    @Deprecated('Use options.syncedStoreNames') List<String>? syncedStoreNames,
+    @Deprecated('Use options.syncedStoreNames')
+    List<String>? syncedExcludedStoreNames,
     String? name,
-  }) : name = name ?? SyncedSdb.nameDefault {
+  }) : name = name ?? SyncedSdb.nameDefault,
+       super(
+         options: options.copyWith(
+           syncedStoreNames: syncedStoreNames,
+           syncedExcludedStoreNames: syncedExcludedStoreNames,
+         ),
+       ) {
     if (databaseFactory != null) {
       this.databaseFactory = databaseFactory;
-    }
-    this.syncedStoreNames = syncedStoreNames ?? <String>[];
-
-    if (this.syncedStoreNames.isEmpty) {
-      var excluded = syncedExcludedStoreNames?.toSet() ?? <String>{};
-      excluded.addAll(syncedDbSystemStoreNames);
-      this.syncedExcludedStoreNames = excluded.toList();
-    } else {
-      this.syncedExcludedStoreNames = syncedExcludedStoreNames;
     }
   }
 

@@ -1,6 +1,6 @@
 export 'src/sync/synced_db_lib.dart'
     show
-        SyncedDbCommon,
+        SyncedSdbCommon,
         SyncedDb,
         SyncedDbBase,
         SyncedDbMixin,
@@ -11,6 +11,8 @@ export 'src/sync/synced_db_lib.dart'
         DbSyncMetaInfoCommon,
         CvSyncedSourceRecord,
         SyncedSourceRecord,
+        SyncedRecordKey,
+        SyncedSourceExt,
         SyncedSyncStat,
         SyncedSourceDefaultMixin,
         SyncedSyncSourceRecord,

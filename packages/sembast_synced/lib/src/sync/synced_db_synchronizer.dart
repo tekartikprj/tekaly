@@ -22,7 +22,7 @@ bool get debugSyncedSync => _debugSyncedSync;
 @Deprecated('Debug Synced sync')
 set debugSyncedSync(bool debugSyncedSync) => _debugSyncedSync = debugSyncedSync;
 
-@Deprecated('Debug Synced sync')
+@doNotSubmit
 set debugSyncedDbSynchronizer(bool debugSyncedSync) =>
     _debugSyncedSync = debugSyncedSync;
 
@@ -264,7 +264,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
         print('start lazy sync');
       }
       return await syncLock.synchronized(() {
-        return _sync();
+        return doSync();
       });
     },
   );
@@ -274,51 +274,9 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
     return (await _lazyLauncher.triggerAndWait());
   }
 
-  /// Sync up and down
-  Future<SyncedSyncStat> sync() {
-    return syncLock.synchronized(() {
-      try {
-        return _sync();
-      } catch (e, st) {
-        if (debugSyncedSync) {
-          // ignore: avoid_print
-          print('sync error $e $st');
-        }
-        rethrow;
-      }
-    });
-  }
-
-  /// Sync up and down
-  Future<SyncedSyncStat> _sync() async {
-    var stat = SyncedSyncStat();
-    var upStat = await _syncUp();
-    stat.add(upStat);
-    var downStat = await doSyncDown();
-    stat.add(downStat);
-    if (debugSyncedSync) {
-      // ignore: avoid_print
-      print('_end sync $stat');
-    }
-    return stat;
-  }
-
-  /// Perform sync up and down
-  @Deprecated('Use sync')
-  Future<SyncedSyncStat> doSync() async {
-    // devPrint('_start sync');
-    return await sync();
-  }
-
   /// Sync dirty records up
-  Future<SyncedSyncStat> syncUp({bool fullSync = false}) async {
-    return syncLock.synchronized(() {
-      return _syncUp(fullSync: fullSync);
-    });
-  }
-
-  /// Sync dirty records up
-  Future<SyncedSyncStat> _syncUp({bool fullSync = false}) async {
+  @override
+  Future<SyncedSyncStat> doSyncUp({bool fullSync = false}) async {
     var stat = SyncedSyncStat();
 
     var dirtySourceRecords = await getLocalDirtySourceRecords();
@@ -430,19 +388,8 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
         .delete(client);
   }
 
-  /// Use it internally to cache the source meta info.
-  Future<CvMetaInfo?> getSourceMetaInfo() async {
-    var sourceMetaInfo = await source.getMetaInfo();
-    _lastSyncMetaInfo = sourceMetaInfo;
-    return lastSyncMetaInfo;
-  }
-
-  CvMetaInfo? _lastSyncMetaInfo;
-
-  /// Last source meta info
-  CvMetaInfo? get lastSyncMetaInfo => _lastSyncMetaInfo;
-
   /// Sync dirty records up
+  @override
   Future<SyncedSyncStat> doSyncDown() async {
     var db = await this.db.database;
     var stat = SyncedSyncStat();
@@ -650,13 +597,6 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   Future<void> lazyWaitSync() async {
     await _lazyLauncher.waitCurrent();
   }
-
-  /// Sync down
-  Future<SyncedSyncStat> syncDown() async {
-    return syncLock.synchronized(() {
-      return doSyncDown();
-    });
-  }
 }
 
 /// Synced db synchronized
@@ -674,13 +614,71 @@ abstract class SyncedDbSynchronizerCommon {
   SyncedDbSynchronizerCommon({
     required this.source,
     this.autoSync = false,
-    required SyncedDbCommon db,
+    required SyncedSdbCommon db,
   }) : dbCommon = db;
 
-  final SyncedDbCommon dbCommon;
+  final SyncedSdbCommon dbCommon;
 
   /// Auto sync
   final bool autoSync;
+  Future<SyncedSyncStat> doSyncDown();
+
+  /// Sync down
+  Future<SyncedSyncStat> syncDown() async {
+    return syncLock.synchronized(() {
+      return doSyncDown();
+    });
+  }
+
+  Future<SyncedSyncStat> doSyncUp({bool fullSync = false});
+
+  /// Sync dirty records up
+  Future<SyncedSyncStat> syncUp({bool fullSync = false}) async {
+    return syncLock.synchronized(() {
+      return doSyncUp(fullSync: fullSync);
+    });
+  }
+
+  /// Sync up and down
+  Future<SyncedSyncStat> doSync() async {
+    var stat = SyncedSyncStat();
+    var upStat = await doSyncUp();
+    stat.add(upStat);
+    var downStat = await doSyncDown();
+    stat.add(downStat);
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('_end sync $stat');
+    }
+    return stat;
+  }
+
+  /// Sync up and down
+  Future<SyncedSyncStat> sync() {
+    return syncLock.synchronized(() {
+      try {
+        return doSync();
+      } catch (e, st) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('sync error $e $st');
+        }
+        rethrow;
+      }
+    });
+  }
+
+  CvMetaInfo? _lastSyncMetaInfo;
+
+  /// Last source meta info
+  CvMetaInfo? get lastSyncMetaInfo => _lastSyncMetaInfo;
+
+  /// Use it internally to cache the source meta info.
+  Future<CvMetaInfo?> getSourceMetaInfo() async {
+    var sourceMetaInfo = await source.getMetaInfo();
+    _lastSyncMetaInfo = sourceMetaInfo;
+    return lastSyncMetaInfo;
+  }
 }
 
 var _lazyLauncherStopwatch = Stopwatch()..start();

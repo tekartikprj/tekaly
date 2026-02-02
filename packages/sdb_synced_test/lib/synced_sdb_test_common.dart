@@ -17,4 +17,9 @@ String get dbEntityStoreName => dbEntityStoreRef.name;
 var dbEntitySchema = SdbDatabaseSchema(
   stores: [dbEntityStoreRef.schema(), ...syncedSdbMetaSchema.stores],
 );
-var dbEntityOptions = SyncedSdbOptions(version: 1, schema: dbEntitySchema);
+var syncedStoreNames = [dbEntityStoreName];
+var dbEntityOptions = SyncedSdbOptions(
+  version: 1,
+  schema: dbEntitySchema,
+  syncedStoreNames: syncedStoreNames,
+);

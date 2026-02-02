@@ -1,11 +1,15 @@
 export 'package:tekaly_sembast_synced/sembast_synced.dart'
-    show CvSyncedSourceRecord, CvMetaInfo, CvSyncedSourceRecordExt;
+    show
+        CvSyncedSourceRecord,
+        CvMetaInfo,
+        CvSyncedSourceRecordExt,
+        debugSyncedDbSynchronizer;
 
 export 'src/sync/synced_sdb.dart'
     show
         SyncedSdb,
-        SyncedDbBase,
-        SyncedDbMixin,
+        SyncedSdbBase,
+        SyncedSdbMixin,
         SyncedDbExtension,
         SyncedSdbOptions,
         syncedSdbMetaSchema;

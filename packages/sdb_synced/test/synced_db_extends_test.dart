@@ -5,7 +5,9 @@ import 'package:tekaly_sdb_synced/src/sync/synced_sdb.dart';
 import 'package:tekartik_app_cv_sdb/src/scv_store_ref.dart';
 import 'package:test/test.dart';
 
-class _SyncedDbMock extends SyncedDbBase {
+class _SyncedDbMock extends SyncedSdbBase {
+  _SyncedDbMock({required super.options});
+
   /*
   @override
   CvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef =>
@@ -32,7 +34,12 @@ class _SyncedDbMock extends SyncedDbBase {
 void main() {
   group('synced_db_extends', () {
     test('mock', () async {
-      _SyncedDbMock();
+      _SyncedDbMock(
+        options: SyncedSdbOptions(
+          version: 1,
+          schema: SdbDatabaseSchema(stores: []),
+        ),
+      );
     });
   });
 }

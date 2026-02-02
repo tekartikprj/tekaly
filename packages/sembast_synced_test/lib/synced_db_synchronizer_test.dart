@@ -132,8 +132,18 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
       sync.close();
     });
-    test('syncNone', () async {
+    test('sync none', () async {
       var stat = await sync.sync();
+      expect(stat, SyncedSyncStat());
+    });
+
+    test('syncUp none', () async {
+      var stat = await sync.syncUp();
+      expect(stat, SyncedSyncStat());
+    });
+
+    test('syncDown none', () async {
+      var stat = await sync.syncDown();
       expect(stat, SyncedSyncStat());
     });
 
