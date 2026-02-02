@@ -123,7 +123,11 @@ class SyncedSyncStat {
 
 /// Synced sync source record
 class SyncedSyncSourceRecord extends SyncedSyncSourceRecordCommon {
-  DbSyncRecord? syncRecord;
+  set syncRecord(DbSyncRecord? value) {
+    syncRecordCommon = value;
+  }
+
+  DbSyncRecord? get syncRecord => syncRecordCommon as DbSyncRecord?;
 }
 
 /// Synced sync source record

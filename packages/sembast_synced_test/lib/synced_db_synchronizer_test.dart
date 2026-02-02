@@ -521,7 +521,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
       stat = await sync.syncUp();
       expect(stat, SyncedSyncStat());
-    });
+    }, solo: true);
 
     test('syncUpdateFromRemote', () async {
       await source.putSourceRecord(
