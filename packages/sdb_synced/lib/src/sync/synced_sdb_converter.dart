@@ -1,10 +1,8 @@
-import 'package:cv/cv.dart';
-import 'package:sembast/blob.dart' as sembast;
-import 'package:sembast/timestamp.dart' as sembast;
-import 'package:tekartik_firebase_firestore/firestore.dart' as firestore;
+import 'dart:typed_data';
 
-import 'model/source_meta_info.dart';
-import 'model/source_record.dart';
+import 'package:cv/cv.dart';
+import 'package:tekaly_sembast_synced/synced_db.dart';
+import 'package:tekartik_firebase_firestore/firestore.dart' as firestore;
 
 /// True for null, num, String, bool
 bool isBasicTypeOrNull(dynamic value) {
@@ -16,23 +14,23 @@ bool isBasicTypeOrNull(dynamic value) {
   return false;
 }
 
-dynamic _toFirestore(dynamic value) {
+dynamic _toSdb(dynamic value) {
   if (isBasicTypeOrNull(value)) {
     return value;
   }
 
-  if (value is sembast.Timestamp) {
-    return firestore.Timestamp(value.seconds, value.nanoseconds);
+  if (value is SyncedDbTimestamp) {
+    return value.toDateTime(isUtc: true);
   }
-  if (value is sembast.Blob) {
-    return firestore.Blob(value.bytes);
+  if (value is SyncedDbBlob) {
+    return value.bytes;
   }
 
   if (value is Map) {
     var map = value;
     Map? clone;
     map.forEach((key, item) {
-      var converted = _toFirestore(item);
+      var converted = _toSdb(item);
       if (!identical(converted, item)) {
         clone ??= Map<String, Object?>.from(map);
         clone![key] = converted;
@@ -44,7 +42,7 @@ dynamic _toFirestore(dynamic value) {
     List? clone;
     for (var i = 0; i < list.length; i++) {
       var item = list[i];
-      var converted = _toFirestore(item);
+      var converted = _toSdb(item);
       if (!identical(converted, item)) {
         clone ??= List.from(list);
         clone[i] = converted;
@@ -57,10 +55,10 @@ dynamic _toFirestore(dynamic value) {
 }
 
 /// Convert a sembast value to a json encodable value
-dynamic sembastToFirestore(dynamic value) {
+dynamic syncedDbToSdb(dynamic value) {
   dynamic converted;
   try {
-    converted = _toFirestore(value);
+    converted = _toSdb(value);
   } on ArgumentError catch (e) {
     throw ArgumentError.value(
       e.invalidValue,
@@ -76,23 +74,30 @@ dynamic sembastToFirestore(dynamic value) {
   return converted;
 }
 
-dynamic _toSembast(dynamic value) {
+dynamic _toSyncedDb(dynamic value) {
+  // print('_toSyncedDb $value (${value.runtimeType})');
   if (isBasicTypeOrNull(value)) {
     return value;
   }
 
-  if (value is firestore.Timestamp) {
-    return sembast.Timestamp(value.seconds, value.nanoseconds);
+  /// Allow synced timestamp on input
+  if (value is SyncedDbTimestamp) {
+    return value;
   }
-  if (value is firestore.Blob) {
-    return sembast.Blob(value.bytes);
+  if (value is DateTime) {
+    return SyncedDbTimestamp.fromDateTime(value);
   }
-
+  if (value is SyncedDbBlob) {
+    return value;
+  }
+  if (value is Uint8List) {
+    return SyncedDbBlob(value);
+  }
   if (value is Map) {
     var map = value;
     Map? clone;
     map.forEach((key, item) {
-      var converted = _toSembast(item);
+      var converted = _toSyncedDb(item);
       if (!identical(converted, item)) {
         clone ??= Map<String, Object?>.from(map);
         clone![key] = converted;
@@ -104,7 +109,7 @@ dynamic _toSembast(dynamic value) {
     List? clone;
     for (var i = 0; i < list.length; i++) {
       var item = list[i];
-      var converted = _toSembast(item);
+      var converted = _toSyncedDb(item);
       if (!identical(converted, item)) {
         clone ??= List.from(list);
         clone[i] = converted;
@@ -117,10 +122,10 @@ dynamic _toSembast(dynamic value) {
 }
 
 /// Convert a value from a firestore to sembast
-dynamic firestoreToSembast(dynamic value) {
+dynamic sdbToSyncedDb(dynamic value) {
   dynamic converted;
   try {
-    converted = _toSembast(value);
+    converted = _toSyncedDb(value);
   } on ArgumentError catch (e) {
     throw ArgumentError.value(
       e.invalidValue,
@@ -130,46 +135,31 @@ dynamic firestoreToSembast(dynamic value) {
   }
 
   /// Ensure root is Map<String, Object?> if only Map
-  if (converted is Map && (converted is! Map<String, Object?>)) {
-    converted = converted.cast<String, Object?>();
+  if (converted is Map) {
+    return asModel(converted);
   }
   return converted;
 }
 
 /// Map easy converter
-Map<String, Object?> mapSembastToFirestore(Map<String, Object?> map) =>
-    sembastToFirestore(map) as Map<String, Object?>;
+Map<String, Object?> mapSyncedDbToSdb(Map<String, Object?> map) =>
+    syncedDbToSdb(map) as Map<String, Object?>;
 
-extension MapSembastFromToFirestoreExt on Map<String, Object?> {
-  Map<String, Object?> fromFirestore() => mapFirestoreToSembast(this);
-  Map<String, Object?> toFirestore() => mapSembastToFirestore(this);
+extension MapSyncedDbFromToSdbExt on Map<String, Object?> {
+  Map<String, Object?> fromSdb() => mapSdbToSyncedDb(this);
+  Map<String, Object?> toSdb() => mapSyncedDbToSdb(this);
 }
 
 /// Map easy converter
-Map<String, Object?> mapFirestoreToSembast(Map<String, Object?> map) =>
-    firestoreToSembast(map) as Map<String, Object?>;
+Map<String, Object?> mapSdbToSyncedDb(Map<String, Object?> map) =>
+    sdbToSyncedDb(map) as Map<String, Object?>;
 
 /// Snapshot to a cv record
 T? cvRecordFromSnapshot<T extends CvModel>(
   firestore.DocumentSnapshot snapshot,
 ) => (snapshot.exists)
     ? () {
-        var data = firestoreToSembast(snapshot.data) as Map<String, Object?>;
+        var data = sdbToSyncedDb(snapshot.data) as Map<String, Object?>;
         return cvBuildModel<T>(data)..fromMap(data);
       }()
     : null;
-
-CvMetaInfo? metaInfoRecordFromSnapshot(firestore.DocumentSnapshot snapshot) =>
-    cvRecordFromSnapshot<CvMetaInfo>(snapshot);
-
-/// Copy the sync id
-CvSyncedSourceRecord? sourceRecordFromSnapshot(
-  firestore.DocumentSnapshot snapshot,
-) =>
-    cvRecordFromSnapshot<CvSyncedSourceRecord>(snapshot)
-      ?..syncId.v = snapshot.ref.id;
-
-/// Copy the sync id
-List<CvSyncedSourceRecord?> sourceRecordFromSnapshots(
-  List<firestore.DocumentSnapshot> snapshots,
-) => snapshots.map(sourceRecordFromSnapshot).toList();

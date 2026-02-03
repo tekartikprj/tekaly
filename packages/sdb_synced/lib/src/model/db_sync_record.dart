@@ -14,7 +14,7 @@ const syncIdKey = 'syncId';
 
 final dbSyncRecordModel = SdbSyncRecord();
 
-final dbSyncMetaStoreRef = scvStringStoreFactory.store<DbSyncMetaInfo>(
+final dbSyncMetaStoreRef = scvStringStoreFactory.store<SdbSyncMetaInfo>(
   'syncMeta',
 );
 

@@ -20,6 +20,7 @@ export 'src/sync/synced_db_lib.dart'
         syncedDbStoreFactory,
         SyncedDbStoreRef,
         SyncedDbRecordRef,
+        SyncedDbBlob,
         // Compat
         SyncedDbSourceSync,
         SyncedDbSynchronizer,

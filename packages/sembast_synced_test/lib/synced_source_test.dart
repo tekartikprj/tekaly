@@ -137,6 +137,69 @@ void runSyncedSourceTest(
       'record': {'store': 'test2', 'key': '2', 'deleted': false},
     });
   });
+  test('put/getRecord data', () async {
+    var record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..value.v = {
+            'string': 'Some test',
+            'bool': true,
+            'double': 1.5,
+            'int': 1,
+            'timestamp': SyncedDbTimestamp(2, 3000),
+            'blob': SyncedDbBlob.fromList([1, 2, 3]),
+          }
+          ..key.v = '1'),
+    ));
+    print('syncId: ${record.syncId.v}');
+    print('record: ${record.toMap()}');
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': 1,
+
+      'record': {
+        'store': 'test',
+        'key': '1',
+        'value': {
+          'string': 'Some test',
+          'bool': true,
+          'double': 1.5,
+          'int': 1,
+          'timestamp': SyncedDbTimestamp(2, 3000),
+          'blob': SyncedDbBlob.fromList([1, 2, 3]),
+        },
+        'deleted': false,
+      },
+    });
+    var syncId = record.syncId.v;
+    expect(syncId, isNotNull);
+    expect(record.syncTimestamp.v, isNotNull);
+    expect(record.recordStore, 'test');
+    expect(record.syncChangeId.v, 1);
+    var ref = SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId);
+    record = (await source.getSourceRecord(ref))!;
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': 1,
+
+      'record': {
+        'store': 'test',
+        'key': '1',
+        'value': {
+          'string': 'Some test',
+          'bool': true,
+          'double': 1.5,
+          'int': 1,
+          'timestamp': SyncedDbTimestamp(2, 3000),
+          'blob': SyncedDbBlob.fromList([1, 2, 3]),
+        },
+        'deleted': false,
+      },
+    });
+  });
   test('getRecord', () async {
     var syncId = '1234';
     var ref = SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId);

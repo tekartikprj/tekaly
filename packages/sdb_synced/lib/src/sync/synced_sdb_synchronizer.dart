@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
+import 'package:tekaly_sdb_synced/src/sync/synced_sdb_converter.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_common_utils/common_utils_import.dart';
@@ -55,7 +56,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
               await db.txnPutSyncRecord(txn, dirtySyncRecord);
             } else {
               // ok
-              value = snapshot.value;
+              value = mapSdbToSyncedDb(snapshot.value);
             }
           }
 
@@ -142,7 +143,9 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
                 } else {
                   stat.remoteUpdatedCount++;
                 }
-                var data = asModel(responseRecord.record.v!.value.v ?? {});
+                var data = mapSyncedDbToSdb(
+                  asModel(responseRecord.record.v!.value.v ?? {}),
+                );
                 if (debugSyncedSync) {
                   // ignore: avoid_print
                   print(
@@ -394,10 +397,18 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       } else {
         stat.localCreatedCount++;
       }
-      await ref.put(
-        client,
-        remoteRecord.record.v!.value.v!.cast<String, Object?>(),
-      );
+      try {
+        var recordValue = mapSyncedDbToSdb(remoteRecord.record.v!.value.v!);
+        await ref.put(client, recordValue);
+      } catch (e, st) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('Error putting record ${remoteRecord.record.v!.key.v!}: $e');
+          // ignore: avoid_print
+          print(st);
+        }
+        rethrow;
+      }
     }
   }
 

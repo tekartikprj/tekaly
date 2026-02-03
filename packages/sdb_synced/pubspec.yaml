@@ -104,7 +104,7 @@ dependencies:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
       path: app_cv_sdb
-  idb_shim: ">=2.8.2-5"
+  idb_shim: ">=2.8.2+2"
   tekaly_sembast_synced:
     git:
       url: https://github.com/tekartikprj/tekaly

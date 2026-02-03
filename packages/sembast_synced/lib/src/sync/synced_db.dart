@@ -9,6 +9,9 @@ import 'model/db_sync_record.dart';
 /// Synced db timestamp (sembast based)
 typedef SyncedDbTimestamp = DbTimestamp;
 
+/// Synced db blob (sembast based)
+typedef SyncedDbBlob = DbBlob;
+
 /// Synced db store factory
 final syncedDbStoreFactory = stringMapStoreFactory;
 

@@ -4,9 +4,6 @@ import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
-/// Synced db timestamp (sembast based)
-typedef SyncedDbTimestamp = ScvTimestamp;
-
 mixin SyncedSdbMixin implements SyncedSdb {
   late final SdbFactory databaseFactory;
 
@@ -30,7 +27,7 @@ void cvInitSyncedDbBuilders() {
     _buildersInitialized = true;
 
     cvAddConstructor(SdbSyncRecord.new);
-    cvAddConstructor(DbSyncMetaInfo.new);
+    cvAddConstructor(SdbSyncMetaInfo.new);
   }
 }
 
@@ -185,9 +182,9 @@ abstract class SyncedSdb implements SyncedSdbCommon {
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
   ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef;
 
-  ScvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef;
+  ScvStoreRef<String, SdbSyncMetaInfo> get dbSyncMetaStoreRef;
 
-  ScvRecordRef<String, DbSyncMetaInfo> get dbSyncMetaInfoRef;
+  ScvRecordRef<String, SdbSyncMetaInfo> get dbSyncMetaInfoRef;
 
   /// Computed on open, actual store names synced
   List<String> get syncedStoreNames;
@@ -362,7 +359,7 @@ extension SyncedDbExtension on SyncedSdb {
     );
   }
 
-  Future<DbSyncMetaInfo?> getSyncMetaInfo({SdbClient? client}) async {
+  Future<SdbSyncMetaInfo?> getSyncMetaInfo({SdbClient? client}) async {
     client ??= await database;
     var localMetaSyncInfo = await dbSyncMetaInfoRef.get(client);
     return localMetaSyncInfo;
@@ -374,7 +371,7 @@ extension SyncedDbExtension on SyncedSdb {
     return metaInfo?.lastChangeId.v;
   }
 
-  Stream<DbSyncMetaInfo?> onSyncMetaInfo() async* {
+  Stream<SdbSyncMetaInfo?> onSyncMetaInfo() async* {
     // ignore: unused_local_variable
     var db = await database;
     // TODO internally
@@ -396,7 +393,7 @@ extension SyncedDbExtension on SyncedSdb {
   @protected
   Future<void> setSyncMetaInfo(
     SdbClient? client,
-    DbSyncMetaInfo? dbSyncMetaInfo,
+    SdbSyncMetaInfo? dbSyncMetaInfo,
   ) async {
     client ??= await database;
 
@@ -528,7 +525,7 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
         );
 
   @override
-  ScvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef =>
+  ScvStoreRef<String, SdbSyncMetaInfo> get dbSyncMetaStoreRef =>
       sync.dbSyncMetaStoreRef;
 
   @override

@@ -3,7 +3,7 @@ import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
 /// Sync meta info
-class DbSyncMetaInfo extends ScvStringRecordBase
+class SdbSyncMetaInfo extends ScvStringRecordBase
     implements DbSyncMetaInfoCommon {
   /// source
   @override

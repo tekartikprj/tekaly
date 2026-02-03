@@ -22,7 +22,7 @@ class _SyncedDbMock extends SyncedSdbBase {
 
   @override
   // TODO: implement dbSyncMetaStoreRef
-  ScvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef =>
+  ScvStoreRef<String, SdbSyncMetaInfo> get dbSyncMetaStoreRef =>
       throw UnimplementedError();
 
   @override
