@@ -6,10 +6,6 @@ enable-beta-ecosystems: true
 
 updates:
   - package-ecosystem: "pub"
-    directory: "."
-    schedule:
-      interval: "monthly"
-  - package-ecosystem: "pub"
     directory: "flutter_packages/file_download"
     schedule:
       interval: "monthly"
@@ -23,6 +19,14 @@ updates:
       interval: "monthly"
   - package-ecosystem: "pub"
     directory: "packages/firestore_synced"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/sdb_synced"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "pub"
+    directory: "packages/sdb_synced_test"
     schedule:
       interval: "monthly"
   - package-ecosystem: "pub"

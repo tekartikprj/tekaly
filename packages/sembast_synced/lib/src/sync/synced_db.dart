@@ -168,15 +168,11 @@ abstract class SyncedDbCommonTransaction implements SyncedDbCommonClient {}
 
 abstract class SyncedDbCommonClient {}
 
-abstract class SyncedSdbCommon {
-  /*/// Get dirty record
-  Future<List<DbSyncRecordCommon>> txnCommonGetDirtySyncRecords(
-    SyncedDbCommonTransaction txn,
-  );*/
-}
+/// Common synced db
+abstract class SyncedDbCommon {}
 
 /// Synced db
-abstract class SyncedDb implements SyncedSdbCommon {
+abstract class SyncedDb implements SyncedDbCommon {
   /// Default name
   static String nameDefault = 'synced.db';
   // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');

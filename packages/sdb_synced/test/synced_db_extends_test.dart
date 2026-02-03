@@ -8,26 +8,17 @@ import 'package:test/test.dart';
 class _SyncedDbMock extends SyncedSdbBase {
   _SyncedDbMock({required super.options});
 
-  /*
-  @override
-  CvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef =>
-      throw UnimplementedError();
-
-  @override
-  CvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef =>
-      throw UnimplementedError();
-*/
   @override
   Future<SdbDatabase> get rawDatabase => throw UnimplementedError();
 
   @override
   // TODO: implement dbSyncMetaStoreRef
-  ScvStoreRef<String, SdbSyncMetaInfo> get dbSyncMetaStoreRef =>
+  ScvStoreRef<String, SdbSyncMetaInfo> get scvSyncMetaStoreRef =>
       throw UnimplementedError();
 
   @override
   // TODO: implement dbSyncRecordStoreRef
-  ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef =>
+  ScvStoreRef<int, SdbSyncRecord> get scvSyncRecordStoreRef =>
       throw UnimplementedError();
 }
 

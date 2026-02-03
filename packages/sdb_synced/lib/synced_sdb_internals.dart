@@ -1,6 +1,9 @@
 export 'package:tekaly_sembast_synced/synced_db_internals.dart'
     show
+        SyncedDbTimestamp,
+        SyncedDbBlob,
         SyncedDataSourceRef,
+        SyncedDataSourceRefExt,
         SyncedSyncStat,
         DbSyncRecordCommon,
         DbSyncMetaInfoCommon,
@@ -12,16 +15,17 @@ export 'package:tekaly_sembast_synced/synced_db_internals.dart'
         SyncedSourceExt,
         SyncedDbSynchronizerCommon,
         debugSyncedSync,
-        SyncedSdbCommon;
+        SyncedDbCommon;
 export 'src/model/db_sync_meta.dart' show SdbSyncMetaInfo;
 export 'src/model/db_sync_record.dart'
-    show SdbSyncRecord, dbSyncRecordStoreRef, dbSyncMetaStoreRef;
+    show SdbSyncRecord, sdbSyncRecordStoreRef, sdbSyncMetaStoreRef;
 export 'src/sync/synced_sdb.dart'
     show
         SyncedSdb,
         SyncedSdbBase,
         SyncedSdbMixin,
-        SyncedDbExtension,
+        SyncedSdbExtension,
         syncedSdbMetaSchema;
 
-//export 'src/model/source_record.dart' show  DbSyncRecord;
+export 'src/sync/synced_sdb_converter.dart'
+    show mapSdbToSyncedDb, mapSyncedDbToSdb;

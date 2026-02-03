@@ -16,8 +16,8 @@ void main() {
       await syncedDb.close();
     });
     test('stores', () async {
-      expect(syncedDb.dbSyncMetaStoreRef.name, 'syncMeta');
-      expect(syncedDb.dbSyncRecordStoreRef.name, 'syncRecord');
+      expect(syncedDb.scvSyncMetaStoreRef.name, 'syncMeta');
+      expect(syncedDb.scvSyncRecordStoreRef.name, 'syncRecord');
       await syncedDb.database;
       expect(syncedDb.syncedStoreNames, ['entity']);
     });
@@ -31,15 +31,15 @@ void main() {
         SdbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true,
+          ..dirty.v = 1,
       ]);
       await dbEntityStoreRef.record(key).delete(db);
       expect(await syncedDb.getSyncRecords(), [
         SdbSyncRecord()
           ..store.v = dbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
-          ..deleted.v = true,
+          ..dirty.v = 1
+          ..deleted.v = 1,
       ]);
     });
     /*

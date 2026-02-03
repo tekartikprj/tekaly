@@ -14,16 +14,25 @@ const syncIdKey = 'syncId';
 
 final dbSyncRecordModel = SdbSyncRecord();
 
-final dbSyncMetaStoreRef = scvStringStoreFactory.store<SdbSyncMetaInfo>(
+final sdbSyncMetaStoreRef = scvStringStoreFactory.store<SdbSyncMetaInfo>(
   'syncMeta',
 );
 
-final dbSyncRecordStoreRef = scvIntStoreFactory.store<SdbSyncRecord>(
+final sdbSyncRecordStoreRef = scvIntStoreFactory.store<SdbSyncRecord>(
   'syncRecord',
 );
 
 /// Index to find by syncId
-final dbSyncRecordBySyncIndexRef = dbSyncRecordStoreRef.index('bySyncId');
+final sdbSyncRecordBySyncIndexRef = sdbSyncRecordStoreRef.index<String>(
+  'bySyncId',
+);
+
+/// Index to find dirty records
+final sdbSyncRecordDirtyIndexRef = sdbSyncRecordStoreRef.index<int>('dirty');
+
+/// Index to find by store and key
+final sdbSyncRecordByStoreAndKeyIndexRef = sdbSyncRecordStoreRef
+    .index2<String, String>('byStoreAndKey');
 
 class SdbSyncRecord extends ScvIntRecordBase implements DbSyncRecordCommon {
   /// Local store
@@ -34,13 +43,19 @@ class SdbSyncRecord extends ScvIntRecordBase implements DbSyncRecordCommon {
   @override
   final key = CvField<String>(recordKeyFieldKey);
 
-  /// Local key
+  /// Whether the record is deleted
   @override
-  final deleted = CvField<bool>(recordDeletedFieldKey);
+  bool get isDeleted => deleted.v == 1;
+
+  /// Local key
+  final deleted = CvField<int>(recordDeletedFieldKey);
+
+  /// Whether the record is dirty
+  @override
+  bool get isDirty => dirty.v == 1;
 
   /// Local dirty/deleted/added
-  @override
-  final dirty = CvField<bool>(recordDirtyFieldKey);
+  final dirty = CvField<int>(recordDirtyFieldKey);
 
   /// Source id
   @override

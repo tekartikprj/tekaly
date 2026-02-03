@@ -1,22 +1,72 @@
 import 'dart:math';
 
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
-import 'package:tekaly_sdb_synced/src/sync/synced_sdb_converter.dart';
+import 'package:tekaly_sdb_synced/src/sync/utils.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_common_utils/common_utils_import.dart';
+import 'package:tekartik_app_common_utils/lazy_runner.dart';
 import 'package:tekartik_common_utils/list_utils.dart';
+import 'package:tekartik_common_utils/stream/stream_join.dart';
 
 /// Synced db synchronized
 class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
   SyncedSdb get db => super.dbCommon as SyncedSdb;
+  // Auto sync subscription
+  StreamSubscription? _autoSyncSourceSubscription;
+  StreamSubscription? _autoSyncDbSubscription;
   SyncedSdbSynchronizer({
     required SyncedSdb db,
     required super.source,
     super.autoSync = false,
-  }) : super(db: db);
+  }) : super(db: db) {
+    if (autoSync) {
+      _autoSyncSourceSubscription =
+          streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
+            var remote = event.$1;
+            var local = event.$2;
+            var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
+            var localLastChangeId = local?.lastChangeId.v ?? 0;
+            // devPrint('remote $remote, local: $local');
+            if (remoteLastChangeId != localLastChangeId) {
+              lazySync();
+            } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
+              lazySync();
+            }
+          });
+      _autoSyncDbSubscription = db.onDirty().listen((dirty) {
+        if (dirty) {
+          lazySync();
+        }
+      });
+    }
+  }
 
-  Future<void> close() async {}
+  late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
+    action: (count) async {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('start lazy sync');
+      }
+      return sync();
+    },
+  );
+
+  /// Trigger a lazy sync
+  Future<SyncedSyncStat> lazySync() async {
+    return (await _lazyLauncher.triggerAndWait());
+  }
+
+  // ignore: unused_field
+  var _closing = false;
+  Future<void> close() async {
+    _autoSyncSourceSubscription?.cancel().unawait();
+    _autoSyncDbSubscription?.cancel().unawait();
+    await syncLock.synchronized(() {
+      _closing = true;
+    });
+    await _lazyLauncher.close();
+  }
 
   /// Get local dirty source records
   Future<List<SyncedSdbSyncSourceRecord>> getLocalDirtySourceRecords() async {
@@ -31,7 +81,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
           var snapshot = await dataRecordRef.get(txn);
           Map<String, Object?>? value;
           // Check and fix deleted
-          if (dirtySyncRecord.deleted.v ?? false) {
+          if (dirtySyncRecord.isDeleted) {
             if (snapshot != null) {
               if (debugSyncedSync) {
                 // ignore: avoid_print
@@ -52,7 +102,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
                 );
               }
               // important to set for later
-              dirtySyncRecord.deleted.v = true;
+              dirtySyncRecord.deleted.v = 1;
               await db.txnPutSyncRecord(txn, dirtySyncRecord);
             } else {
               // ok
@@ -66,7 +116,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
             ..record.v = (CvSyncedSourceRecordData()
               ..store.v = dirtySyncRecord.store.v
               ..key.v = dirtySyncRecord.key.v
-              ..deleted.v = dirtySyncRecord.deleted.v == true
+              ..deleted.v = intToBool(dirtySyncRecord.deleted.v)
               ..value.v = value);
           list.add(
             SyncedSdbSyncSourceRecord()
@@ -111,11 +161,11 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
               var responseRecord = syncSourceRecord.sourceRecord!;
               var originalSyncRecord = syncSourceRecord.syncRecord!;
               var newSyncRecord =
-                  db.dbSyncRecordStoreRef.record(originalSyncRecord.id).cv()
-                    ..deleted.v = responseRecord.record.v!.deleted.v
+                  db.scvSyncRecordStoreRef.record(originalSyncRecord.id).cv()
+                    ..deleted.v = boolToInt(responseRecord.record.v!.deleted.v)
                     ..store.v = responseRecord.record.v!.store.v
                     ..key.v = responseRecord.record.v!.key.v
-                    ..dirty.v = false
+                    ..dirty.v = 0
                     ..syncId.v = responseRecord.syncId.v
                     // id from the original syncRecord
                     //..id = originalSyncRecord.id
@@ -133,7 +183,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
               var dataRecordRef = newSyncRecord.dataRecordRef;
 
               /// Handle deleted case too. (!warning that could delete data at some point)
-              if ((newSyncRecord.deleted.v ?? false) ||
+              if ((newSyncRecord.isDeleted) ||
                   (responseRecord.record.v!.value.isNull)) {
                 stat.remoteDeletedCount++;
                 await dataRecordRef.delete(txn);
@@ -158,6 +208,11 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
           },
         );
       }
+    } else {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('syncUp: no dirty records');
+      }
     }
     if (debugSyncedSync) {
       // ignore: avoid_print
@@ -172,7 +227,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     var db = await this.db.database;
     var stat = SyncedSyncStat();
 
-    var localMetaSyncInfo = (await this.db.dbSyncMetaInfoRef.get(db));
+    var localMetaSyncInfo = (await this.db.scvSyncMetaInfoRef.get(db));
     var hasInitialLastChangeId = localMetaSyncInfo?.lastChangeId.v != null;
     var initialLastChangeIdOrNull = localMetaSyncInfo?.lastChangeId.v;
     var initialLastChangeId = initialLastChangeIdOrNull ?? -1;
@@ -289,7 +344,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
             local = localMap![syncedKey];
           } else {
             local = await this.db.getSyncRecord(
-              db,
+              txn,
               SdbStoreRef<String, SdbModel>(
                 syncedKey.store,
               ).record(syncedKey.key),
@@ -336,15 +391,11 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
           }
         }
         Future<void> saveMetaInfo() async {
-          var metaInfo = this.db.dbSyncMetaInfoRef.cv()
+          var metaInfo = this.db.scvSyncMetaInfoRef.cv()
             ..lastChangeId.v = newLastChangeId
             ..lastTimestamp.v = newLastTimestamp
             ..sourceVersion.setValue(initialSourceMeta?.version.v);
-          await metaInfo.put(txn);
-          if (debugSyncedSync) {
-            // ignore: avoid_print
-            print('Setting meta Info $metaInfo');
-          }
+          await this.db.setSyncMetaInfo(txn, metaInfo);
         }
 
         if (newLastChangeId != initialLastChangeId ||
@@ -366,6 +417,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       // ignore: avoid_print
       print('syncDown: $stat');
     }
+
     return stat;
   }
 
@@ -375,14 +427,14 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     CvSyncedSourceRecord remoteRecord,
     SyncedSyncStat stat,
   ) async {
-    await db.dbSyncRecordStoreRef.add(
+    await db.scvSyncRecordStoreRef.add(
       client,
       (SdbSyncRecord()
         ..syncId.v = remoteRecord.syncId.v
         ..syncTimestamp.v = remoteRecord.syncTimestamp.v
         ..store.v = remoteRecord.record.v!.store.v
         ..key.v = remoteRecord.record.v!.key.v
-        ..deleted.v = remoteRecord.record.v!.deleted.v),
+        ..deleted.v = boolToInt(remoteRecord.record.v!.deleted.v)),
     );
 
     var ref = SdbStoreRef<String, SdbModel>(
@@ -417,7 +469,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     SdbSyncRecord syncRecord,
   ) async {
     // create
-    await db.dbSyncRecordStoreRef.record(syncRecord.id).delete(client);
+    await db.scvSyncRecordStoreRef.record(syncRecord.id).delete(client);
     await SdbStoreRef<String, SdbModel>(
       syncRecord.store.v!,
     ).record(syncRecord.key.v!).delete(client);
@@ -432,5 +484,8 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
 
 /// Synced sync source record
 class SyncedSdbSyncSourceRecord extends SyncedSyncSourceRecordCommon {
-  SdbSyncRecord? syncRecord;
+  SdbSyncRecord? get syncRecord => super.syncRecordCommon as SdbSyncRecord?;
+  set syncRecord(SdbSyncRecord? value) {
+    super.syncRecordCommon = value;
+  }
 }

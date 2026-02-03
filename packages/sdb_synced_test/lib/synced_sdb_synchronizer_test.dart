@@ -1,54 +1,29 @@
+import 'package:dev_test/test.dart';
+import 'package:idb_shim/utils/sdb_import_export.dart';
+import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/sdb_synced.dart';
-import 'package:dev_test/test.dart';
-// ignore: unused_import
-import 'package:idb_shim/utils/sdb_import_export.dart';
-/*// ignore_for_file: avoid_print, invalid_use_of_visible_for_testing_member
-
-import 'package:dev_test/test.dart';
-import 'package:idb_shim/utils/sdb_import_export.dart';
-import 'package:sembast/timestamp.dart';
-import 'package:sembast/utils/sembast_import_export.dart';
-import 'package:tekaly_sdb_synced/sdb_scv.dart';
-import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
-import 'package:tekaly_sdb_synced/synced_sdb.dart';
-import 'package:tekaly_sembast_synced_test/synced_source_test.dart';
-
-import 'package:tekartik_common_utils/common_utils_import.dart';
-import 'package:tekartik_common_utils/env_utils.dart';
-
-import 'synced_db_test_common.dart';
-*/
-
-/*
-/// Web steps might not handled microseconds
-Timestamp exampleTimestamp1() =>
-    kDartIsWeb ? Timestamp(1, 1000000) : Timestamp(1, 1000);
-
-var syncedStoreNames = [dbEntityStoreName];
-*/
-
-import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
 import 'synced_sdb_test_common.dart';
 
-Future<SyncTestsContext> setupNewInMemorySyncSdbTestsContext() async {
+Future<SyncSdbTestsContext> setupNewInMemorySyncSdbTestsContext() async {
   //    setUp(() async {
-  return SyncTestsContext()
+  return SyncSdbTestsContext()
     ..syncedSdb = SyncedSdb.newInMemory(options: dbEntityOptions)
     ..source = newInMemorySyncedSourceMemory();
 }
 
 void main() {
-  // debugSyncedDbSynchronizer = devTrue;
+  //debugSyncedDbSynchronizer = devTrue;
+  //syncedSdbDebug = devTrue;
   group('synced_sdb_source_sync_memory_test_internal', () {
     syncTests(setupNewInMemorySyncSdbTestsContext);
   });
 }
 
-class SyncTestsContext {
+class SyncSdbTestsContext {
   late SyncedSource source;
   late SyncedSdb syncedSdb;
 
@@ -57,20 +32,20 @@ class SyncTestsContext {
   }
 }
 
-void syncTests(Future<SyncTestsContext> Function() setupContext) {
+void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
   cvAddConstructor(DbEntity.new);
-  /*
+
   group('non_auto_synced_db_source_sync_test', () {
     late SyncedSdbSynchronizer sync;
     late SyncedSource source;
-    late SyncedSdb syncedDb;
-    late SyncTestsContext context;
+    late SyncedSdb syncedSdb;
+    late SyncSdbTestsContext context;
     setUp(() async {
       context = await setupContext();
       source = context.source;
-      syncedDb = context.syncedDb;
+      syncedSdb = context.syncedSdb;
       //debugSyncedSync = true;
-      sync = SyncedSdbSynchronizer(db: syncedDb, source: source);
+      sync = SyncedSdbSynchronizer(db: syncedSdb, source: source);
     });
     tearDown(() async {
       await sync.close();
@@ -79,11 +54,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('auto syncNone', () async {
       var meta = await syncedSdb.getSyncMetaInfo();
       expect(meta, isNull);
-      print('meta: $meta');
-      var db = await syncedSdb.database;
-
       try {
-        meta = (await syncedDb
+        meta = (await syncedSdb
             .onSyncMetaInfo()
             .firstWhere((meta) => meta != null)
             .timeout(const Duration(milliseconds: 1000)));
@@ -91,18 +63,19 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       } on TimeoutException catch (_) {}
     });
   });
+
   group('auto_synced_db_source_sync_test', () {
     late SyncedSdbSynchronizer sync;
     late SyncedSource source;
-    late SyncedSdb syncedDb;
-    late SyncTestsContext context;
+    late SyncedSdb syncedSdb;
+    late SyncSdbTestsContext context;
     setUp(() async {
       context = await setupContext();
       source = context.source;
-      syncedDb = context.syncedDb;
+      syncedSdb = context.syncedSdb;
       // debugSyncedSdbSynchronizer = true;
       sync = SyncedSdbSynchronizer(
-        db: syncedDb,
+        db: syncedSdb,
         source: source,
         autoSync: true,
       );
@@ -113,6 +86,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         await sync.close();
         await context.dispose();
       } catch (e, st) {
+        // ignore: avoid_print
         print('Error during tearDown: $e, $st');
         rethrow;
       }
@@ -139,12 +113,11 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
   });
 
-   */
   group('synced_db_source_sync_test', () {
     late SyncedSdbSynchronizer sync;
     late SyncedSource source;
     late SyncedSdb syncedSdb;
-    late SyncTestsContext context;
+    late SyncSdbTestsContext context;
     setUp(() async {
       context = await setupContext();
       source = context.source;
@@ -154,7 +127,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     tearDown(() async {
       await context.dispose();
 
-      sync.close();
+      await sync.close();
     });
 
     test('syncUp None', () async {
@@ -183,7 +156,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           .put(db);
       var syncRecords = await syncedSdb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
-        {'store': 'entity', 'key': 'a1', 'dirty': true},
+        {'store': 'entity', 'key': 'a1', 'dirty': 1},
       ]);
       var stat = await sync.syncUp();
       syncRecords = await syncedSdb.getSyncRecords();
@@ -195,8 +168,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         {
           'store': 'entity',
           'key': 'a1',
-          'dirty': false,
-          'deleted': false,
+          'dirty': 0,
+          'deleted': 0,
           'syncTimestamp': syncRecord.syncTimestamp.v!.toDateTime(isUtc: true),
           'syncId': syncRecord.syncId.v,
           'syncChangeId': 1,
@@ -242,8 +215,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(await sync.sync(), SyncedSyncStat(remoteCreatedCount: 1));
       await recordRef.delete(db);
       var syncRecords = await syncedSdb.getSyncRecords();
-      expect(syncRecords.first.deleted.v, isTrue);
-      expect(syncRecords.first.dirty.v, isTrue);
+      expect(syncRecords.first.isDeleted, isTrue);
+      expect(syncRecords.first.isDirty, isTrue);
 
       expect(await sync.sync(), SyncedSyncStat(remoteDeletedCount: 1));
     });
@@ -268,8 +241,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           {
             'store': 'entity',
             'key': 'a1',
-            'dirty': false,
-            'deleted': false,
+            'dirty': 0,
+            'deleted': 0,
             'syncTimestamp': syncRecord.syncTimestamp.v,
             'syncId': syncRecord.syncId.v,
             'syncChangeId': 1,
@@ -311,7 +284,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (dbEntityStoreRef.record('a1').cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedSdb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
-        {'store': 'entity', 'key': 'a1', 'dirty': true},
+        {'store': 'entity', 'key': 'a1', 'dirty': 1},
       ]);
       var stat = await sync.syncUp();
       syncRecords = await syncedSdb.getSyncRecords();
@@ -323,8 +296,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         {
           'store': storeName,
           'key': 'a1',
-          'dirty': false,
-          'deleted': false,
+          'dirty': 0,
+          'deleted': 0,
           'syncTimestamp': syncRecord.syncTimestamp.v!.toDateTime(
             isUtc: true,
           ), // ! different from sembast
@@ -405,6 +378,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           'store_entity',
           {'name': 'entity'},
         ],
+
         [
           'store_syncMeta',
           {'name': 'syncMeta'},
@@ -415,7 +389,12 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             'name': 'syncRecord',
             'autoIncrement': true,
             'indecies': [
+              {
+                'name': 'byStoreAndKey',
+                'keyPath': ['store', 'key'],
+              },
               {'name': 'bySyncId', 'keyPath': 'syncId'},
+              {'name': 'dirty', 'keyPath': 'dirty'},
             ],
           },
         ],
@@ -446,7 +425,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
           {
             'store': 'entity',
             'key': 'a1',
-            'deleted': false,
+            'deleted': 0,
             'syncId': 'entity|a1',
             'syncTimestamp': {'@Timestamp': recordSyncTimestampString},
           },
@@ -471,11 +450,11 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await sync.sync();
       expect((await ref.get(db))!.name.v, 'éà');
     });
-    /*
+
     test('syncOneDeleteFromRemote', () async {
       // debugSyncedSync = devWarning(true);
       var db = await syncedSdb.database;
-      (await source.putSourceRecord(
+      await source.putSourceRecord(
         CvSyncedSourceRecord()
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
@@ -483,7 +462,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'dummy'
             ..deleted.v = true),
-      )); // no value
+      ); // no value
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
           //..syncId.v = sourceRecord.syncId.v
@@ -512,10 +491,13 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (ref.cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedSdb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
-        {'store': 'entity', 'key': 'a1', 'dirty': true},
+        {'store': 'entity', 'key': 'a1', 'dirty': 1},
       ]);
       //await syncedSdb.clearSyncRecords(db);
-      await syncedSdb.setSyncMetaInfo(db, DbSyncMetaInfo()..lastChangeId.v = 1);
+      await syncedSdb.setSyncMetaInfo(
+        db,
+        SdbSyncMetaInfo()..lastChangeId.v = 1,
+      );
       stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localDeletedCount: 1));
       expect((await syncedSdb.getSyncMetaInfoLastChangeId()), 2);
@@ -536,6 +518,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await ref.delete(db);
       await sync.sync();
 
+      // ignore: invalid_use_of_visible_for_testing_member
       await syncedSdb.clearAllSyncInfo(db);
       expect(await syncedSdb.getSyncMetaInfoLastChangeId(), null);
       var stat = await sync.sync();
@@ -565,13 +548,13 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
-      expect((await dbEntityStoreRef.findRecord(await syncedSdb.database)), [
+      expect((await dbEntityStoreRef.findRecords(await syncedSdb.database)), [
         dbEntityStoreRef.record('a1').cv()..name.v = 'test1',
       ]);
       var metaInfo = (await syncedSdb.getSyncMetaInfo())!;
       expect(metaInfo.toMap(), {
         'lastChangeId': 1,
-        'lastTimestamp': metaInfo.lastTimestamp.v,
+        'lastTimestamp': metaInfo.lastTimestamp.v!.toDateTime(isUtc: true),
       });
 
       /// again
@@ -628,6 +611,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         ..version.v = 1
         ..lastChangeId.v = 2
         ..minIncrementalChangeId.v = 3;
+      // ignore: invalid_use_of_visible_for_testing_member
       var updatedMeta = await source.putMetaInfo(meta);
       expect(updatedMeta, meta);
       var readMeta = await source.getMetaInfo();
@@ -637,17 +621,19 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('newVersionSyncUpdateFromRemote', () async {
       //if (source is SyncedSourceFirestore) {
       // debugSyncedSync = true;
+      // ignore: invalid_use_of_visible_for_testing_member
       await source.putMetaInfo(
         CvMetaInfo()
           ..version.v = 1
           ..lastChangeId.v = 1
           ..minIncrementalChangeId.v = 0,
       );
+      // ignore: invalid_use_of_visible_for_testing_member
       await source.putRawRecord(
         CvSyncedSourceRecord()
           ..syncId.v = '1'
           ..syncChangeId.v = 1
-          ..syncTimestamp.v = Timestamp(1, 0)
+          ..syncTimestamp.v = SyncedDbTimestamp(1, 0)
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'
@@ -658,6 +644,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
       // We just change the version and the data
+      // ignore: invalid_use_of_visible_for_testing_member
       await source.putMetaInfo(
         CvMetaInfo()
           ..version.v = 2
@@ -669,11 +656,12 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         'lastChangeId': 1,
         'version': 2,
       });
+      // ignore: invalid_use_of_visible_for_testing_member
       await source.putRawRecord(
         CvSyncedSourceRecord()
           ..syncId.v = '1'
           ..syncChangeId.v = 1
-          ..syncTimestamp.v = Timestamp(1, 0)
+          ..syncTimestamp.v = SyncedDbTimestamp(1, 0)
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'
@@ -711,6 +699,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
        */
     });
+
     test('syncTwiceOneFromLocal', () async {
       var db = await syncedSdb.database;
       await (dbEntityStoreRef.record('r1').cv()).put(db);
@@ -719,8 +708,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       stat = await sync.sync();
       expect(stat, SyncedSyncStat());
     });
-
-   */
   });
   /*
   group('multi sync', () async {

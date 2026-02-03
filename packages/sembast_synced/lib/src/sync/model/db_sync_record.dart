@@ -22,11 +22,12 @@ abstract class DbSyncRecordCommon implements CvModel {
   /// Local key
   CvField<String> get key;
 
-  /// Local key
-  CvField<bool> get deleted;
+  /// Whether the record is deleted
+  bool get isDeleted;
 
   /// Local dirty/deleted/added
-  CvField<bool> get dirty;
+  /// Whether the record is dirty
+  bool get isDirty;
 
   /// Source id
   CvField<String> get syncId;
@@ -48,11 +49,10 @@ class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
   final key = CvField<String>(recordKeyFieldKey);
 
   /// Local key
-  @override
+
   final deleted = CvField<bool>(recordDeletedFieldKey);
 
   /// Local dirty/deleted/added
-  @override
   final dirty = CvField<bool>(recordDirtyFieldKey);
 
   /// Source id
@@ -85,6 +85,12 @@ class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
     syncTimestamp,
     syncChangeId,
   ];
+
+  @override
+  bool get isDeleted => deleted.v == true;
+
+  @override
+  bool get isDirty => dirty.v == true;
 }
 
 DbSyncRecord? dbSyncRecordFromSnapshot(

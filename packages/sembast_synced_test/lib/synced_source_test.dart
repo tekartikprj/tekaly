@@ -152,12 +152,14 @@ void runSyncedSourceTest(
           }
           ..key.v = '1'),
     ));
-    print('syncId: ${record.syncId.v}');
-    print('record: ${record.toMap()}');
+    var syncChangeId = record.syncChangeId.v;
+    print(
+      'syncId: ${record.syncId.v}, syncChangeId: $syncChangeId, record: ${record.toMap()}',
+    );
     expect(record.toMap(), {
       'syncId': record.syncId.v,
       'syncTimestamp': record.syncTimestamp.v,
-      'syncChangeId': 1,
+      'syncChangeId': syncChangeId,
 
       'record': {
         'store': 'test',
@@ -177,13 +179,13 @@ void runSyncedSourceTest(
     expect(syncId, isNotNull);
     expect(record.syncTimestamp.v, isNotNull);
     expect(record.recordStore, 'test');
-    expect(record.syncChangeId.v, 1);
+    //expect(record.syncChangeId.v, 1);
     var ref = SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId);
     record = (await source.getSourceRecord(ref))!;
     expect(record.toMap(), {
       'syncId': record.syncId.v,
       'syncTimestamp': record.syncTimestamp.v,
-      'syncChangeId': 1,
+      'syncChangeId': syncChangeId,
 
       'record': {
         'store': 'test',

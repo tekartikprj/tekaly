@@ -263,9 +263,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
         // ignore: avoid_print
         print('start lazy sync');
       }
-      return await syncLock.synchronized(() {
-        return doSync();
-      });
+      return sync();
     },
   );
 
@@ -594,6 +592,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   }
 
   /// Wait for current sync to terminate
+  @Deprecated('to remove')
   Future<void> lazyWaitSync() async {
     await _lazyLauncher.waitCurrent();
   }
@@ -614,10 +613,10 @@ abstract class SyncedDbSynchronizerCommon {
   SyncedDbSynchronizerCommon({
     required this.source,
     this.autoSync = false,
-    required SyncedSdbCommon db,
+    required SyncedDbCommon db,
   }) : dbCommon = db;
 
-  final SyncedSdbCommon dbCommon;
+  final SyncedDbCommon dbCommon;
 
   /// Auto sync
   final bool autoSync;

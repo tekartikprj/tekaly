@@ -1,3 +1,5 @@
+import 'package:idb_shim/idb_client_logger.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:tekaly_sdb_synced/src/model/db_sync_record.dart' as sync;
 import 'package:tekaly_sdb_synced/src/model/db_sync_record.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
@@ -32,6 +34,8 @@ void cvInitSyncedDbBuilders() {
 }
 
 abstract class SyncedSdbBase with SyncedSdbMixin {
+  final _syncMetaInfoSubject = BehaviorSubject<SdbSyncMetaInfo?>();
+  final _syncDirtySubject = PublishSubject<bool>();
   final SyncedSdbOptions options;
   SyncedSdbBase({required this.options}) {
     cvInitSyncedDbBuilders();
@@ -43,7 +47,8 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
   /// Visible only for testing
   @override
   @visibleForTesting
-  var trackChangesDisabled = false;
+  bool get trackChangesDisabled =>
+      Zone.current[SyncedSdbExtension._zoneKey] == true;
 
   SdbDatabase? _database;
 
@@ -63,13 +68,12 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
     SdbTransaction txn,
     List<SdbRecordChange> changes,
   ) async {
+    if (trackChangesDisabled) return;
     for (var change in changes) {
       var changeRef = change.ref;
       if (syncedSdbDebug) {
         // ignore: avoid_print
-        print(
-          'change: ${change.oldSnapshot} => ${change.newSnapshot} $trackChangesDisabled',
-        );
+        print('change: ${change.oldSnapshot} => ${change.newSnapshot}');
       }
       if (!trackChangesDisabled) {
         //if (change.isAdd) {
@@ -77,42 +81,55 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
         var existingSyncRecord = await getSyncRecordAny(txn, changeRef);
         if (existingSyncRecord == null) {
           if (change.isDelete) {
-            await dbSyncRecordStoreRef.add(
-              txn,
-              (syncRecordFromAny(changeRef)
-                ..dirty.v = true
-                ..deleted.v = true),
-            );
+            var record = syncRecordFromAny(changeRef)
+              ..deleted.v = 1
+              ..dirty.v = 1;
+            if (syncedSdbDebug) {
+              // ignore: avoid_print
+              print('New dirty deleted record $record');
+            }
+            await sdbSyncRecordStoreRef.add(txn, record);
           } else {
-            await dbSyncRecordStoreRef.add(
-              txn,
-              (syncRecordFromAny(changeRef)..dirty.v = true),
-            );
+            var record = syncRecordFromAny(changeRef)..dirty.v = 1;
+            if (syncedSdbDebug) {
+              // ignore: avoid_print
+              print('New dirty record $record');
+            }
+            await sdbSyncRecordStoreRef.add(txn, record);
           }
         } else {
           if (change.isDelete) {
-            if (existingSyncRecord.deleted.v != true) {
-              existingSyncRecord.dirty.v = true;
-              existingSyncRecord.deleted.v = true;
+            if (existingSyncRecord.deleted.v != 1) {
+              existingSyncRecord.dirty.v = 1;
+              existingSyncRecord.deleted.v = 1;
               await existingSyncRecord.put(txn);
+              if (syncedSdbDebug) {
+                // ignore: avoid_print
+                print('Mark dirty deleted record $existingSyncRecord');
+              }
             }
           } else {
             // Mark dirty if needed
-            if (existingSyncRecord.dirty.v != true ||
-                existingSyncRecord.deleted.v == true) {
-              existingSyncRecord.dirty.v = true;
+            if (existingSyncRecord.dirty.v != 1 ||
+                existingSyncRecord.deleted.v == 1) {
+              existingSyncRecord.dirty.v = 1;
               existingSyncRecord.deleted.clear();
+              if (syncedSdbDebug) {
+                // ignore: avoid_print
+                print('Mark dirty existing sync record $existingSyncRecord');
+              }
               await existingSyncRecord.put(txn);
             }
           }
         }
       }
     }
+    _syncDirtySubject.add(true);
   }
 
   List<String> get _metaStoreNames => [
-    dbSyncRecordStoreRef.name,
-    dbSyncMetaStoreRef.name,
+    sdbSyncRecordStoreRef.name,
+    sdbSyncMetaStoreRef.name,
   ];
   @override
   Future<SdbDatabase> get database async =>
@@ -151,11 +168,11 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
       }))!;
 
   @override
-  late var dbSyncMetaInfoRef = dbSyncMetaStoreRef.record('info');
+  late var scvSyncMetaInfoRef = sdbSyncMetaStoreRef.record('info');
   @override
   late var syncedDbSystemStoreNames = [
-    dbSyncRecordStoreRef.name,
-    dbSyncMetaStoreRef.name,
+    sdbSyncRecordStoreRef.name,
+    sdbSyncMetaStoreRef.name,
   ];
 
   /// Explicit sync stores
@@ -166,6 +183,8 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
 
   @override
   Future<void> close() async {
+    _syncMetaInfoSubject.close().unawait();
+    _syncDirtySubject.close().unawait();
     if (!_closed && _database != null) {
       _closed = true;
       await _database?.close();
@@ -174,17 +193,17 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
 }
 
 /// Synced db
-abstract class SyncedSdb implements SyncedSdbCommon {
+abstract class SyncedSdb implements SyncedDbCommon {
   /// Default name
   static String nameDefault = 'synced_sdb.db';
 
   // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
-  ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef;
+  ScvStoreRef<int, SdbSyncRecord> get scvSyncRecordStoreRef;
 
-  ScvStoreRef<String, SdbSyncMetaInfo> get dbSyncMetaStoreRef;
+  ScvStoreRef<String, SdbSyncMetaInfo> get scvSyncMetaStoreRef;
 
-  ScvRecordRef<String, SdbSyncMetaInfo> get dbSyncMetaInfoRef;
+  ScvRecordRef<String, SdbSyncMetaInfo> get scvSyncMetaInfoRef;
 
   /// Computed on open, actual store names synced
   List<String> get syncedStoreNames;
@@ -232,21 +251,22 @@ abstract class SyncedSdb implements SyncedSdbCommon {
 
   /// Visible only for testing
   @visibleForTesting
-  late bool trackChangesDisabled;
+  bool get trackChangesDisabled;
 
   Future<void> close();
 }
 
-extension SyncedDbExtension on SyncedSdb {
-  static final _dirtyFilter = SdbFilter.equals(recordDirtyFieldKey, true);
+extension SyncedSdbExtension on SyncedSdb {
+  SyncedSdbBase get _impl => this as _SyncedSdbImpl;
 
   /// Get dirty record
   Future<List<SdbSyncRecord>> txnGetDirtySyncRecords(SdbClient client) async {
-    // TODO optimize with index
-    return (await dbSyncRecordStoreRef.findRecords(
-      client,
-      options: SdbFindOptions(filter: _dirtyFilter),
-    )).toList();
+    var dirtyRecords = await sdbSyncRecordDirtyIndexRef
+        .record(1)
+        .findObjects(client);
+    //print('all records ${await sdbSyncRecordStoreRef.findRecords(client)}');
+    //print('dirty records $dirtyRecords');
+    return dirtyRecords;
   }
 
   Iterable<String> allStoreNamesButSynced(SdbDatabase db) {
@@ -276,6 +296,8 @@ extension SyncedDbExtension on SyncedSdb {
     );
   }
 
+  static const _zoneKey = #syncedSdbDisableChangeTracking;
+
   /// Disable change tracking during syncTransaction
   Future<T> syncTransaction<T>({
     List<String>? storeNames,
@@ -283,21 +305,17 @@ extension SyncedDbExtension on SyncedSdb {
     required FutureOr<T> Function(SdbTransaction transaction) run,
   }) async {
     return syncTransactionLock.synchronized(() async {
-      try {
-        return await transaction(
+      return await runZoned(
+        () => transaction(
           storeNames: storeNames,
           mode: mode,
           run: (txn) async {
-            try {
-              trackChangesDisabled = true;
-              var result = await run(txn);
-              return result;
-            } finally {}
+            var result = await run(txn);
+            return result;
           },
-        );
-      } finally {
-        trackChangesDisabled = false;
-      }
+        ),
+        zoneValues: {_zoneKey: true},
+      );
     });
   }
 
@@ -310,13 +328,13 @@ extension SyncedDbExtension on SyncedSdb {
   @visibleForTesting
   Future<void> clearSyncRecords(SdbClient? client) async {
     client ??= await database;
-    await dbSyncRecordStoreRef.delete(client);
+    await sdbSyncRecordStoreRef.delete(client);
   }
 
   @visibleForTesting
   Future<void> clearMetaInfo(SdbClient? client) async {
     client ??= await database;
-    await dbSyncMetaInfoRef.delete(client);
+    await scvSyncMetaInfoRef.delete(client);
   }
 
   @visibleForTesting
@@ -328,20 +346,16 @@ extension SyncedDbExtension on SyncedSdb {
   /// Get sync records
   Future<List<SdbSyncRecord>> getSyncRecords({SdbClient? client}) async {
     client ??= await database;
-    return (await dbSyncRecordStoreRef.findRecords(client)).toList();
+    return (await sdbSyncRecordStoreRef.findRecords(client)).toList();
   }
 
   Future<SdbSyncRecord?> getSyncRecord(
     SdbClient client,
-    SdbRecordRef<dynamic, Map<String, Object?>> record,
-  ) async {
-    return await dbSyncRecordStoreRef.findRecord(
-      client,
-      filter: SdbFilter.and([
-        SdbFilter.equals(dbSyncRecordModel.store.k, record.store.name),
-        SdbFilter.equals(dbSyncRecordModel.key.k, record.key),
-      ]),
-    );
+    SdbRecordRef<String, Map<String, Object?>> record,
+  ) {
+    return sdbSyncRecordByStoreAndKeyIndexRef
+        .record(record.store.name, record.key)
+        .getObject(client);
   }
 
   Future<SdbSyncRecord?> getSyncRecordAny(
@@ -349,7 +363,7 @@ extension SyncedDbExtension on SyncedSdb {
     SdbRecordRef record,
   ) async {
     // !! very slow
-    return await dbSyncRecordStoreRef.findRecord(
+    return await sdbSyncRecordStoreRef.findRecord(
       client,
 
       filter: SdbFilter.and([
@@ -361,7 +375,8 @@ extension SyncedDbExtension on SyncedSdb {
 
   Future<SdbSyncMetaInfo?> getSyncMetaInfo({SdbClient? client}) async {
     client ??= await database;
-    var localMetaSyncInfo = await dbSyncMetaInfoRef.get(client);
+    var localMetaSyncInfo = await scvSyncMetaInfoRef.get(client);
+    _impl._syncMetaInfoSubject.add(localMetaSyncInfo);
     return localMetaSyncInfo;
   }
 
@@ -371,54 +386,60 @@ extension SyncedDbExtension on SyncedSdb {
     return metaInfo?.lastChangeId.v;
   }
 
+  /// Local sync meta info changes
   Stream<SdbSyncMetaInfo?> onSyncMetaInfo() async* {
     // ignore: unused_local_variable
-    var db = await database;
-    // TODO internally
-    // yield* dbSyncMetaInfoRef.onRecord(db);
+
+    var subject = _impl._syncMetaInfoSubject;
+    if (subject.valueOrNull == null) {
+      database.then((db) async {
+        /// getSyncMetaInfo will update the subject
+        await getSyncMetaInfo(client: db);
+      }).unawait();
+    }
+    yield* _impl._syncMetaInfoSubject.stream;
   }
 
   Stream<bool> onDirty() async* {
     // ignore: unused_local_variable
     var db = await database;
-    // TODO implement onDirty
-    /*
-    yield* dbSyncRecordStoreRef
-        .query(finder: _dirtyFinder)
-        .onCount(db)
-        .map((count) => count > 0);*/
+    yield* _impl._syncDirtySubject.stream;
   }
 
   /// Internal and test only.
   @protected
   Future<void> setSyncMetaInfo(
-    SdbClient? client,
+    SdbClient client,
     SdbSyncMetaInfo? dbSyncMetaInfo,
   ) async {
-    client ??= await database;
-
     if (dbSyncMetaInfo == null) {
-      await dbSyncMetaInfoRef.delete(client);
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('Deleting meta Info');
+      }
+      await scvSyncMetaInfoRef.delete(client);
     } else {
       if (!dbSyncMetaInfo.hasId) {
-        dbSyncMetaInfo = dbSyncMetaInfoRef.cv()..copyFrom(dbSyncMetaInfo);
+        dbSyncMetaInfo = scvSyncMetaInfoRef.cv()..copyFrom(dbSyncMetaInfo);
+      }
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('Setting meta Info $dbSyncMetaInfo');
       }
       await dbSyncMetaInfo.put(client);
-      //await dbSyncMetaInfoRef.cv(),
-      /*
-      client, dbSyncMetaInfo);
-      ..lastChangeId.v = newLastChangeId
-      ..lastTimestamp.v = newLastTimestamp
-      ..sourceVersion.setValue(initialSourceMeta?.version.v))
-        .put(txn);
-
-       */
+      _impl._syncMetaInfoSubject.add(dbSyncMetaInfo);
     }
   }
 
   /// Ready to use
   Future<void> get ready => database;
 }
+
+/// New memory factory.
+@doNotSubmit
+SdbFactory newSdbFactoryMemoryLogger() =>
+    // ignore: deprecated_member_use
+    sdbFactoryFromIdb(newIdbFactoryMemory().debugWrapInLogger());
 
 class _SyncedSdbInMemory extends _SyncedSdbImpl {
   static SdbFactory get inMemoryDatabaseFactory => newSdbFactoryMemory();
@@ -465,12 +486,18 @@ class SyncedSdbOptions {
 
 final syncedSdbMetaSchema = SdbDatabaseSchema(
   stores: [
-    dbSyncMetaStoreRef.schema(),
-    dbSyncRecordStoreRef.schema(
+    sdbSyncMetaStoreRef.schema(),
+    sdbSyncRecordStoreRef.schema(
       autoIncrement: true,
       indexes: [
-        dbSyncRecordBySyncIndexRef.schema(
+        sdbSyncRecordBySyncIndexRef.schema(
           keyPath: dbSyncRecordModel.syncId.name,
+        ),
+        sdbSyncRecordByStoreAndKeyIndexRef.schema(
+          keyPath: [dbSyncRecordModel.store.name, dbSyncRecordModel.key.name],
+        ),
+        sdbSyncRecordDirtyIndexRef.schema(
+          keyPath: dbSyncRecordModel.dirty.name,
         ),
       ],
     ),
@@ -525,15 +552,21 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
         );
 
   @override
-  ScvStoreRef<String, SdbSyncMetaInfo> get dbSyncMetaStoreRef =>
-      sync.dbSyncMetaStoreRef;
+  ScvStoreRef<String, SdbSyncMetaInfo> get scvSyncMetaStoreRef =>
+      sync.sdbSyncMetaStoreRef;
 
   @override
-  ScvStoreRef<int, SdbSyncRecord> get dbSyncRecordStoreRef =>
-      sync.dbSyncRecordStoreRef;
+  ScvStoreRef<int, SdbSyncRecord> get scvSyncRecordStoreRef =>
+      sync.sdbSyncRecordStoreRef;
 }
 
-SdbSyncRecord syncRecordFrom(SdbRecordRef<String, SdbModel> record) {
+/// Sync record store ref
+//typedef ScvSyncRecordStoreRef = ScvStringStoreRef<SdbSyncRecord>;
+
+// /// Record ref
+// typedef SyncedDbRecordRef = RecordRef<String, Model>;
+typedef SyncedSdbRecordRef = SdbRecordRef<String, SdbModel>;
+SdbSyncRecord syncRecordFrom(SyncedSdbRecordRef record) {
   return SdbSyncRecord()
     ..key.v = record.key
     ..store.v = record.store.name;

@@ -8,14 +8,12 @@ import 'package:test/test.dart';
 
 void main() {
   group('synced_db_source_sync_firestore_test', () {
-    Future<SyncTestsContext> setupContext() async {
-      //    setUp(() async {
-      return SyncTestsContext()
+    Future<SyncSdbTestsContext> setupContext() async {
+      return SyncSdbTestsContext()
         ..syncedSdb = SyncedSdb.newInMemory(options: dbEntityOptions)
         ..source = newInMemorySyncedSourceFirestore();
     }
 
-    //  });
-    syncTests(setupContext);
+    allSyncedDbTests(setupContext);
   });
 }
