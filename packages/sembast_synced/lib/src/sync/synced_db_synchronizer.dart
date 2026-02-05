@@ -255,7 +255,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       _closing = true;
     });
     try {
-      await _singleFlight.wait();
+      await _singleFlight.close();
     } catch (e, st) {
       if (debugSyncedSync) {
         // ignore: avoid_print
