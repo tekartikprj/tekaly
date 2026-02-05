@@ -16,6 +16,12 @@ mixin SyncedSdbMixin implements SyncedSdb {
   /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
   @override
   Future<void> initialSynchronizationDone() async {
+    onSyncMetaInfo().listen((data) {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('initialSynchronizationDone meta info $data');
+      }
+    });
     await onSyncMetaInfo().firstWhere((meta) => meta?.lastChangeId != null);
   }
 }

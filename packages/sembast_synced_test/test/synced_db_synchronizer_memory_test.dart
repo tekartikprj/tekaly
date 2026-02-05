@@ -4,6 +4,7 @@ import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
 import 'package:test/test.dart';
 
 void main() {
+  // debugSyncedDbSynchronizer = devTrue;
   group('synced_db_source_sync_memory_test', () {
     syncTests(setupNewInMemorySyncTestsContext);
     syncedDbReadMinServiceTests(setupNewInMemorySyncTestsContext);

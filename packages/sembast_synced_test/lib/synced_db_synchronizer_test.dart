@@ -98,6 +98,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
 
     test('auto sync done', () async {
       await syncedDb.initialSynchronizationDone();
+      print('initial sync done');
     });
     test('autoSyncOneFromLocal', () async {
       var meta = await syncedDb.getSyncMetaInfo();

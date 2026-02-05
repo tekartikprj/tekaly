@@ -63,7 +63,7 @@ abstract class AutoSynchronizedFirestoreSyncedDb implements AutoSynchronizedDb {
 
   Future<SyncedSyncStat> synchronize();
 
-  /// Lazy synchronize if needed (timing undefined)
+  /// Lazy synchronize if needed (timing undefined) - same as synchronize as of 2026/02/05
   Future<SyncedSyncStat> lazySynchronize();
 
   /// Wait for current lazy synchronization to be done

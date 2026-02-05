@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/database_utils.dart';
-import 'package:tekartik_app_common_utils/lazy_runner.dart';
+import 'package:tekartik_app_common_utils/single_flight.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 import 'package:tekartik_common_utils/list_utils.dart';
@@ -254,22 +254,19 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
     await syncLock.synchronized(() {
       _closing = true;
     });
-    await _lazyLauncher.close();
-  }
-
-  late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
-    action: (count) async {
+    try {
+      await _singleFlight.wait();
+    } catch (e, st) {
       if (debugSyncedSync) {
         // ignore: avoid_print
-        print('start lazy sync');
+        print('Error while waiting for sync to terminate: $e $st');
       }
-      return sync();
-    },
-  );
+    }
+  }
 
   /// Trigger a lazy sync
-  Future<SyncedSyncStat> lazySync() async {
-    return (await _lazyLauncher.triggerAndWait());
+  FutureOr<SyncedSyncStat> lazySync() {
+    return sync();
   }
 
   /// Sync dirty records up
@@ -594,7 +591,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   /// Wait for current sync to terminate
   @Deprecated('to remove')
   Future<void> lazyWaitSync() async {
-    await _lazyLauncher.waitCurrent();
+    await _singleFlight.wait();
   }
 }
 
@@ -610,6 +607,7 @@ abstract class SyncedDbSynchronizerCommon {
   int? stepLimitDown;
 
   final syncLock = Lock();
+
   SyncedDbSynchronizerCommon({
     required this.source,
     this.autoSync = false,
@@ -620,6 +618,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Auto sync
   final bool autoSync;
+
   Future<SyncedSyncStat> doSyncDown();
 
   /// Sync down
@@ -652,11 +651,10 @@ abstract class SyncedDbSynchronizerCommon {
     return stat;
   }
 
-  /// Sync up and down
-  Future<SyncedSyncStat> sync() {
-    return syncLock.synchronized(() {
+  late final _singleFlight = SingleFlight<SyncedSyncStat>(() async {
+    return await syncLock.synchronized(() async {
       try {
-        return doSync();
+        return await doSync();
       } catch (e, st) {
         if (debugSyncedSync) {
           // ignore: avoid_print
@@ -665,6 +663,11 @@ abstract class SyncedDbSynchronizerCommon {
         rethrow;
       }
     });
+  });
+
+  /// Sync up and down
+  FutureOr<SyncedSyncStat> sync() {
+    return _singleFlight.run();
   }
 
   CvMetaInfo? _lastSyncMetaInfo;
@@ -678,59 +681,4 @@ abstract class SyncedDbSynchronizerCommon {
     _lastSyncMetaInfo = sourceMetaInfo;
     return lastSyncMetaInfo;
   }
-}
-
-var _lazyLauncherStopwatch = Stopwatch()..start();
-
-class _LazyLauncherTrigger<T> {
-  final LazyLauncher<T> lazyLauncher;
-  final triggerTime = _lazyLauncherStopwatch.elapsed;
-  Duration? startTime;
-
-  //Future<T> _launch;
-  _LazyLauncherTrigger(this.lazyLauncher);
-
-  Future<T> launch() => _launch;
-
-  late final Future<T> _launch = _doLaunch();
-
-  Future<T> _doLaunch() async {
-    var running = lazyLauncher._runningTrigger;
-    if (running != null) {
-      return await running._launch;
-    }
-    return await lazyLauncher._lock.synchronized(() async {
-      var lastTriggerRunTime = lazyLauncher._lastTriggerRunTime;
-      if (lastTriggerRunTime != null && lastTriggerRunTime >= triggerTime) {
-        return lazyLauncher._lastValue as T;
-      }
-      var triggerRunTime = _lazyLauncherStopwatch.elapsed;
-      var value = await lazyLauncher._launcher();
-      lazyLauncher._lastValue = value;
-      lazyLauncher._lastTriggerRunTime = triggerRunTime;
-      return value;
-    });
-  }
-}
-
-/// Lazy launcher
-class LazyLauncher<T> {
-  final _lock = Lock();
-
-  // ignore: unused_field
-  _LazyLauncherTrigger<T>? _runningTrigger;
-  Duration? _lastTriggerRunTime;
-  final Future<T> Function() _launcher;
-  T? _lastValue;
-
-  /// Default constructor
-  LazyLauncher(this._launcher);
-
-  /// Fait for last trigger to terminate. (working?)
-  Future<void> wait() async {
-    return await _lock.synchronized(() async {});
-  }
-
-  /// Launch the operation
-  Future<T> launch() => _LazyLauncherTrigger<T>(this).launch();
 }
