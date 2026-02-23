@@ -14,4 +14,9 @@ class DbEntity extends DbStringRecordBase {
 }
 
 var dbEntityStoreRef = cvStringStoreFactory.store<DbEntity>('entity');
+
+/// Excluded from sync by default
+var dbLocalEntityStoreRef = cvStringStoreFactory.store<DbEntity>(
+  'entity_local',
+);
 String get dbEntityStoreName => dbEntityStoreRef.name;

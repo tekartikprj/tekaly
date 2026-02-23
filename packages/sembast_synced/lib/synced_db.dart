@@ -29,3 +29,4 @@ export 'src/sync/synced_db_lib.dart'
         CvSyncedSourceRecordExt,
         debugSyncedDbSynchronizer;
 export 'src/sync/synced_db_min_service.dart' show SyncedDbReadMinService;
+export 'src/sync/synced_db_options.dart' show SyncedDbOptions;

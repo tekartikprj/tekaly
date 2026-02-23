@@ -5,7 +5,7 @@ import 'package:tekaly_sembast_synced/src/sync/model/db_sync_record.dart'
     show syncTimestampKey;
 import 'package:tekaly_sembast_synced/synced_db_firestore.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
-import 'package:tekaly_sembast_synced_test/synced_source_firestore_test.dart';
+import 'package:tekaly_sembast_synced_test/synced_source_firestore_test_common.dart';
 import 'package:tekaly_sembast_synced_test/synced_source_test.dart';
 import 'package:tekartik_firebase_firestore/firestore_logger.dart' as fb;
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart'

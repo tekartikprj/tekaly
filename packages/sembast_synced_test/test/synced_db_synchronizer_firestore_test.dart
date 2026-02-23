@@ -1,7 +1,7 @@
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 import 'package:tekaly_sembast_synced_test/synced_db_read_min_service_test.dart';
 import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
-import 'package:tekaly_sembast_synced_test/synced_source_firestore_test.dart';
+import 'package:tekaly_sembast_synced_test/synced_source_firestore_test_common.dart';
 // ignore: depend_on_referenced_packages
 import 'package:test/test.dart';
 

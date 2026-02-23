@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:sembast/timestamp.dart';
-import 'package:sembast/utils/database_utils.dart';
 import 'package:tekartik_app_common_utils/single_flight.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
@@ -465,12 +464,6 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       );
     }
 
-    // get all local record
-    var localStores = List<String>.from(getNonEmptyStoreNames(db));
-    for (var name in this.db.syncedDbSystemStoreNames) {
-      localStores.remove(name);
-    }
-
     // only for full sync
     List<DbSyncRecord>? localSyncRecords;
     Map<SyncedRecordKey, DbSyncRecord>? localMap;
@@ -489,7 +482,8 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       for (var remoteRecord in dirtyRemoteSourceRecords.list) {
         var remoteRecordData = remoteRecord.record.v;
 
-        if (remoteRecordData?.store.v == null ||
+        var store = remoteRecordData?.store.v;
+        if (store == null ||
             remoteRecordData?.key.v == null ||
             remoteRecord.syncTimestamp.v == null ||
             remoteRecord.syncChangeId.v == null) {
@@ -497,6 +491,8 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
             // ignore: avoid_print
             print('invalid dirty: $remoteRecord');
           }
+          continue;
+        } else if (!this.db.shouldSyncStore(store)) {
           continue;
         }
 

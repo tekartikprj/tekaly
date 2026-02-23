@@ -20,7 +20,7 @@ void main() {
     test('stores', () async {
       expect(syncedDb.dbSyncMetaStoreRef.name, 'syncMeta');
       expect(syncedDb.dbSyncRecordStoreRef.name, 'syncRecord');
-      expect(syncedDb.syncedStoreNames, ['entity']);
+      expect(syncedDb.options.syncedStoreNames, ['entity']);
     });
     test('add/delete record', () async {
       var db = await syncedDb.database;
@@ -173,6 +173,23 @@ void main() {
           {'store': 'entity', 'key': 'export', 'dirty': true},
         ],
       ]);
+    });
+  });
+  group('local synced_db', () {
+    late SyncedDb syncedDb;
+    setUp(() async {
+      syncedDb = SyncedDb.newInMemory();
+    });
+    tearDown(() async {
+      await syncedDb.close();
+    });
+    test('add record', () async {
+      var db = await syncedDb.database;
+      (await dbLocalEntityStoreRef.add(
+        db,
+        DbEntity()..name.v = 'test',
+      )).rawRef.key;
+      expect(await syncedDb.getSyncRecords(), isEmpty);
     });
   });
 }

@@ -23,10 +23,6 @@ typedef SyncedDbRecordRef = RecordRef<String, Model>;
 
 mixin SyncedDbMixin implements SyncedDb {
   late final DatabaseFactory databaseFactory;
-  @override
-  late final List<String> syncedStoreNames;
-  @override
-  late final List<String>? syncedExcludedStoreNames;
 
   /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
   @override
@@ -54,8 +50,13 @@ void cvInitSyncedDbBuilders() {
   }
 }
 
+/// Synced db base
 abstract class SyncedDbBase with SyncedDbMixin {
-  SyncedDbBase() {
+  /// Synced db options
+  @override
+  final SyncedDbOptions options;
+  SyncedDbBase({SyncedDbOptions? options})
+    : options = options ?? SyncedDbOptions() {
     cvInitSyncedDbBuilders();
   }
 
@@ -85,6 +86,16 @@ abstract class SyncedDbBase with SyncedDbMixin {
         print(
           'change: ${change.oldSnapshot} => ${change.newSnapshot} $trackChangesDisabled',
         );
+      }
+      var store = change.ref.store.name;
+      if (!shouldSyncStore(store)) {
+        if (syncedDbDebug) {
+          // ignore: avoid_print
+          print(
+            'ignore: ${change.oldSnapshot} => ${change.newSnapshot} $trackChangesDisabled',
+          );
+        }
+        return;
       }
       if (!trackChangesDisabled) {
         //if (change.isAdd) {
@@ -133,9 +144,14 @@ abstract class SyncedDbBase with SyncedDbMixin {
           store.rawRef.addOnChangesListener(db, onChanges);
         }
         if (_syncStores.isEmpty) {
+          var excludedStoreNames = Set.of({
+            ...syncedDbSystemStoreNames,
+            ...?options.syncedExcludedStoreNames,
+          }).toList();
+
           db.addAllStoresOnChangesListener(
             onChangesAny,
-            excludedStoreNames: syncedExcludedStoreNames,
+            excludedStoreNames: excludedStoreNames,
           );
         }
         return db;
@@ -153,11 +169,12 @@ abstract class SyncedDbBase with SyncedDbMixin {
   @Deprecated('do not use')
   List<CvStoreRef<String, DbStringRecordBase>> get syncStores => _syncStores;
 
-  /// Expplicit sync stores
+  /// Explicit sync stores
   List<CvStoreRef<String, DbStringRecordBase>> get _syncStores =>
-      syncedStoreNames
-          .map((e) => cvStringStoreFactory.store<DbStringRecordBase>(e))
-          .toList();
+      (options.syncedStoreNames
+          ?.map((e) => cvStringStoreFactory.store<DbStringRecordBase>(e))
+          .toList()) ??
+      [];
 
   var _closed = false;
 
@@ -179,19 +196,15 @@ abstract class SyncedDbCommon {}
 
 /// Synced db
 abstract class SyncedDb implements SyncedDbCommon {
+  /// Synced options
+  SyncedDbOptions get options;
+
   /// Default name
   static String nameDefault = 'synced.db';
+
   // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
   CvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef;
-
-  /// Synced store
-  // List<CvStoreRef<String, DbStringRecordBase>> get syncStores;
-
-  List<String>? get syncedStoreNames;
-
-  /// USed if synced store names is empty, to excluded some stores
-  List<String>? get syncedExcludedStoreNames;
 
   CvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef;
 
@@ -204,42 +217,72 @@ abstract class SyncedDb implements SyncedDbCommon {
   Future<void> initialSynchronizationDone();
 
   /// Good for in memory manipulation of incomping data and unit test !
-  factory SyncedDb.newInMemory({List<String>? syncedStoreNames}) =>
-      _SyncedDbInMemory(syncedStoreNames: syncedStoreNames);
+  factory SyncedDb.newInMemory({
+    SyncedDbOptions? options,
+    List<String>? syncedStoreNames,
+  }) {
+    /// Compat
+    options ??= SyncedDbOptions(syncedStoreNames: syncedStoreNames);
+
+    return _SyncedDbInMemory(options: options);
+  }
 
   /// Constructor
   factory SyncedDb({
     String? name,
+
+    /// Options
+    SyncedDbOptions? options,
     required DatabaseFactory databaseFactory,
+
+    /// Prefer options
     List<String>? syncedExcludedStoreNames,
+
+    /// Prefer options
     List<String>? syncedStoreNames,
-  }) => _SyncedDbImpl(
-    name: name,
-    databaseFactory: databaseFactory,
-    syncedExcludedStoreNames: syncedExcludedStoreNames,
-    syncedStoreNames: syncedStoreNames,
-  );
+  }) {
+    options ??= SyncedDbOptions(
+      syncedExcludedStoreNames: syncedExcludedStoreNames,
+      syncedStoreNames: syncedStoreNames,
+    );
+    return _SyncedDbImpl(
+      name: name,
+      databaseFactory: databaseFactory,
+      options: options,
+    );
+  }
+
   factory SyncedDb.fromOpenedDb({
     Database? openedDatabase,
+    SyncedDbOptions? options,
     List<String>? syncedStoreNames,
     List<String>? syncedExcludedStoreNames,
-  }) => _SyncedDbImpl(
-    openedDatabase: openedDatabase,
-    syncedStoreNames: syncedStoreNames,
-    syncedExcludedStoreNames: syncedExcludedStoreNames,
-  );
+  }) {
+    options ??= SyncedDbOptions(
+      syncedExcludedStoreNames: syncedExcludedStoreNames,
+      syncedStoreNames: syncedStoreNames,
+    );
+    return _SyncedDbImpl(openedDatabase: openedDatabase, options: options);
+  }
 
   static SyncedDb openDatabase({
     String? name,
     required DatabaseFactory databaseFactory,
+    SyncedDbOptions? options,
     List<String>? syncedExcludedStoreNames,
     List<String>? syncedStoreNames,
-  }) => SyncedDb(
-    name: name,
-    databaseFactory: databaseFactory,
-    syncedExcludedStoreNames: syncedExcludedStoreNames,
-    syncedStoreNames: syncedStoreNames,
-  );
+  }) {
+    options ??= SyncedDbOptions(
+      syncedExcludedStoreNames: syncedExcludedStoreNames,
+      syncedStoreNames: syncedStoreNames,
+    );
+    return SyncedDb(
+      name: name,
+      databaseFactory: databaseFactory,
+      options: options,
+    );
+  }
+
   Future<Database> get rawDatabase;
 
   Future<Database> get database;
@@ -419,10 +462,8 @@ class _SyncedDbInMemory extends _SyncedDbImpl {
 
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
   @visibleForTesting
-  _SyncedDbInMemory({
-    required super.syncedStoreNames,
-    super.syncedExcludedStoreNames,
-  }) : super(databaseFactory: inMemoryDatabaseFactory);
+  _SyncedDbInMemory({required super.options})
+    : super(databaseFactory: inMemoryDatabaseFactory);
 }
 
 /// Default implementation
@@ -430,26 +471,19 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
   String name;
 
   final Database? openedDatabase;
+
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
   @visibleForTesting
   _SyncedDbImpl({
     DatabaseFactory? databaseFactory,
+
     this.openedDatabase,
-    List<String>? syncedStoreNames,
-    required List<String>? syncedExcludedStoreNames,
+
+    required super.options,
     String? name,
   }) : name = name ?? SyncedDb.nameDefault {
     if (databaseFactory != null) {
       this.databaseFactory = databaseFactory;
-    }
-    this.syncedStoreNames = syncedStoreNames ?? <String>[];
-
-    if (this.syncedStoreNames.isEmpty) {
-      var excluded = syncedExcludedStoreNames?.toSet() ?? <String>{};
-      excluded.addAll(syncedDbSystemStoreNames);
-      this.syncedExcludedStoreNames = excluded.toList();
-    } else {
-      this.syncedExcludedStoreNames = syncedExcludedStoreNames;
     }
   }
 
@@ -478,4 +512,26 @@ DbSyncRecord syncRecordFromAny(RecordRef record) {
   return DbSyncRecord()
     ..key.v = record.key as String
     ..store.v = record.store.name;
+}
+
+/// Private extension
+extension SyncedDbPrvOptionsExt on SyncedDb {
+  bool shouldSyncStore(String store) {
+    if (options.syncedStoreNames != null) {
+      return options.syncedStoreNames!.contains(store);
+    }
+    if (options.syncedExcludedStoreNames?.contains(store) ?? false) {
+      return false;
+    }
+    if (syncedDbSystemStoreNames.contains(store)) {
+      return false;
+    }
+    if (store.endsWith('_local')) {
+      return false;
+    }
+    if (options.predicate != null) {
+      return options.predicate!(store);
+    }
+    return true;
+  }
 }

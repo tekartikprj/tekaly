@@ -396,6 +396,38 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         ],
       ]);
     });
+    test('local excluded syncOneFromRemote', () async {
+      var sourceRecord = (await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          //..syncId.v = sourceRecord.syncId.v
+          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
+          ..record.v = (CvSyncedSourceRecordData()
+            ..store.v = dbLocalEntityStoreRef.name
+            ..key.v = 'a1'
+            ..value.v = {'name': 'test1', 'timestamp': exampleTimestamp1()}),
+      ));
+      expect(sourceRecord.syncId.v, isNotNull);
+      expect(sourceRecord.syncTimestamp.v, isNotNull);
+
+      var sourceMeta = (await source.getMetaInfo())!;
+      expect(sourceMeta.toMap(), {'lastChangeId': 1});
+
+      expect(await syncedDb.getSyncMetaInfo(), null);
+
+      /// Full sync
+      var stat = await sync.syncDown();
+      expect(stat, SyncedSyncStat(localCreatedCount: 0));
+
+      var metaInfo = (await syncedDb.getSyncMetaInfo())!;
+      expect(metaInfo.toMap(), {
+        'lastChangeId': 1,
+        'lastTimestamp': metaInfo.lastTimestamp.v,
+      });
+
+      /// again
+      stat = await sync.syncDown();
+      expect(stat, SyncedSyncStat());
+    });
 
     test('syncOneWithDiacritic', () async {
       // debugWebServices = devWarning(true);
