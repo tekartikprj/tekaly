@@ -26,13 +26,28 @@ class SyncedSourceFirestore
   /// Generated firestore key is `store|key` (pipe separated)
   static const int version2 = 2;
 
+  /// Data collection id
   static const dataCollectionId = 'data';
+
+  /// Meta collection id
   static const metaCollectionId = 'meta';
+
+  /// Meta info document id
   static const metaInfoDocumentId = 'info';
+
+  /// Firestore
   final fb.Firestore firestore;
+
+  /// Root path
   final String? rootPath;
+
+  /// Data collection
   late fb.CollectionReference dataCollection;
+
+  /// Meta collection
   late fb.CollectionReference metaCollection;
+
+  /// Meta info reference
   late fb.DocumentReference metaInfoReference;
 
   /// True when used without auth during development
@@ -41,6 +56,7 @@ class SyncedSourceFirestore
   @override
   Future<void> close() async {}
 
+  /// Constructor
   SyncedSourceFirestore({
     required this.firestore,
 
@@ -55,6 +71,7 @@ class SyncedSourceFirestore
     metaInfoReference = metaCollection.doc(metaInfoDocumentId);
   }
 
+  /// Get path
   String getPath(String path) {
     if (rootPath == null) {
       return path;
@@ -98,6 +115,7 @@ class SyncedSourceFirestore
     return '$store|$key';
   }
 
+  /// Ref sync id
   String refSyncId(SyncedDataSourceRef ref) {
     return ref.syncId ?? _storeKeySyncId(ref.store!, ref.key!);
   }
@@ -169,6 +187,7 @@ class SyncedSourceFirestore
   Future<CvMetaInfo?> getMetaInfo() async =>
       getRecord<CvMetaInfo>(metaInfoReference);
 
+  /// Txn get meta info
   Future<CvMetaInfo?> txnGetMetaInfo(fb.Transaction txn) async =>
       _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
 
@@ -194,6 +213,7 @@ class SyncedSourceFirestore
     return (await getMetaInfo())!;
   }
 
+  /// Get record
   Future<T?> getRecord<T extends CvModel>(fb.DocumentReference doc) async {
     return cvRecordFromSnapshot<T>(await doc.get());
   }
@@ -253,6 +273,7 @@ class SyncedSourceFirestore
     return null;
   }
 
+  /// Txn get source record by id
   Future<CvSyncedSourceRecord?> txnGetSourceRecordById(
     fb.Transaction txn,
     String syncId,
@@ -262,6 +283,7 @@ class SyncedSourceFirestore
     return sourceRecordFromSnapshot(raw);
   }
 
+  /// Get source record by id
   Future<CvSyncedSourceRecord?> getSourceRecordById(
     fb.Transaction txn,
     String syncId,

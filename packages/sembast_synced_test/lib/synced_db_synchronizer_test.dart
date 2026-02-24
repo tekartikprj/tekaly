@@ -97,7 +97,9 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     });
 
     test('auto sync done', () async {
+      var firstSync = sync.onSynced().first;
       await syncedDb.initialSynchronizationDone();
+      expect(await firstSync, SyncedSyncStat());
       print('initial sync done');
     });
     test('autoSyncOneFromLocal', () async {

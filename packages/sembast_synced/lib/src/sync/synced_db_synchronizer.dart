@@ -122,19 +122,27 @@ class SyncedSyncStat {
 
 /// Synced sync source record
 class SyncedSyncSourceRecord extends SyncedSyncSourceRecordCommon {
+  /// Set sync record
   set syncRecord(DbSyncRecord? value) {
     syncRecordCommon = value;
   }
 
+  /// Get sync record
   DbSyncRecord? get syncRecord => syncRecordCommon as DbSyncRecord?;
 }
 
 /// Synced sync source record
 class SyncedSyncSourceRecordCommon {
+  /// Source record
   CvSyncedSourceRecord? sourceRecord;
+
+  /// Sync record common
   DbSyncRecordCommon? syncRecordCommon;
+
+  /// Has sync id
   bool get hasSyncId => syncRecordCommon?.syncId.v != null;
 
+  /// Is new local record
   bool get isNewLocalRecord => !hasSyncId;
 }
 
@@ -593,6 +601,12 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
 
 /// Synced db synchronized
 abstract class SyncedDbSynchronizerCommon {
+  /// Sync subject
+  final _onSyncedSubject = StreamController<SyncedSyncStat>.broadcast();
+
+  /// On synced stream
+  Stream<SyncedSyncStat> onSynced() => _onSyncedSubject.stream;
+
   /// The source being synchronized
   final SyncedSource source;
 
@@ -602,19 +616,23 @@ abstract class SyncedDbSynchronizerCommon {
   /// Default to 100 down
   int? stepLimitDown;
 
+  /// Sync lock
   final syncLock = Lock();
 
+  /// Constructor
   SyncedDbSynchronizerCommon({
     required this.source,
     this.autoSync = false,
     required SyncedDbCommon db,
   }) : dbCommon = db;
 
+  /// Db common
   final SyncedDbCommon dbCommon;
 
   /// Auto sync
   final bool autoSync;
 
+  /// Sync down
   Future<SyncedSyncStat> doSyncDown();
 
   /// Sync down
@@ -624,6 +642,7 @@ abstract class SyncedDbSynchronizerCommon {
     });
   }
 
+  /// Sync up
   Future<SyncedSyncStat> doSyncUp({bool fullSync = false});
 
   /// Sync dirty records up
@@ -644,6 +663,7 @@ abstract class SyncedDbSynchronizerCommon {
       // ignore: avoid_print
       print('_end sync $stat');
     }
+    _onSyncedSubject.add(stat);
     return stat;
   }
 
@@ -676,5 +696,10 @@ abstract class SyncedDbSynchronizerCommon {
     var sourceMetaInfo = await source.getMetaInfo();
     _lastSyncMetaInfo = sourceMetaInfo;
     return lastSyncMetaInfo;
+  }
+
+  /// Closing
+  void dispose() {
+    _onSyncedSubject.close();
   }
 }

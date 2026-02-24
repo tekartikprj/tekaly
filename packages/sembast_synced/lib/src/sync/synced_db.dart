@@ -21,7 +21,9 @@ typedef SyncedDbStoreRef = StoreRef<String, Model>;
 /// Record ref
 typedef SyncedDbRecordRef = RecordRef<String, Model>;
 
+/// Synced db mixin
 mixin SyncedDbMixin implements SyncedDb {
+  /// Database factory
   late final DatabaseFactory databaseFactory;
 
   /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
@@ -41,6 +43,7 @@ var syncedDbDebug = false; // devWarning(true);
 
 var _buildersInitialized = false;
 
+/// Init builders
 void cvInitSyncedDbBuilders() {
   if (!_buildersInitialized) {
     _buildersInitialized = true;
@@ -55,6 +58,8 @@ abstract class SyncedDbBase with SyncedDbMixin {
   /// Synced db options
   @override
   final SyncedDbOptions options;
+
+  /// Constructor
   SyncedDbBase({SyncedDbOptions? options})
     : options = options ?? SyncedDbOptions() {
     cvInitSyncedDbBuilders();
@@ -70,6 +75,7 @@ abstract class SyncedDbBase with SyncedDbMixin {
 
   Database? _database;
 
+  /// On changes
   Future<void> onChanges(
     Transaction txn,
     List<RecordChange<String, Map<String, Object?>>> changes,
@@ -78,6 +84,7 @@ abstract class SyncedDbBase with SyncedDbMixin {
   }
 
   // Type unsafe assuming string, map
+  /// On changes any
   Future<void> onChangesAny(Transaction txn, List<RecordChange> changes) async {
     for (var change in changes) {
       var changeRef = change.ref;
@@ -187,8 +194,10 @@ abstract class SyncedDbBase with SyncedDbMixin {
   }
 }
 
+/// Synced db common transaction
 abstract class SyncedDbCommonTransaction implements SyncedDbCommonClient {}
 
+/// Synced db common client
 abstract class SyncedDbCommonClient {}
 
 /// Common synced db
@@ -204,12 +213,16 @@ abstract class SyncedDb implements SyncedDbCommon {
 
   // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
   // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
+  /// Sync record store ref
   CvStoreRef<int, DbSyncRecord> get dbSyncRecordStoreRef;
 
+  /// Sync meta store ref
   CvStoreRef<String, DbSyncMetaInfo> get dbSyncMetaStoreRef;
 
+  /// Sync meta info ref
   CvRecordRef<String, DbSyncMetaInfo> get dbSyncMetaInfoRef;
 
+  /// Sync transaction lock
   @protected
   Lock get syncTransactionLock;
 
@@ -252,6 +265,7 @@ abstract class SyncedDb implements SyncedDbCommon {
     );
   }
 
+  /// From opened db
   factory SyncedDb.fromOpenedDb({
     Database? openedDatabase,
     SyncedDbOptions? options,
@@ -265,6 +279,7 @@ abstract class SyncedDb implements SyncedDbCommon {
     return _SyncedDbImpl(openedDatabase: openedDatabase, options: options);
   }
 
+  /// Open database
   static SyncedDb openDatabase({
     String? name,
     required DatabaseFactory databaseFactory,
@@ -283,19 +298,24 @@ abstract class SyncedDb implements SyncedDbCommon {
     );
   }
 
+  /// Raw database
   Future<Database> get rawDatabase;
 
+  /// Database
   Future<Database> get database;
 
+  /// Synced db system store names
   List<String> get syncedDbSystemStoreNames;
 
   /// Visible only for testing
   @visibleForTesting
   late bool trackChangesDisabled;
 
+  /// Close
   Future<void> close();
 }
 
+/// Synced db extension
 extension SyncedDbExtension on SyncedDb {
   static final _dirtyFinder = Finder(
     filter: Filter.equals(recordDirtyFieldKey, true),
@@ -348,18 +368,21 @@ extension SyncedDbExtension on SyncedDb {
     await record.put(client, merge: true);
   }
 
+  /// Clear sync records
   @visibleForTesting
   Future<void> clearSyncRecords(DatabaseClient? client) async {
     client ??= await database;
     await dbSyncRecordStoreRef.delete(client);
   }
 
+  /// Clear meta info
   @visibleForTesting
   Future<void> clearMetaInfo(DatabaseClient? client) async {
     client ??= await database;
     await dbSyncMetaInfoRef.delete(client);
   }
 
+  /// Clear all sync info
   @visibleForTesting
   Future<void> clearAllSyncInfo(DatabaseClient? client) async {
     await clearMetaInfo(client);
@@ -372,6 +395,7 @@ extension SyncedDbExtension on SyncedDb {
     return (await dbSyncRecordStoreRef.find(client)).toList();
   }
 
+  /// Get sync record
   Future<DbSyncRecord?> getSyncRecord(
     DatabaseClient client,
     RecordRef<dynamic, Map<String, Object?>> record,
@@ -386,6 +410,7 @@ extension SyncedDbExtension on SyncedDb {
     );
   }
 
+  /// Get sync record any
   Future<DbSyncRecord?> getSyncRecordAny(
     DatabaseClient client,
     RecordRef record,
@@ -400,6 +425,7 @@ extension SyncedDbExtension on SyncedDb {
     );
   }
 
+  /// Get sync meta info
   Future<DbSyncMetaInfo?> getSyncMetaInfo({DatabaseClient? client}) async {
     client ??= await database;
     var localMetaSyncInfo = await dbSyncMetaInfoRef.get(client);
@@ -412,11 +438,13 @@ extension SyncedDbExtension on SyncedDb {
     return metaInfo?.lastChangeId.v;
   }
 
+  /// On sync meta info
   Stream<DbSyncMetaInfo?> onSyncMetaInfo() async* {
     var db = await database;
     yield* dbSyncMetaInfoRef.onRecord(db);
   }
 
+  /// On dirty
   Stream<bool> onDirty() async* {
     var db = await database;
     yield* dbSyncRecordStoreRef
@@ -502,12 +530,14 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
       : databaseFactory.openDatabase(name);
 }
 
+/// Sync record from
 DbSyncRecord syncRecordFrom(RecordRef<String, Map<String, Object?>> record) {
   return DbSyncRecord()
     ..key.v = record.key
     ..store.v = record.store.name;
 }
 
+/// Sync record from any
 DbSyncRecord syncRecordFromAny(RecordRef record) {
   return DbSyncRecord()
     ..key.v = record.key as String
@@ -516,6 +546,7 @@ DbSyncRecord syncRecordFromAny(RecordRef record) {
 
 /// Private extension
 extension SyncedDbPrvOptionsExt on SyncedDb {
+  /// Should sync store
   bool shouldSyncStore(String store) {
     if (options.syncedStoreNames != null) {
       return options.syncedStoreNames!.contains(store);

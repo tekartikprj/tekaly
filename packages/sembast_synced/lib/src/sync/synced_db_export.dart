@@ -4,14 +4,19 @@ import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
+/// Synced db export filename
 var syncedDbExportFilename = 'export.jsonl';
+
+/// Synced db export meta filename
 var syncedDbExportMetaFilename = 'export_meta.json';
 
+/// Assets root data parts
 var assetsRootDataParts = ['assets', 'data'];
 
 /// Default for flutter app
 var assetsRootDataPath = url.joinAll(assetsRootDataParts);
 
+/// Assets root data io path
 var assetsRootDataIoPath = joinAll(assetsRootDataParts);
 
 /// Export info

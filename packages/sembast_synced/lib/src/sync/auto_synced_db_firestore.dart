@@ -6,6 +6,9 @@ import 'package:tekartik_common_utils/common_utils_import.dart';
 /// Synced source firestore
 class AutoSynchronizedFirestoreSyncedDbOptions
     implements AutoSynchronizedSyncedDbOptions {
+  /// Synced db options
+  final SyncedDbOptions syncedDbOptions;
+
   /// Firestore instance
   final Firestore firestore;
 
@@ -18,35 +21,51 @@ class AutoSynchronizedFirestoreSyncedDbOptions
   /// Sembast db name
   final String sembastDbName;
 
-  /// Synchronized stores
-  final List<String>? synchronizedStores;
+  /// Synchronized stores, compat, prefer options
+  List<String>? get synchronizedStores => syncedDbOptions.syncedStoreNames;
 
-  /// Synchronized excluded stores
-  final List<String>? synchronizedExcludedStores;
+  /// Synchronized excluded stores, compat, prefer options,
+  List<String>? get synchronizedExcludedStores =>
+      syncedDbOptions.syncedExcludedStoreNames;
 
   /// Firestore synced db options
   AutoSynchronizedFirestoreSyncedDbOptions({
     Firestore? firestore,
+    SyncedDbOptions? syncedDbOptions,
     required this.databaseFactory,
     this.sembastDbName = 'synced.db',
 
     /// Default ok for tests only
     this.rootDocumentPath = 'test/local',
-    this.synchronizedStores,
-    this.synchronizedExcludedStores,
-  }) : firestore = firestore ?? Firestore.instance;
+    List<String>? synchronizedStores,
+    List<String>? synchronizedExcludedStores,
+  }) : syncedDbOptions =
+           syncedDbOptions ??
+           SyncedDbOptions(
+             syncedStoreNames: synchronizedStores,
+             syncedExcludedStoreNames: synchronizedExcludedStores,
+           ),
+       firestore = firestore ?? Firestore.instance;
 }
 
 /// Auto synchronized firestore synced db
 abstract class AutoSynchronizedFirestoreSyncedDb implements AutoSynchronizedDb {
+  /// Synchronizer
+  SyncedDbSynchronizer get synchronizer;
+
+  /// Synced db
   SyncedDb get syncedDb;
 
+  /// Options
   final AutoSynchronizedFirestoreSyncedDbOptions options;
 
+  /// Database
   Database get database;
 
+  /// Constructor
   AutoSynchronizedFirestoreSyncedDb({required this.options});
 
+  /// Open
   static Future<AutoSynchronizedFirestoreSyncedDb> open({
     required AutoSynchronizedFirestoreSyncedDbOptions options,
   }) async {
@@ -61,6 +80,7 @@ abstract class AutoSynchronizedFirestoreSyncedDb implements AutoSynchronizedDb {
   /// Close the db
   Future<void> close();
 
+  /// Synchronize
   Future<SyncedSyncStat> synchronize();
 
   /// Lazy synchronize if needed (timing undefined) - same as synchronize as of 2026/02/05
@@ -74,6 +94,7 @@ class _AutoSynchronizedFirestoreSyncedDb
     implements AutoSynchronizedFirestoreSyncedDb {
   @override
   late final SyncedDb syncedDb;
+  @override
   late final SyncedDbSynchronizer synchronizer;
 
   /// Wait for first synchronization (could take forever if offline the first time)
