@@ -63,7 +63,7 @@ class SdbSyncRecord extends ScvIntRecordBase implements DbSyncRecordCommon {
 
   /// Source timestamp
   @override
-  final syncTimestamp = cvEncodedTimestampField(syncTimestampKey);
+  final syncTimestamp = CvField<SdbTimestamp>(syncTimestampKey);
 
   /// Source change id
   @override

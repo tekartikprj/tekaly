@@ -52,10 +52,7 @@ void syncedDbReadMinServiceTests(
       var localRecord = await localService.getRecordData(record1.rawRef);
       expect(localRecord, isNull);
       var timestamp = SyncedDbTimestamp(2, 3000);
-      var expectedLocalMap = {
-        'name': 'text1',
-        'timestamp': timestamp.toDateTime(isUtc: true),
-      };
+      var expectedLocalMap = {'name': 'text1', 'timestamp': timestamp};
       var insertedRecord = record1.cv()
         ..name.v = 'text1'
         ..timestamp.v = timestamp;
@@ -80,7 +77,7 @@ void syncedDbReadMinServiceTests(
       print('remoteRecord: $remoteRecordData');
       expect(remoteRecordData, expectedRemoteMap);
       var sdbData = mapSyncedDbToSdb(remoteRecordData!);
-      expect(remoteRecordData.cv<DbEntity>().timestamp.v, isNull); // !!!
+      expect(remoteRecordData.cv<DbEntity>().timestamp.v, isNotNull);
       expect(sdbData.cv<DbEntity>(), insertedRecord);
     });
   });

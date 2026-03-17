@@ -1,29 +1,27 @@
 import 'dart:typed_data';
 
 import 'package:cv/cv.dart';
+import 'package:idb_shim/idb_sdb.dart';
 import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart' as firestore;
 
 /// True for null, num, String, bool
-bool isBasicTypeOrNull(dynamic value) {
+bool isSdbSupportedTypeOrNull(dynamic value) {
   if (value == null) {
     return true;
-  } else if (value is num || value is String || value is bool) {
+  } else if (value is num ||
+      value is String ||
+      value is bool ||
+      value is SdbBlob ||
+      value is SdbTimestamp) {
     return true;
   }
   return false;
 }
 
 dynamic _toSdb(dynamic value) {
-  if (isBasicTypeOrNull(value)) {
+  if (isSdbSupportedTypeOrNull(value)) {
     return value;
-  }
-
-  if (value is SyncedDbTimestamp) {
-    return value.toDateTime(isUtc: true);
-  }
-  if (value is SyncedDbBlob) {
-    return value.bytes;
   }
 
   if (value is Map) {
@@ -76,19 +74,12 @@ dynamic syncedDbToSdb(dynamic value) {
 
 dynamic _toSyncedDb(dynamic value) {
   // print('_toSyncedDb $value (${value.runtimeType})');
-  if (isBasicTypeOrNull(value)) {
+  if (isSdbSupportedTypeOrNull(value)) {
     return value;
   }
 
-  /// Allow synced timestamp on input
-  if (value is SyncedDbTimestamp) {
-    return value;
-  }
   if (value is DateTime) {
     return SyncedDbTimestamp.fromDateTime(value);
-  }
-  if (value is SyncedDbBlob) {
-    return value;
   }
   if (value is Uint8List) {
     return SyncedDbBlob(value);

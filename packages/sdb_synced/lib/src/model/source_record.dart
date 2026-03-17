@@ -19,15 +19,11 @@ mixin SdbSyncedSourceRecordMixin implements CvSyncedSourceRecord {
 
   /// Server timestamp
   @override
-  final syncTimestamp = cvEncodedTimestampField(syncTimestampKey);
+  final syncTimestamp = CvField<SdbTimestamp>(syncTimestampKey);
 
   /// The record data
   @override
   final record = CvModelField<CvSyncedSourceRecordData>(recordFieldKey);
-  //final store = CvField<String>(recordStoreFieldKey);
-  //final key = CvField<String>(recordKeyFieldKey);
-  //final deleted = CvField<bool>(recordDeletedFieldKey);
-  //final value = CvField<Map>(recordValueFieldKey);
 
   @override
   List<CvField> get fields => [syncId, syncTimestamp, syncChangeId, record];

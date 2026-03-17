@@ -170,7 +170,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           'key': 'a1',
           'dirty': 0,
           'deleted': 0,
-          'syncTimestamp': syncRecord.syncTimestamp.v!.toDateTime(isUtc: true),
+          'syncTimestamp': syncRecord.syncTimestamp.v!,
           'syncId': syncRecord.syncId.v,
           'syncChangeId': 1,
         },
@@ -298,9 +298,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           'key': 'a1',
           'dirty': 0,
           'deleted': 0,
-          'syncTimestamp': syncRecord.syncTimestamp.v!.toDateTime(
-            isUtc: true,
-          ), // ! different from sembast
+          'syncTimestamp': syncRecord.syncTimestamp.v!,
           'syncId': syncRecord.syncId.v,
           'syncChangeId': 1,
         },
@@ -357,7 +355,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       var metaInfo = (await syncedSdb.getSyncMetaInfo())!;
       expect(metaInfo.toMap(), {
         'lastChangeId': 1,
-        'lastTimestamp': metaInfo.lastTimestamp.v!.toDateTime(isUtc: true),
+        'lastTimestamp': metaInfo.lastTimestamp.v!,
       });
 
       /// again
@@ -408,14 +406,18 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           'a1',
           {
             'name': 'test1',
-            'timestamp': {'@Timestamp': exampleTimestamp1().toIso8601String()},
+            'timestamp': {
+              '@': {'@Timestamp': exampleTimestamp1().toIso8601String()},
+            },
           },
         ],
         {'store': 'syncMeta'},
         [
           'info',
           {
-            'lastTimestamp': {'@Timestamp': lastTimestampString},
+            'lastTimestamp': {
+              '@': {'@Timestamp': lastTimestampString},
+            },
             'lastChangeId': 1,
           },
         ],
@@ -427,7 +429,9 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             'key': 'a1',
             'deleted': 0,
             'syncId': 'entity|a1',
-            'syncTimestamp': {'@Timestamp': recordSyncTimestampString},
+            'syncTimestamp': {
+              '@': {'@Timestamp': recordSyncTimestampString},
+            },
           },
         ],
       ]);
@@ -554,7 +558,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       var metaInfo = (await syncedSdb.getSyncMetaInfo())!;
       expect(metaInfo.toMap(), {
         'lastChangeId': 1,
-        'lastTimestamp': metaInfo.lastTimestamp.v!.toDateTime(isUtc: true),
+        'lastTimestamp': metaInfo.lastTimestamp.v!,
       });
 
       /// again

@@ -8,7 +8,7 @@ export 'package:tekaly_sembast_synced_test/synced_source_test.dart';
 /// Entity in the database.
 class DbEntity extends ScvStringRecordBase {
   final name = CvField<String>('name');
-  final timestamp = cvEncodedTimestampField('timestamp');
+  final timestamp = CvField<SdbTimestamp>('timestamp');
 
   @override
   List<CvField> get fields => [name, timestamp];

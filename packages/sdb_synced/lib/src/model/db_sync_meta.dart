@@ -19,7 +19,7 @@ class SdbSyncMetaInfo extends ScvStringRecordBase
 
   /// Last timestamp
   @override
-  final lastTimestamp = cvEncodedTimestampField('lastTimestamp');
+  final lastTimestamp = CvField<SdbTimestamp>('lastTimestamp');
 
   /// Last change id, 0 if none after first sync
   @override
