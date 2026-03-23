@@ -553,8 +553,10 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
       ? Future.value(openedDatabase)
       : databaseFactory.openDatabase(
           name,
-          version: options.version,
-          schema: options.schema,
+          options: SdbOpenDatabaseOptions(
+            version: options.version,
+            schema: options.schema,
+          ),
         );
 
   @override
