@@ -463,7 +463,7 @@ class SyncedSdbOptions {
   /// Synced store names, null means all
   final List<String>? syncedStoreNames;
 
-  /// USed if synced store names is empty, to excluded some stores
+  /// Used if synced store names is empty, to excluded some stores
   final List<String>? syncedExcludedStoreNames;
 
   SyncedSdbOptions({

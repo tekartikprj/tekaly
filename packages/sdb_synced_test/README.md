@@ -10,5 +10,5 @@ test helpers
   tekaly_sdb_synced_test:
     git:
       url: https://github.com/tekartikprj/tekaly.git
-      path: packages/sembast_sdb_test
+      path: packages/sdb_synced_test
 ```
