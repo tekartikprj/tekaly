@@ -23,8 +23,10 @@ var sdbEntitySchema = SdbDatabaseSchema(
 );
 var syncedStoreNames = [dbEntityStoreName];
 var sdbEntityOptions = SyncedSdbOptions(
-  version: 1,
-  schema: sdbEntitySchema,
+  openDatabaseOptions: SdbOpenDatabaseOptions(
+    version: 1,
+    schema: sdbEntitySchema,
+  ),
   syncedStoreNames: syncedStoreNames,
 );
 

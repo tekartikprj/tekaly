@@ -27,8 +27,10 @@ void main() {
     test('mock', () async {
       _SyncedDbMock(
         options: SyncedSdbOptions(
-          version: 1,
-          schema: SdbDatabaseSchema(stores: []),
+          openDatabaseOptions: SdbOpenDatabaseOptions(
+            version: 1,
+            schema: SdbDatabaseSchema(stores: []),
+          ),
         ),
       );
     });

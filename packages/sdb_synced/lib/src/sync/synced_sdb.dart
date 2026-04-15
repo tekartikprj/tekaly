@@ -457,8 +457,7 @@ class _SyncedSdbInMemory extends _SyncedSdbImpl {
 }
 
 class SyncedSdbOptions {
-  final SdbDatabaseSchema schema;
-  final int version;
+  final SdbOpenDatabaseOptions openDatabaseOptions;
 
   /// Synced store names, null means all
   final List<String>? syncedStoreNames;
@@ -467,22 +466,23 @@ class SyncedSdbOptions {
   final List<String>? syncedExcludedStoreNames;
 
   SyncedSdbOptions({
-    required this.schema,
-    required this.version,
+    @Deprecated('use openDatabaseOptions') SdbDatabaseSchema? schema,
+    @Deprecated('use openDatabaseOptions') int? version,
+    SdbOpenDatabaseOptions? openDatabaseOptions,
     this.syncedStoreNames,
     this.syncedExcludedStoreNames,
-  });
+  }) : openDatabaseOptions =
+           openDatabaseOptions ??
+           SdbOpenDatabaseOptions(schema: schema, version: version);
 
   /// Copy with
   SyncedSdbOptions copyWith({
-    SdbDatabaseSchema? schema,
-    int? version,
+    SdbOpenDatabaseOptions? openDatabaseOptions,
     List<String>? syncedStoreNames,
     List<String>? syncedExcludedStoreNames,
   }) {
     return SyncedSdbOptions(
-      schema: schema ?? this.schema,
-      version: version ?? this.version,
+      openDatabaseOptions: openDatabaseOptions ?? this.openDatabaseOptions,
       syncedStoreNames: syncedStoreNames ?? this.syncedStoreNames,
       syncedExcludedStoreNames:
           syncedExcludedStoreNames ?? this.syncedExcludedStoreNames,
@@ -553,10 +553,7 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
       ? Future.value(openedDatabase)
       : databaseFactory.openDatabase(
           name,
-          options: SdbOpenDatabaseOptions(
-            version: options.version,
-            schema: options.schema,
-          ),
+          options: options.openDatabaseOptions,
         );
 
   @override

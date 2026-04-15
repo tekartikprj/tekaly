@@ -61,7 +61,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             .timeout(const Duration(milliseconds: 1000)));
         fail('should fail');
       } on TimeoutException catch (_) {}
-    });
+    }, solo: true);
   });
 
   group('auto_synced_db_source_sync_test', () {
