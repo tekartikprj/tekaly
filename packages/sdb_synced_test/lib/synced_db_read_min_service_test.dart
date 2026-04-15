@@ -2,7 +2,7 @@
 
 import 'package:dev_test/test.dart';
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
-import 'package:tekaly_sdb_synced/sdb_synced.dart';
+import 'package:tekaly_sdb_synced/synced_sdb.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
