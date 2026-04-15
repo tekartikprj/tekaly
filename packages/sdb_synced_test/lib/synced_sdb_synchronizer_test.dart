@@ -11,7 +11,7 @@ import 'synced_sdb_test_common.dart';
 Future<SyncSdbTestsContext> setupNewInMemorySyncSdbTestsContext() async {
   //    setUp(() async {
   return SyncSdbTestsContext()
-    ..syncedSdb = SyncedSdb.newInMemory(options: dbEntityOptions)
+    ..syncedSdb = SyncedSdb.newInMemory(options: sdbEntityOptions)
     ..source = newInMemorySyncedSourceMemory();
 }
 
@@ -99,7 +99,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       var meta = await syncedSdb.getSyncMetaInfo();
       expect(meta, isNull);
       var db = await syncedSdb.database;
-      await (dbEntityStoreRef.record('a1').cv()
+      await (sdbEntityStoreRef.record('a1').cv()
             ..name.v = 'test1'
             ..timestamp.v = exampleTimestamp1())
           .put(db);
@@ -150,7 +150,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneAddToRemote', () async {
       expect(await syncedSdb.getSyncRecords(), isEmpty);
       var db = await syncedSdb.database;
-      await (dbEntityStoreRef.record('a1').cv()
+      await (sdbEntityStoreRef.record('a1').cv()
             ..name.v = 'test1'
             ..timestamp.v = exampleTimestamp1())
           .put(db);
@@ -186,7 +186,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
               ..syncTimestamp.v = sourceRecord.syncTimestamp.v
               ..syncChangeId.v = 1
               ..record.v = (CvSyncedSourceRecordData()
-                ..store.v = dbEntityStoreRef.name
+                ..store.v = sdbEntityStoreRef.name
                 ..key.v = 'a1'
                 ..deleted.v = false
                 ..value.v = {
@@ -207,7 +207,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneDeleteToRemote', () async {
       expect(await syncedSdb.getSyncRecords(), isEmpty);
       var db = await syncedSdb.database;
-      var recordRef = dbEntityStoreRef.record('a1');
+      var recordRef = sdbEntityStoreRef.record('a1');
       await (recordRef.cv()
             ..name.v = 'test1'
             ..timestamp.v = exampleTimestamp1())
@@ -224,7 +224,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneUntrackedToRemote', () async {
       expect(await syncedSdb.getSyncRecords(), isEmpty);
       var db = await syncedSdb.database;
-      await (dbEntityStoreRef.record('a1').cv()..name.v = 'test1').put(db);
+      await (sdbEntityStoreRef.record('a1').cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedSdb.getSyncRecords();
       expect(syncRecords, isNotEmpty);
       await syncRecords.delete(db);
@@ -259,7 +259,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             ..syncTimestamp.v = sourceRecord.syncTimestamp.v
             ..syncChangeId.v = 1
             ..record.v = (CvSyncedSourceRecordData()
-              ..store.v = dbEntityStoreRef.name
+              ..store.v = sdbEntityStoreRef.name
               ..key.v = 'a1'
               ..deleted.v = false
               ..value.v = {'name': 'test1'}),
@@ -281,7 +281,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       expect(await syncedSdb.getSyncRecords(), isEmpty);
       var storeName = 'entity';
 
-      await (dbEntityStoreRef.record('a1').cv()..name.v = 'test1').put(db);
+      await (sdbEntityStoreRef.record('a1').cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedSdb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
         {'store': 'entity', 'key': 'a1', 'dirty': 1},
@@ -336,7 +336,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..value.v = {'name': 'test1', 'timestamp': exampleTimestamp1()}),
       ));
@@ -363,7 +363,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat());
 
       sourceRecord = (await source.getSourceRecord(
-        SyncedDataSourceRef(store: dbEntityStoreRef.name, key: 'a1'),
+        SyncedDataSourceRef(store: sdbEntityStoreRef.name, key: 'a1'),
       ))!;
 
       var recordSyncTimestampString = sourceRecord.syncTimestamp.v!
@@ -441,7 +441,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       // debugWebServices = devWarning(true);
       var db = await syncedSdb.database;
       expect(await syncedSdb.getSyncRecords(), isEmpty);
-      var ref = dbEntityStoreRef.record('diacritic');
+      var ref = sdbEntityStoreRef.record('diacritic');
       await (ref.cv()..name.v = 'éà').put(db);
       await sync.sync();
       // Delete locally and global sync info
@@ -463,7 +463,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'dummy'
             ..deleted.v = true),
       ); // no value
@@ -472,7 +472,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..deleted.v = true),
       )); //
@@ -491,7 +491,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat());
 
       /// Create the record locally but clear the sync info
-      var ref = dbEntityStoreRef.record('a1');
+      var ref = sdbEntityStoreRef.record('a1');
       await (ref.cv()..name.v = 'test1').put(db);
       var syncRecords = await syncedSdb.getSyncRecords();
       expect(syncRecords.map((r) => r.toMap()), [
@@ -514,7 +514,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneDeleteNoData', () async {
       // debugSyncedSync = devWarning(true);
       var db = await syncedSdb.database;
-      var ref = dbEntityStoreRef.record('a1');
+      var ref = sdbEntityStoreRef.record('a1');
       await (ref.cv()..name.v = 'test1').put(db);
       await sync.sync();
 
@@ -536,7 +536,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..value.v = {'name': 'test1'}),
       ));
@@ -552,8 +552,8 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       var stat = await sync.syncDown();
       expect(stat, SyncedSyncStat(localCreatedCount: 1));
 
-      expect((await dbEntityStoreRef.findRecords(await syncedSdb.database)), [
-        dbEntityStoreRef.record('a1').cv()..name.v = 'test1',
+      expect((await sdbEntityStoreRef.findRecords(await syncedSdb.database)), [
+        sdbEntityStoreRef.record('a1').cv()..name.v = 'test1',
       ]);
       var metaInfo = (await syncedSdb.getSyncMetaInfo())!;
       expect(metaInfo.toMap(), {
@@ -568,7 +568,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
 
     test('syncUpdateToRemote', () async {
       var db = await syncedSdb.database;
-      var ref = dbEntityStoreRef.record('a1');
+      var ref = sdbEntityStoreRef.record('a1');
       await (ref.cv()..name.v = 'test1').put(db);
       var stat = await sync.syncUp();
       expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
@@ -585,7 +585,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..value.v = {'name': 'test1'}),
       );
@@ -600,7 +600,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           //..syncId.v = sourceRecord.syncId.v
           // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..value.v = {'name': 'test2'}),
       );
@@ -639,7 +639,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           ..syncChangeId.v = 1
           ..syncTimestamp.v = SyncedDbTimestamp(1, 0)
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..value.v = {'name': 'test1'}),
       );
@@ -667,7 +667,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           ..syncChangeId.v = 1
           ..syncTimestamp.v = SyncedDbTimestamp(1, 0)
           ..record.v = (CvSyncedSourceRecordData()
-            ..store.v = dbEntityStoreRef.name
+            ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
             ..value.v = {'name': 'test2'}),
       );
@@ -678,10 +678,10 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneToRemoteThenAnotherOne', () async {
       // debugSyncedSync = devWarning(true);
       var db = await syncedSdb.database;
-      await (dbEntityStoreRef.record('a2').cv()).put(db);
+      await (sdbEntityStoreRef.record('a2').cv()).put(db);
       var stat = await sync.sync();
       expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
-      await (dbEntityStoreRef.record('a1').cv()).put(db);
+      await (sdbEntityStoreRef.record('a1').cv()).put(db);
       stat = await sync.sync();
       expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
     });
@@ -689,9 +689,9 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('sync3Step2', () async {
       // debugSyncedSync = devWarning(true);
       var db = await syncedSdb.database;
-      await (dbEntityStoreRef.record('a1').cv()).put(db);
-      await (dbEntityStoreRef.record('a2').cv()).put(db);
-      await (dbEntityStoreRef.record('a3').cv()).put(db);
+      await (sdbEntityStoreRef.record('a1').cv()).put(db);
+      await (sdbEntityStoreRef.record('a2').cv()).put(db);
+      await (sdbEntityStoreRef.record('a3').cv()).put(db);
       sync.stepLimitUp = 2;
       sync.stepLimitDown = 2;
       var stat = await sync.sync();
@@ -706,7 +706,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
 
     test('syncTwiceOneFromLocal', () async {
       var db = await syncedSdb.database;
-      await (dbEntityStoreRef.record('r1').cv()).put(db);
+      await (sdbEntityStoreRef.record('r1').cv()).put(db);
       var stat = await sync.sync();
       expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
       stat = await sync.sync();

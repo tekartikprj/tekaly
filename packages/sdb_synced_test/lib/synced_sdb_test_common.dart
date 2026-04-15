@@ -14,17 +14,17 @@ class DbEntity extends ScvStringRecordBase {
   List<CvField> get fields => [name, timestamp];
 }
 
-var dbEntityStoreRef = scvStringStoreFactory.store<DbEntity>('entity');
-String get dbEntityStoreName => dbEntityStoreRef.name;
+var sdbEntityStoreRef = scvStringStoreFactory.store<DbEntity>('entity');
+String get dbEntityStoreName => sdbEntityStoreRef.name;
 
 /// Database schema (synced)
-var dbEntitySchema = SdbDatabaseSchema(
-  stores: [dbEntityStoreRef.schema(), ...syncedSdbMetaSchema.stores],
+var sdbEntitySchema = SdbDatabaseSchema(
+  stores: [sdbEntityStoreRef.schema(), ...syncedSdbMetaSchema.stores],
 );
 var syncedStoreNames = [dbEntityStoreName];
-var dbEntityOptions = SyncedSdbOptions(
+var sdbEntityOptions = SyncedSdbOptions(
   version: 1,
-  schema: dbEntitySchema,
+  schema: sdbEntitySchema,
   syncedStoreNames: syncedStoreNames,
 );
 

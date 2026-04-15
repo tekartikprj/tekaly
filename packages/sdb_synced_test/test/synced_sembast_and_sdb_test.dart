@@ -10,7 +10,7 @@ void main() {
   group('synced_db', () {
     late SyncedSdb syncedDb;
     setUp(() async {
-      syncedDb = SyncedSdb.newInMemory(options: dbEntityOptions);
+      syncedDb = SyncedSdb.newInMemory(options: sdbEntityOptions);
     });
     tearDown(() async {
       await syncedDb.close();
@@ -23,20 +23,20 @@ void main() {
     });
     test('add/delete record', () async {
       var db = await syncedDb.database;
-      var key = (await dbEntityStoreRef.add(
+      var key = (await sdbEntityStoreRef.add(
         db,
         DbEntity()..name.v = 'test',
       )).rawRef.key;
       expect(await syncedDb.getSyncRecords(), [
         SdbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = 1,
       ]);
-      await dbEntityStoreRef.record(key).delete(db);
+      await sdbEntityStoreRef.record(key).delete(db);
       expect(await syncedDb.getSyncRecords(), [
         SdbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
           ..dirty.v = 1
           ..deleted.v = 1,

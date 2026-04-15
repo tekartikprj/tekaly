@@ -3,7 +3,8 @@ export 'package:tekaly_sembast_synced/sembast_synced.dart'
         CvSyncedSourceRecord,
         CvMetaInfo,
         CvSyncedSourceRecordExt,
-        debugSyncedDbSynchronizer;
+        debugSyncedDbSynchronizer,
+        SyncedSyncStat;
 
 export 'src/sync/synced_sdb.dart'
     show

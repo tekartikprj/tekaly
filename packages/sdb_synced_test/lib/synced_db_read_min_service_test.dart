@@ -27,7 +27,7 @@ void syncedDbReadMinServiceTests(
     late SyncedSdb syncedDb;
     late SyncSdbTestsContext context;
     late SdbDatabase db;
-    var record1 = dbEntityStoreRef.record('r1');
+    var record1 = sdbEntityStoreRef.record('r1');
     late SyncedSdbReadMinService localService;
     late SyncedSdbReadMinService remoteService;
     setUp(() async {

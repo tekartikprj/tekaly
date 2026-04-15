@@ -10,7 +10,7 @@ void main() {
   group('synced_db_source_sync_firestore_test', () {
     Future<SyncSdbTestsContext> setupContext() async {
       return SyncSdbTestsContext()
-        ..syncedSdb = SyncedSdb.newInMemory(options: dbEntityOptions)
+        ..syncedSdb = SyncedSdb.newInMemory(options: sdbEntityOptions)
         ..source = newInMemorySyncedSourceFirestore();
     }
 
