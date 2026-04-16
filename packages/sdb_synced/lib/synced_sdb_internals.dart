@@ -25,6 +25,7 @@ export 'src/sync/synced_sdb.dart'
         SyncedSdbBase,
         SyncedSdbMixin,
         SyncedSdbExtension,
+        SyncedSdbPrvExtension,
         syncedSdbMetaSchema;
 
 export 'src/sync/synced_sdb_converter.dart'

@@ -9,12 +9,16 @@ import 'package:tekartik_app_common_utils/lazy_runner.dart';
 import 'package:tekartik_common_utils/list_utils.dart';
 import 'package:tekartik_common_utils/stream/stream_join.dart';
 
-/// Synced db synchronized
+/// Synced SDB synchronizer.
 class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
+  /// Synced database.
   SyncedSdb get db => super.dbCommon as SyncedSdb;
+
   // Auto sync subscription
   StreamSubscription? _autoSyncSourceSubscription;
   StreamSubscription? _autoSyncDbSubscription;
+
+  /// Synced SDB synchronizer constructor.
   SyncedSdbSynchronizer({
     required SyncedSdb db,
     required super.source,
@@ -59,6 +63,8 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
 
   // ignore: unused_field
   var _closing = false;
+
+  /// Close synchronizer.
   Future<void> close() async {
     _autoSyncSourceSubscription?.cancel().unawait();
     _autoSyncDbSubscription?.cancel().unawait();
@@ -482,8 +488,9 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
   }*/
 }
 
-/// Synced sync source record
+/// Synced SDB sync source record.
 class SyncedSdbSyncSourceRecord extends SyncedSyncSourceRecordCommon {
+  /// Sync record.
   SdbSyncRecord? get syncRecord => super.syncRecordCommon as SdbSyncRecord?;
   set syncRecord(SdbSyncRecord? value) {
     super.syncRecordCommon = value;

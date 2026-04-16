@@ -16,8 +16,8 @@ void main() {
       await syncedDb.close();
     });
     test('stores', () async {
-      expect(syncedDb.scvSyncMetaStoreRef.name, 'syncMeta');
-      expect(syncedDb.scvSyncRecordStoreRef.name, 'syncRecord');
+      expect(syncedDb.scvSyncMetaStoreRef.name, 'local_sync_meta');
+      expect(syncedDb.scvSyncRecordStoreRef.name, 'local_sync_record');
       await syncedDb.database;
       expect(syncedDb.syncedStoreNames, ['entity']);
     });

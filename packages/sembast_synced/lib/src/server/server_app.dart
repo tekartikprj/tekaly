@@ -1,4 +1,4 @@
-// ignore_for_file: depend_on_referenced_packages
+// ignore_for_file: depend_on_referenced_packages, public_member_api_docs
 
 /*import 'package:dcjo2023_common/constant.dart';
 

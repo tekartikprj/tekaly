@@ -6,12 +6,10 @@ import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
+/// Synced SDB mixin.
 mixin SyncedSdbMixin implements SyncedSdb {
+  /// Database factory.
   late final SdbFactory databaseFactory;
-
-  /// Computed on open, actual store names synced
-  @override
-  late List<String> syncedStoreNames;
 
   /// True when first synchronization is done (even without data, i.e. last ChangeId should be zero)
   @override
@@ -26,10 +24,12 @@ mixin SyncedSdbMixin implements SyncedSdb {
   }
 }
 
+/// Debug flag for synced sdb.
 var syncedSdbDebug = false; // devWarning(true);
 
 var _buildersInitialized = false;
 
+/// Initialize cv builders for synced db.
 void cvInitSyncedDbBuilders() {
   if (!_buildersInitialized) {
     _buildersInitialized = true;
@@ -39,10 +39,15 @@ void cvInitSyncedDbBuilders() {
   }
 }
 
+/// Synced SDB base class.
 abstract class SyncedSdbBase with SyncedSdbMixin {
   final _syncMetaInfoSubject = BehaviorSubject<SdbSyncMetaInfo?>();
   final _syncDirtySubject = PublishSubject<bool>();
+
+  /// Options for synced sdb.
   final SyncedSdbOptions options;
+
+  /// Synced SDB base constructor.
   SyncedSdbBase({required this.options}) {
     cvInitSyncedDbBuilders();
   }
@@ -58,6 +63,7 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
 
   SdbDatabase? _database;
 
+  /// On changes listener.
   Future<void> onChanges(
     SdbTransaction txn,
     List<SdbRecordChange<String, SdbModel>> changes,
@@ -69,7 +75,7 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
     await onChangesAny(txn, changes);
   }
 
-  // Type unsafe assuming string, map
+  /// On changes listener for any record.
   Future<void> onChangesAny(
     SdbTransaction txn,
     List<SdbRecordChange> changes,
@@ -133,45 +139,35 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
     _syncDirtySubject.add(true);
   }
 
-  List<String> get _metaStoreNames => [
+  late final Set<String> _syncedStoreNames;
+
+  List<String> get _syncedDbSystemStoreNames => [
     sdbSyncRecordStoreRef.name,
     sdbSyncMetaStoreRef.name,
   ];
   @override
-  Future<SdbDatabase> get database async =>
-      _database ??= (await rawDatabase.then((db) {
-        var extraStoreNames = _metaStoreNames;
-        var systemStoreNames = syncedDbSystemStoreNames;
-        var storeNames = <String>{};
-        var optionsSyncedStoreNames = options.syncedStoreNames;
-        var optionsSyncedExcludedStoreNames = options.syncedExcludedStoreNames;
-        if (optionsSyncedStoreNames != null) {
-          storeNames.addAll(optionsSyncedStoreNames);
-        }
-        if (optionsSyncedExcludedStoreNames != null) {
-          storeNames.removeAll(optionsSyncedExcludedStoreNames);
-        }
-        storeNames.removeAll(systemStoreNames);
-        syncedStoreNames = storeNames.toList();
-        // Setup triggers
-        for (var store in _syncStores) {
-          store.addOnChangesListener(
-            db,
-            onChanges,
-            extraStoreNames: extraStoreNames,
-          );
-        }
-        if (_syncStores.isEmpty) {
-          for (var store in _allStoresButMeta(db)) {
-            store.addOnChangesListener(
-              db,
-              onChanges,
-              extraStoreNames: extraStoreNames,
-            );
-          }
-        }
-        return db;
-      }))!;
+  late final database = () async {
+    return _database ??= (await rawDatabase.then((db) {
+      var syncedStoreNames = Set.of(db.storeNames);
+      syncedStoreNames
+        ..removeAll(_syncedDbSystemStoreNames)
+        ..removeWhere(
+          (name) => name.startsWith(SyncedSdb.unsyncedStoreNamePrefix),
+        );
+      var extraStoreNames = _syncedDbSystemStoreNames;
+      _syncedStoreNames = syncedStoreNames;
+      // Setup triggers
+      for (var store in _syncedStores) {
+        store.addOnChangesListener(
+          db,
+          onChanges,
+          extraStoreNames: extraStoreNames,
+        );
+      }
+
+      return db;
+    }))!;
+  }();
 
   @override
   late var scvSyncMetaInfoRef = sdbSyncMetaStoreRef.record('info');
@@ -182,8 +178,8 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
   ];
 
   /// Explicit sync stores
-  List<SdbStoreRef<String, SdbModel>> get _syncStores =>
-      syncedStoreNames.map((e) => SdbStoreRef<String, SdbModel>(e)).toList();
+  List<SdbStoreRef<String, SdbModel>> get _syncedStores =>
+      _syncedStoreNames.map((e) => SdbStoreRef<String, SdbModel>(e)).toList();
 
   var _closed = false;
 
@@ -198,22 +194,24 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
   }
 }
 
-/// Synced db
+/// Synced SDB.
 abstract class SyncedSdb implements SyncedDbCommon {
+  /// Prefix for local stores (un synced)
+  static const unsyncedStoreNamePrefix = 'local_';
+
   /// Default name
   static String nameDefault = 'synced_sdb.db';
 
-  // var dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>('syncedR');
-  // var dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>('syncedM');
+  /// Sync record store ref.
   ScvStoreRef<int, SdbSyncRecord> get scvSyncRecordStoreRef;
 
+  /// Sync meta store ref.
   ScvStoreRef<String, SdbSyncMetaInfo> get scvSyncMetaStoreRef;
 
+  /// Sync meta info record ref.
   ScvRecordRef<String, SdbSyncMetaInfo> get scvSyncMetaInfoRef;
 
-  /// Computed on open, actual store names synced
-  List<String> get syncedStoreNames;
-
+  /// Sync transaction lock.
   @protected
   Lock get syncTransactionLock;
 
@@ -235,33 +233,45 @@ abstract class SyncedSdb implements SyncedDbCommon {
     options: options,
   );
 
+  /// Create from an opened database.
   factory SyncedSdb.fromOpenedDb({
     SdbDatabase? openedDatabase,
     required SyncedSdbOptions options,
   }) => _SyncedSdbImpl(options: options, openedDatabase: openedDatabase);
 
+  /// Open database.
   static SyncedSdb openDatabase({
     String? name,
     required SdbFactory databaseFactory,
-    List<String>? syncedExcludedStoreNames,
-    List<String>? syncedStoreNames,
     required SyncedSdbOptions options,
   }) =>
       SyncedSdb(options: options, name: name, databaseFactory: databaseFactory);
 
+  /// Raw database access.
   Future<SdbDatabase> get rawDatabase;
 
+  /// Database access.
   Future<SdbDatabase> get database;
 
+  /// System store names.
   List<String> get syncedDbSystemStoreNames;
 
   /// Visible only for testing
   @visibleForTesting
   bool get trackChangesDisabled;
 
+  /// Close database.
   Future<void> close();
 }
 
+/// Private extension
+extension SyncedSdbPrvExtension on SyncedSdb {
+  /// Computed on open, actual store names synced
+  @visibleForTesting
+  List<String> get syncedStoreNames => _impl._syncedStoreNames.toList();
+}
+
+/// Synced SDB extension.
 extension SyncedSdbExtension on SyncedSdb {
   SyncedSdbBase get _impl => this as _SyncedSdbImpl;
 
@@ -274,16 +284,6 @@ extension SyncedSdbExtension on SyncedSdb {
     //print('dirty records $dirtyRecords');
     return dirtyRecords;
   }
-
-  Iterable<String> allStoreNamesButSynced(SdbDatabase db) {
-    var storeNames = db.storeNames;
-    return storeNames.where((name) => !(syncedStoreNames.contains(name)));
-  }
-
-  Iterable<SdbStoreRef<String, SdbModel>> _allStoresButMeta(SdbDatabase db) =>
-      allStoreNamesButSynced(
-        db,
-      ).map((e) => SdbStoreRef<String, SdbModel>(e)).toList();
 
   /// Run in transaction.
   Future<T> transaction<T>({
@@ -331,18 +331,21 @@ extension SyncedSdbExtension on SyncedSdb {
     await record.put(client);
   }
 
+  /// Clear sync records.
   @visibleForTesting
   Future<void> clearSyncRecords(SdbClient? client) async {
     client ??= await database;
     await sdbSyncRecordStoreRef.delete(client);
   }
 
+  /// Clear meta info.
   @visibleForTesting
   Future<void> clearMetaInfo(SdbClient? client) async {
     client ??= await database;
     await scvSyncMetaInfoRef.delete(client);
   }
 
+  /// Clear all sync info.
   @visibleForTesting
   Future<void> clearAllSyncInfo(SdbClient? client) async {
     await clearMetaInfo(client);
@@ -355,6 +358,7 @@ extension SyncedSdbExtension on SyncedSdb {
     return (await sdbSyncRecordStoreRef.findRecords(client)).toList();
   }
 
+  /// Get sync record.
   Future<SdbSyncRecord?> getSyncRecord(
     SdbClient client,
     SdbRecordRef<String, Map<String, Object?>> record,
@@ -364,6 +368,7 @@ extension SyncedSdbExtension on SyncedSdb {
         .getObject(client);
   }
 
+  /// Get sync record by any record ref.
   Future<SdbSyncRecord?> getSyncRecordAny(
     SdbClient client,
     SdbRecordRef record,
@@ -379,6 +384,7 @@ extension SyncedSdbExtension on SyncedSdb {
     );
   }
 
+  /// Get sync meta info.
   Future<SdbSyncMetaInfo?> getSyncMetaInfo({SdbClient? client}) async {
     client ??= await database;
     var localMetaSyncInfo = await scvSyncMetaInfoRef.get(client);
@@ -406,6 +412,7 @@ extension SyncedSdbExtension on SyncedSdb {
     yield* _impl._syncMetaInfoSubject.stream;
   }
 
+  /// On dirty changes.
   Stream<bool> onDirty() async* {
     // ignore: unused_local_variable
     var db = await database;
@@ -456,40 +463,23 @@ class _SyncedSdbInMemory extends _SyncedSdbImpl {
     : super(databaseFactory: inMemoryDatabaseFactory);
 }
 
+/// Synced SDB options.
 class SyncedSdbOptions {
+  /// Open database options.
   final SdbOpenDatabaseOptions openDatabaseOptions;
 
-  /// Synced store names, null means all
-  final List<String>? syncedStoreNames;
-
-  /// Used if synced store names is empty, to excluded some stores
-  final List<String>? syncedExcludedStoreNames;
-
-  SyncedSdbOptions({
-    @Deprecated('use openDatabaseOptions') SdbDatabaseSchema? schema,
-    @Deprecated('use openDatabaseOptions') int? version,
-    SdbOpenDatabaseOptions? openDatabaseOptions,
-    this.syncedStoreNames,
-    this.syncedExcludedStoreNames,
-  }) : openDatabaseOptions =
-           openDatabaseOptions ??
-           SdbOpenDatabaseOptions(schema: schema, version: version);
+  /// Synced SDB options constructor.
+  SyncedSdbOptions({required this.openDatabaseOptions});
 
   /// Copy with
-  SyncedSdbOptions copyWith({
-    SdbOpenDatabaseOptions? openDatabaseOptions,
-    List<String>? syncedStoreNames,
-    List<String>? syncedExcludedStoreNames,
-  }) {
+  SyncedSdbOptions copyWith({SdbOpenDatabaseOptions? openDatabaseOptions}) {
     return SyncedSdbOptions(
       openDatabaseOptions: openDatabaseOptions ?? this.openDatabaseOptions,
-      syncedStoreNames: syncedStoreNames ?? this.syncedStoreNames,
-      syncedExcludedStoreNames:
-          syncedExcludedStoreNames ?? this.syncedExcludedStoreNames,
     );
   }
 }
 
+/// Synced SDB meta schema.
 final syncedSdbMetaSchema = SdbDatabaseSchema(
   stores: [
     sdbSyncMetaStoreRef.schema(),
@@ -521,18 +511,9 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
   _SyncedSdbImpl({
     SdbFactory? databaseFactory,
     this.openedDatabase,
-    required SyncedSdbOptions options,
-    @Deprecated('Use options.syncedStoreNames') List<String>? syncedStoreNames,
-    @Deprecated('Use options.syncedStoreNames')
-    List<String>? syncedExcludedStoreNames,
+    required super.options,
     String? name,
-  }) : name = name ?? SyncedSdb.nameDefault,
-       super(
-         options: options.copyWith(
-           syncedStoreNames: syncedStoreNames,
-           syncedExcludedStoreNames: syncedExcludedStoreNames,
-         ),
-       ) {
+  }) : name = name ?? SyncedSdb.nameDefault {
     if (databaseFactory != null) {
       this.databaseFactory = databaseFactory;
     }
@@ -570,13 +551,17 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
 
 // /// Record ref
 // typedef SyncedDbRecordRef = RecordRef<String, Model>;
+/// Synced SDB record ref.
 typedef SyncedSdbRecordRef = SdbRecordRef<String, SdbModel>;
+
+/// Create a sync record from a synced sdb record ref.
 SdbSyncRecord syncRecordFrom(SyncedSdbRecordRef record) {
   return SdbSyncRecord()
     ..key.v = record.key
     ..store.v = record.store.name;
 }
 
+/// Create a sync record from any sdb record ref.
 SdbSyncRecord syncRecordFromAny(SdbRecordRef record) {
   return SdbSyncRecord()
     ..key.v = record.key as String

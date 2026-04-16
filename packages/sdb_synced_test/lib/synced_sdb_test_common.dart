@@ -17,17 +17,23 @@ class DbEntity extends ScvStringRecordBase {
 var sdbEntityStoreRef = scvStringStoreFactory.store<DbEntity>('entity');
 String get dbEntityStoreName => sdbEntityStoreRef.name;
 
+var sdbLocalEntityStoreRef = scvStringStoreFactory.store<DbEntity>(
+  'local_entity',
+);
+
 /// Database schema (synced)
 var sdbEntitySchema = SdbDatabaseSchema(
-  stores: [sdbEntityStoreRef.schema(), ...syncedSdbMetaSchema.stores],
+  stores: [
+    sdbLocalEntityStoreRef.schema(),
+    sdbEntityStoreRef.schema(),
+    ...syncedSdbMetaSchema.stores,
+  ],
 );
-var syncedStoreNames = [dbEntityStoreName];
 var sdbEntityOptions = SyncedSdbOptions(
   openDatabaseOptions: SdbOpenDatabaseOptions(
     version: 1,
     schema: sdbEntitySchema,
   ),
-  syncedStoreNames: syncedStoreNames,
 );
 
 void allSyncedDbTests(Future<SyncSdbTestsContext> Function() setupContext) {

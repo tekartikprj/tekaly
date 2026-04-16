@@ -13,6 +13,7 @@ class SyncedDbOptions {
   /// Dynamic predicate return true or false to allow syncing a store
   final SyncStorePredicate? predicate;
 
+  /// Creates synced database store filtering options.
   SyncedDbOptions({
     this.syncedStoreNames,
     this.syncedExcludedStoreNames,

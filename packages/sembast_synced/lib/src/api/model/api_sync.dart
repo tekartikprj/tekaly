@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:cv/cv_json.dart';
 
 /// Api change ref

@@ -6,6 +6,7 @@ import 'package:tekartik_firebase_storage_rest/storage_json.dart';
 
 import 'firebase.dart';
 
+/// Creates a [FirebaseContext] backed by the REST Firestore implementation.
 FirebaseContext initFirebaseRest(Client client, {required String fbProjectId}) {
   var firebase = firebaseRest;
   var firestoreService = firestoreServiceRest;
@@ -33,7 +34,7 @@ class SyncedDbUnauthenticatedStorageApiImportContext {
   /// Optional meta basename suffix
   final String? metaBasenameSuffix;
 
-  /// Context
+  /// Creates the storage import context.
   SyncedDbUnauthenticatedStorageApiImportContext({
     required this.storageApi,
     required this.rootPath,

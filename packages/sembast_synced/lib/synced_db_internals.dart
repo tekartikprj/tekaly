@@ -1,5 +1,6 @@
 export 'src/sync/synced_db_lib.dart'
     show
+        unsyncedLocalStoreNamePrefix,
         SyncedDbCommon,
         SyncedDb,
         SyncedDbBase,

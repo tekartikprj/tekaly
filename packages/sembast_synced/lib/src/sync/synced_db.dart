@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:sembast/sembast_memory.dart';
 import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
@@ -5,6 +7,8 @@ import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
 import 'model/db_sync_record.dart';
+
+const unsyncedLocalStoreNamePrefix = 'local_';
 
 /// Synced db timestamp (sembast based)
 typedef SyncedDbTimestamp = DbTimestamp;
@@ -557,7 +561,9 @@ extension SyncedDbPrvOptionsExt on SyncedDb {
     if (syncedDbSystemStoreNames.contains(store)) {
       return false;
     }
-    if (store.endsWith('_local')) {
+    // Future is to only handle local prefix
+    if (store.endsWith('_local') ||
+        store.startsWith(unsyncedLocalStoreNamePrefix)) {
       return false;
     }
     if (options.predicate != null) {

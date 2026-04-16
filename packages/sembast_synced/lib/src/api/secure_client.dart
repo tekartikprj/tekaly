@@ -1,8 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:cv/cv_json.dart';
 import 'package:http/retry.dart';
 import 'package:path/path.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
-// ignore_for_file: depend_on_referenced_packages
 
 import 'package:tekaly_sembast_synced/src/firebase/firebase_sim.dart';
 import 'package:tekaly_sembast_synced/src/server/server_app.dart';

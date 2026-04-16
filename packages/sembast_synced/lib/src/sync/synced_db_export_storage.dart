@@ -16,8 +16,10 @@ String getExportMetaFileName({String? suffix}) =>
 
 /// Export result (only if metaOnly is false)
 class SyncedDbExportResult {
+  /// Exported JSONL payload size, or `null` when only metadata was written.
   final int? exportSize;
 
+  /// Creates the export result.
   SyncedDbExportResult({required this.exportSize});
 }
 

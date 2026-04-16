@@ -16,10 +16,15 @@ void main() {
       await syncedDb.close();
     });
     test('stores', () async {
-      expect(syncedDb.scvSyncMetaStoreRef.name, 'syncMeta');
-      expect(syncedDb.scvSyncRecordStoreRef.name, 'syncRecord');
+      expect(syncedDb.scvSyncMetaStoreRef.name, 'local_sync_meta');
+      expect(syncedDb.scvSyncRecordStoreRef.name, 'local_sync_record');
       await syncedDb.database;
       expect(syncedDb.syncedStoreNames, ['entity']);
+    });
+    test('add unsynced record', () async {
+      var db = await syncedDb.database;
+      await sdbLocalEntityStoreRef.add(db, DbEntity()..name.v = 'test');
+      expect(await syncedDb.getSyncRecords(), isEmpty);
     });
     test('add/delete record', () async {
       var db = await syncedDb.database;
@@ -42,87 +47,89 @@ void main() {
           ..deleted.v = 1,
       ]);
     });
-    /*
+
     test('add/put/delete record', () async {
       var db = await syncedDb.database;
-      var key = (await dbEntityStoreRef.add(
+      var key = (await sdbEntityStoreRef.add(
         db,
         DbEntity()..name.v = 'test',
       )).rawRef.key;
-      var ref = dbEntityStoreRef.record(key);
+      var ref = sdbEntityStoreRef.record(key);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true,
+          ..dirty.v = 1,
       ]);
       await (ref.cv()..name.v = 'updated').put(db);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true,
+          ..dirty.v = 1,
       ]);
-      await dbEntityStoreRef.record(key).delete(db);
+      await sdbEntityStoreRef.record(key).delete(db);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
-          ..deleted.v = true,
+          ..dirty.v = 1
+          ..deleted.v = 1,
       ]);
     });
+
     test('delete/put record', () async {
       // syncedDbDebug = devWarning(true);
       var db = await syncedDb.database;
-      var key = (await dbEntityStoreRef.add(
+      var key = (await sdbEntityStoreRef.add(
         db,
         DbEntity()..name.v = 'test',
       )).rawRef.key;
       await syncedDb.clearSyncRecords(null);
-      var ref = dbEntityStoreRef.record(key);
+      var ref = sdbEntityStoreRef.record(key);
 
       await ref.delete(db);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true
-          ..deleted.v = true,
+          ..dirty.v = 1
+          ..deleted.v = 1,
       ]);
       await (ref.cv()..name.v = 'updated').put(db);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = key
-          ..dirty.v = true,
+          ..dirty.v = 1,
       ]);
     });
+
     test('putRecord', () async {
-      var record = dbEntityStoreRef.record('test');
+      var record = sdbEntityStoreRef.record('test');
       var database = await syncedDb.database;
       await (record.cv()..name.v = 'test').put(database);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = 'test'
-          ..dirty.v = true,
+          ..dirty.v = 1,
       ]);
 
       /// Manually delete the sync record so that it gets re-created
-      await syncedDb.dbSyncRecordStoreRef.record(1).delete(database);
+      await syncedDb.scvSyncRecordStoreRef.record(1).delete(database);
 
       await (record.cv()..name.v = 'test2').put(database);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = 'test'
-          ..dirty.v = true,
+          ..dirty.v = 1,
       ]);
     });
-
+    /*
     test('delete record', () async {
-      var record = dbEntityStoreRef.record('test_delete');
+      var record = sdbEntityStoreRef.record('test_delete');
       var database = await syncedDb.database;
       await record.rawRef.delete(database);
       expect(await syncedDb.getSyncRecords(), isEmpty);
@@ -132,20 +139,20 @@ void main() {
       expect(await syncedDb.getSyncRecords(), isEmpty);
       await record.rawRef.delete(database);
       expect(await syncedDb.getSyncRecords(), [
-        DbSyncRecord()
-          ..store.v = dbEntityStoreRef.name
+        SdbSyncRecord()
+          ..store.v = sdbEntityStoreRef.name
           ..key.v = 'test_delete'
           ..dirty.v = true
           ..deleted.v = true,
       ]);
     });
     test('ext', () async {
-      var record = dbEntityStoreRef.record('test_ext');
+      var record = sdbEntityStoreRef.record('test_ext');
       var database = await syncedDb.database;
       var artist = record.cv()..name.v = 'test';
       await artist.put(database);
       expect((await record.get(database)), artist);
-      expect((await dbEntityStoreRef.query().getRecords(database)), [artist]);
+      expect((await sdbEntityStoreRef.query().getRecords(database)), [artist]);
 
       var map = (await record.get(database))!;
       expect(map, artist);
@@ -155,7 +162,7 @@ void main() {
     });
 
     test('export', () async {
-      var record = dbEntityStoreRef.record('export');
+      var record = sdbEntityStoreRef.record('export');
       var database = await syncedDb.database;
       var artist = record.cv()..name.v = 'test';
       await artist.put(database);

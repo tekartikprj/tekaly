@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:sembast/timestamp.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 

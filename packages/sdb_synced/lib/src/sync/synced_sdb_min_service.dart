@@ -14,6 +14,7 @@ abstract class SyncedSdbReadMinService {
     return _SyncedDbLocalMinService(syncedDb: syncedDb);
   }
 
+  /// Get record data.
   Future<Model?> getRecordData(SyncedSdbRecordRef ref);
 
   /// Remote

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:sembast/sembast_memory.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';

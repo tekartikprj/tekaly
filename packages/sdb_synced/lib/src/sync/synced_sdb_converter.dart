@@ -136,8 +136,12 @@ dynamic sdbToSyncedDb(dynamic value) {
 Map<String, Object?> mapSyncedDbToSdb(Map<String, Object?> map) =>
     syncedDbToSdb(map) as Map<String, Object?>;
 
+/// Map synced db from/to sdb extension.
 extension MapSyncedDbFromToSdbExt on Map<String, Object?> {
+  /// Convert to synced db.
   Map<String, Object?> fromSdb() => mapSdbToSyncedDb(this);
+
+  /// Convert to sdb.
   Map<String, Object?> toSdb() => mapSyncedDbToSdb(this);
 }
 

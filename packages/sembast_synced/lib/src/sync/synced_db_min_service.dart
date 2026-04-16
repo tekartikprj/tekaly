@@ -10,6 +10,8 @@ abstract class SyncedDbReadMinService {
   factory SyncedDbReadMinService.syncedDb({required SyncedDb syncedDb}) {
     return _SyncedDbLocalMinService(syncedDb: syncedDb);
   }
+
+  /// Reads the raw record data for [ref].
   Future<Model?> getRecordData(SyncedDbRecordRef ref);
 
   /// Remote

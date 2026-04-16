@@ -2,24 +2,44 @@ import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 import 'source_record.dart';
 
+/// Sync timestamp key.
 const syncTimestampKey = 'syncTimestamp';
+
+/// Sync change id key.
 const syncChangeIdKey = 'syncChangeId';
+
+/// Record store field key.
 const recordStoreFieldKey = 'store';
+
+/// Record key field key.
 const recordKeyFieldKey = 'key';
+
+/// Record deleted field key.
 const recordDeletedFieldKey = 'deleted';
+
+/// Record value field key.
 const recordValueFieldKey = 'value';
+
+/// Record dirty field key.
 const recordDirtyFieldKey = 'dirty';
+
+/// Record field key.
 const recordFieldKey = 'record';
+
+/// Sync id key.
 const syncIdKey = 'syncId';
 
+/// Sync record model.
 final dbSyncRecordModel = SdbSyncRecord();
 
+/// Sync meta store.
 final sdbSyncMetaStoreRef = scvStringStoreFactory.store<SdbSyncMetaInfo>(
-  'syncMeta',
+  'local_sync_meta',
 );
 
+/// Sync record store.
 final sdbSyncRecordStoreRef = scvIntStoreFactory.store<SdbSyncRecord>(
-  'syncRecord',
+  'local_sync_record',
 );
 
 /// Index to find by syncId
@@ -34,6 +54,7 @@ final sdbSyncRecordDirtyIndexRef = sdbSyncRecordStoreRef.index<int>('dirty');
 final sdbSyncRecordByStoreAndKeyIndexRef = sdbSyncRecordStoreRef
     .index2<String, String>('byStoreAndKey');
 
+/// Sdb sync record.
 class SdbSyncRecord extends ScvIntRecordBase implements DbSyncRecordCommon {
   /// Local store
   @override

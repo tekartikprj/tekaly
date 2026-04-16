@@ -378,13 +378,13 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
         ],
 
         [
-          'store_syncMeta',
-          {'name': 'syncMeta'},
+          'store_local_sync_meta',
+          {'name': 'local_sync_meta'},
         ],
         [
-          'store_syncRecord',
+          'store_local_sync_record',
           {
-            'name': 'syncRecord',
+            'name': 'local_sync_record',
             'autoIncrement': true,
             'indecies': [
               {
@@ -398,7 +398,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
         ],
         [
           'stores',
-          ['entity', 'syncMeta', 'syncRecord'],
+          ['entity', 'local_sync_meta', 'local_sync_record'],
         ],
         ['version', 1],
         {'store': 'entity'},
@@ -411,7 +411,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             },
           },
         ],
-        {'store': 'syncMeta'},
+        {'store': 'local_sync_meta'},
         [
           'info',
           {
@@ -421,7 +421,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             'lastChangeId': 1,
           },
         ],
-        {'store': 'syncRecord'},
+        {'store': 'local_sync_record'},
         [
           1,
           {

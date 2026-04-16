@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:tekaly_sembast_synced/src/api/synced_source_api.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 

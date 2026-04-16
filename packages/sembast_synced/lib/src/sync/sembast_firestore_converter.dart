@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:cv/cv.dart';
 import 'package:sembast/blob.dart' as sembast;
 import 'package:sembast/timestamp.dart' as sembast;

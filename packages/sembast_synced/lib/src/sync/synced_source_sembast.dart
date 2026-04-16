@@ -15,6 +15,8 @@ Future<SyncedSourceSembast> newInMemorySyncedSourceSembast() async {
 abstract class SyncedSourceSembast implements SyncedSource {
   /// The sembast database
   sembast.Database get database;
+
+  /// Creates a synced source backed by an existing sembast [database].
   factory SyncedSourceSembast({required sembast.Database database}) =>
       _SyncedSourceSembast(database: database);
 }
@@ -23,6 +25,7 @@ String _generateSyncId(String store, String key) {
   return '$store|$key';
 }
 
+/// Returns the sync identifier used for a data source reference.
 String refSyncId(SyncedDataSourceRef ref) {
   return ref.syncId ?? _generateSyncId(ref.store!, ref.key!);
 }
@@ -59,6 +62,7 @@ extension on CvSyncedSourceRecord {
 /// Sembast record
 class DbMetaInfoRecord extends DbStringRecordBase with CvMetaInfoMixin {}
 
+/// Sembast record storing synced source data.
 class DbDataSourceRecord extends DbStringRecordBase
     with SyncedSourceRecordMixin {}
 

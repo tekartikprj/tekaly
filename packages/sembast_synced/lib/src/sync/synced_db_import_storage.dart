@@ -68,7 +68,7 @@ class _UnauthenticatedStorageFetcher implements SyncedDbStringFetcher {
 
 /// Expor helper
 extension SyncedDbImportStorageExt on SyncedDb {
-  /// Export
+  /// Imports a database snapshot from authenticated Firebase Storage.
   /// * `export_meta<suffix>.json`
   /// * `export_<changeId>.jsonl`
   Future<void> importDatabaseFromStorage({
@@ -91,6 +91,7 @@ extension SyncedDbImportStorageExt on SyncedDb {
     }
   }
 
+  /// Imports a database snapshot from unauthenticated storage endpoints.
   Future<void> importDatabaseFromUnauthenticatedStorage({
     required SyncedDbUnauthenticatedStorageApiImportContext importContext,
   }) async {

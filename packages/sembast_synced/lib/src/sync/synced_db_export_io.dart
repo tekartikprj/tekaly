@@ -10,6 +10,9 @@ import 'import_common.dart';
 
 /// Io export extension
 extension SyncedDbExportIoExt on SyncedDb {
+  /// Exports the database to files in [dir].
+  ///
+  /// When [dir] is omitted, [assetsFolder] is used for backwards compatibility.
   Future<void> exportDatabase({
     /// Deprecated use dir
     String? assetsFolder,

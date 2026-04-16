@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'synced_db.dart';
 
 /// Sync either from an export or from firestore

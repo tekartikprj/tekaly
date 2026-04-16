@@ -14,13 +14,16 @@ class SyncedDbAssetImportContext {
   /// Asset root path
   final String rootPath;
 
+  /// Creates the asset import context.
   SyncedDbAssetImportContext({
     required this.assetBundle,
     required this.rootPath,
   });
 }
 
+/// Imports a synced database snapshot from assets.
 extension SyncedDbImportAssetExt on SyncedDb {
+  /// Imports a database snapshot from the configured asset bundle.
   Future<void> importDatabaseFromAsset({
     required SyncedDbAssetImportContext importContext,
   }) async {

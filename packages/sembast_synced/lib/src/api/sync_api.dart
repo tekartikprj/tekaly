@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 const commandSyncGetInfo = 'sync_get_info';
 const commandSyncPutChange = 'sync_put_change';
 

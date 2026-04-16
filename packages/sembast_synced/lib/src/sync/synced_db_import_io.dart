@@ -6,9 +6,11 @@ import 'package:tekaly_sembast_synced/src/sync/synced_db_export.dart';
 
 import '../../synced_db.dart';
 
+/// Imports a synced database snapshot from local IO files.
 extension SyncedDbImportIoExt on SyncedDb {
+  /// Imports a database snapshot from files written by [exportDatabase].
   Future<void> importDatabaseFromFiles({
-    /// Destination folder (import export.jsonl and export_meta.json)
+    /// Directory containing `export.jsonl` and `export_meta.json`.
     required String dir,
   }) async {
     await fetchAndImport(

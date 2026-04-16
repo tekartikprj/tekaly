@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast_io.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_firebase_local/firebase_local.dart';
