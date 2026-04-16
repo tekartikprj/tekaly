@@ -148,25 +148,24 @@ abstract class SyncedDbBase with SyncedDbMixin {
   }
 
   @override
-  Future<Database> get database async =>
-      _database ??= (await rawDatabase.then((db) {
-        // Setup triggers
-        for (var store in _syncStores) {
-          store.rawRef.addOnChangesListener(db, onChanges);
-        }
-        if (_syncStores.isEmpty) {
-          var excludedStoreNames = Set.of({
-            ...syncedDbSystemStoreNames,
-            ...?options.syncedExcludedStoreNames,
-          }).toList();
+  Future<Database> get database async => _database ??= (await rawDatabase.then((
+    db,
+  ) {
+    // Setup triggers
+    for (var store in _syncStores) {
+      store.rawRef.addOnChangesListener(db, onChanges);
+    }
+    if (_syncStores.isEmpty) {
+      var excludedStoreNames = Set.of({...syncedDbSystemStoreNames}).toList();
 
-          db.addAllStoresOnChangesListener(
-            onChangesAny,
-            excludedStoreNames: excludedStoreNames,
-          );
-        }
-        return db;
-      }))!;
+      db.addAllStoresOnChangesListener(
+        onChangesAny,
+        excludedStoreNames: excludedStoreNames,
+        storePredicate: (name) => shouldSyncStore(name),
+      );
+    }
+    return db;
+  }))!;
 
   @override
   late var dbSyncMetaInfoRef = dbSyncMetaStoreRef.record('info');
@@ -252,16 +251,15 @@ abstract class SyncedDb implements SyncedDbCommon {
     SyncedDbOptions? options,
     required DatabaseFactory databaseFactory,
 
+    @Deprecated('Note supported')
     /// Prefer options
     List<String>? syncedExcludedStoreNames,
 
+    @Deprecated('use options')
     /// Prefer options
     List<String>? syncedStoreNames,
   }) {
-    options ??= SyncedDbOptions(
-      syncedExcludedStoreNames: syncedExcludedStoreNames,
-      syncedStoreNames: syncedStoreNames,
-    );
+    options ??= SyncedDbOptions(syncedStoreNames: syncedStoreNames);
     return _SyncedDbImpl(
       name: name,
       databaseFactory: databaseFactory,
@@ -273,13 +271,10 @@ abstract class SyncedDb implements SyncedDbCommon {
   factory SyncedDb.fromOpenedDb({
     Database? openedDatabase,
     SyncedDbOptions? options,
-    List<String>? syncedStoreNames,
-    List<String>? syncedExcludedStoreNames,
+    @Deprecated('Use options') List<String>? syncedStoreNames,
+    @Deprecated('not supported') List<String>? syncedExcludedStoreNames,
   }) {
-    options ??= SyncedDbOptions(
-      syncedExcludedStoreNames: syncedExcludedStoreNames,
-      syncedStoreNames: syncedStoreNames,
-    );
+    options ??= SyncedDbOptions(syncedStoreNames: syncedStoreNames);
     return _SyncedDbImpl(openedDatabase: openedDatabase, options: options);
   }
 
@@ -288,13 +283,8 @@ abstract class SyncedDb implements SyncedDbCommon {
     String? name,
     required DatabaseFactory databaseFactory,
     SyncedDbOptions? options,
-    List<String>? syncedExcludedStoreNames,
-    List<String>? syncedStoreNames,
   }) {
-    options ??= SyncedDbOptions(
-      syncedExcludedStoreNames: syncedExcludedStoreNames,
-      syncedStoreNames: syncedStoreNames,
-    );
+    options ??= SyncedDbOptions();
     return SyncedDb(
       name: name,
       databaseFactory: databaseFactory,
@@ -554,9 +544,6 @@ extension SyncedDbPrvOptionsExt on SyncedDb {
   bool shouldSyncStore(String store) {
     if (options.syncedStoreNames != null) {
       return options.syncedStoreNames!.contains(store);
-    }
-    if (options.syncedExcludedStoreNames?.contains(store) ?? false) {
-      return false;
     }
     if (syncedDbSystemStoreNames.contains(store)) {
       return false;

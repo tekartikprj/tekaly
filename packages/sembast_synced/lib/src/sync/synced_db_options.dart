@@ -7,6 +7,7 @@ class SyncedDbOptions {
   /// Strict list of store names
   final List<String>? syncedStoreNames;
 
+  @Deprecated('not needed anymore')
   /// Strict excluded list of store names
   final List<String>? syncedExcludedStoreNames;
 
@@ -16,7 +17,7 @@ class SyncedDbOptions {
   /// Creates synced database store filtering options.
   SyncedDbOptions({
     this.syncedStoreNames,
-    this.syncedExcludedStoreNames,
+    @Deprecated('not needed anymore') this.syncedExcludedStoreNames,
     this.predicate,
   });
 }

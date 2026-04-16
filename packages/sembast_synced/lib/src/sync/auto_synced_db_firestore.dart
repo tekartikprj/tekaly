@@ -24,10 +24,6 @@ class AutoSynchronizedFirestoreSyncedDbOptions
   /// Synchronized stores, compat, prefer options
   List<String>? get synchronizedStores => syncedDbOptions.syncedStoreNames;
 
-  /// Synchronized excluded stores, compat, prefer options,
-  List<String>? get synchronizedExcludedStores =>
-      syncedDbOptions.syncedExcludedStoreNames;
-
   /// Firestore synced db options
   AutoSynchronizedFirestoreSyncedDbOptions({
     Firestore? firestore,
@@ -37,14 +33,7 @@ class AutoSynchronizedFirestoreSyncedDbOptions
 
     /// Default ok for tests only
     this.rootDocumentPath = 'test/local',
-    List<String>? synchronizedStores,
-    List<String>? synchronizedExcludedStores,
-  }) : syncedDbOptions =
-           syncedDbOptions ??
-           SyncedDbOptions(
-             syncedStoreNames: synchronizedStores,
-             syncedExcludedStoreNames: synchronizedExcludedStores,
-           ),
+  }) : syncedDbOptions = syncedDbOptions ?? SyncedDbOptions(),
        firestore = firestore ?? Firestore.instance;
 }
 
@@ -119,8 +108,7 @@ class _AutoSynchronizedFirestoreSyncedDb
   late final ready = () async {
     syncedDb = SyncedDb.openDatabase(
       databaseFactory: options.databaseFactory,
-      syncedExcludedStoreNames: options.synchronizedExcludedStores,
-      syncedStoreNames: options.synchronizedStores,
+      options: options.syncedDbOptions,
       name: options.sembastDbName,
     );
     database = await syncedDb.database;
