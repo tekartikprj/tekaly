@@ -23,6 +23,10 @@ var sdbLocalEntityStoreRef = scvStringStoreFactory.store<DbEntity>(
 
 /// Database schema (synced)
 var sdbEntitySchema = SdbDatabaseSchema(
+  stores: [sdbEntityStoreRef.schema(), ...syncedSdbMetaSchema.stores],
+);
+
+var sdbEntityAndLocalSchema = SdbDatabaseSchema(
   stores: [
     sdbLocalEntityStoreRef.schema(),
     sdbEntityStoreRef.schema(),
@@ -35,7 +39,12 @@ var sdbEntityOptions = SyncedSdbOptions(
     schema: sdbEntitySchema,
   ),
 );
-
+var sdbEntityAndLocalOptions = SyncedSdbOptions(
+  openDatabaseOptions: SdbOpenDatabaseOptions(
+    version: 1,
+    schema: sdbEntityAndLocalSchema,
+  ),
+);
 void allSyncedDbTests(Future<SyncSdbTestsContext> Function() setupContext) {
   syncTests(setupContext);
   syncedDbReadMinServiceTests(setupContext);

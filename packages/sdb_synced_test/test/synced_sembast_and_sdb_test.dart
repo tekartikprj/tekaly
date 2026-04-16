@@ -167,7 +167,7 @@ void main() {
           'export',
           {'name': 'test'},
         ],
-        {'store': 'syncRecord'},
+        {'store': 'local_sync_record'},
         [
           1,
           {'store': 'entity', 'key': 'export', 'dirty': true},

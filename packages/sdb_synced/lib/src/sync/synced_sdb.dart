@@ -519,16 +519,6 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
     }
   }
 
-  /*
-  @override
-  final dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>(
-    'syncMeta',
-  );
-  @override
-  final dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>(
-    'syncRecord',
-  );*/
-
   @override
   late final rawDatabase = openedDatabase != null
       ? Future.value(openedDatabase)

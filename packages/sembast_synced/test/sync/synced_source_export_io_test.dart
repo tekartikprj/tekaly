@@ -32,10 +32,10 @@ void main() {
     expect(
       content,
       '{"sembast_export":1,"version":1}\n'
+      '{"store":"local_sync_meta"}\n'
+      '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n'
       '{"store":"my_store"}\n'
-      '["my_key",{"test":123}]\n'
-      '{"store":"syncMeta"}\n'
-      '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n',
+      '["my_key",{"test":123}]\n',
     );
     await syncedDb.close();
     syncedDb = SyncedDb.newInMemory();

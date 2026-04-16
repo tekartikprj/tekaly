@@ -373,7 +373,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             'timestamp': {'@Timestamp': exampleTimestamp1().toIso8601String()},
           },
         ],
-        {'store': 'syncMeta'},
+        {'store': 'local_sync_meta'},
         [
           'info',
           {
@@ -383,7 +383,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             'lastChangeId': 1,
           },
         ],
-        {'store': 'syncRecord'},
+        {'store': 'local_sync_record'},
         [
           1,
           {

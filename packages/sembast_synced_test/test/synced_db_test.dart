@@ -18,8 +18,8 @@ void main() {
       await syncedDb.close();
     });
     test('stores', () async {
-      expect(syncedDb.dbSyncMetaStoreRef.name, 'syncMeta');
-      expect(syncedDb.dbSyncRecordStoreRef.name, 'syncRecord');
+      expect(syncedDb.dbSyncMetaStoreRef.name, 'local_sync_meta');
+      expect(syncedDb.dbSyncRecordStoreRef.name, 'local_sync_record');
       expect(syncedDb.options.syncedStoreNames, ['entity']);
     });
     test('add/delete record', () async {
@@ -167,7 +167,7 @@ void main() {
           'export',
           {'name': 'test'},
         ],
-        {'store': 'syncRecord'},
+        {'store': 'local_sync_record'},
         [
           1,
           {'store': 'entity', 'key': 'export', 'dirty': true},

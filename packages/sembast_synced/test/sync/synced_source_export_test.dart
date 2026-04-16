@@ -25,18 +25,18 @@ void main() {
     });
     expect(exportInfo.data, [
       {'sembast_export': 1, 'version': 1},
-      {'store': 'my_store'},
-      [
-        'my_key',
-        {'test': 123},
-      ],
-      {'store': 'syncMeta'},
+      {'store': 'local_sync_meta'},
       [
         'info',
         {
           'lastTimestamp': {'@Timestamp': timestamp},
           'lastChangeId': 1,
         },
+      ],
+      {'store': 'my_store'},
+      [
+        'my_key',
+        {'test': 123},
       ],
     ]);
   });

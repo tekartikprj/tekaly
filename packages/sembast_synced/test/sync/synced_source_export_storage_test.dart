@@ -75,7 +75,7 @@ void main() {
     var result = await syncedDb.exportDatabaseToStorage(
       exportContext: importExportContext,
     );
-    expect(result.exportSize, 188);
+    expect(result.exportSize, 195);
     var meta = await storage
         .bucket()
         .file('my_test/export_meta.json')
@@ -91,10 +91,10 @@ void main() {
     expect(
       content,
       '{"sembast_export":1,"version":1}\n'
+      '{"store":"local_sync_meta"}\n'
+      '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n'
       '{"store":"my_store"}\n'
-      '["my_key",{"test":123}]\n'
-      '{"store":"syncMeta"}\n'
-      '["info",{"lastChangeId":1,"lastTimestamp":{"@Timestamp":"$timestamp"}}]\n',
+      '["my_key",{"test":123}]\n',
     );
 
     await syncedDb.close();

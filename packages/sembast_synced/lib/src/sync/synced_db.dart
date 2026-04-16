@@ -511,11 +511,11 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
 
   @override
   final dbSyncMetaStoreRef = cvStringStoreFactory.store<DbSyncMetaInfo>(
-    'syncMeta',
+    'local_sync_meta',
   );
   @override
   final dbSyncRecordStoreRef = cvIntStoreFactory.store<DbSyncRecord>(
-    'syncRecord',
+    'local_sync_record',
   );
 
   @override

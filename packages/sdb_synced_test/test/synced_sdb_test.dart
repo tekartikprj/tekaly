@@ -10,7 +10,7 @@ void main() {
   group('synced_db', () {
     late SyncedSdb syncedDb;
     setUp(() async {
-      syncedDb = SyncedSdb.newInMemory(options: sdbEntityOptions);
+      syncedDb = SyncedSdb.newInMemory(options: sdbEntityAndLocalOptions);
     });
     tearDown(() async {
       await syncedDb.close();
@@ -174,7 +174,7 @@ void main() {
           'export',
           {'name': 'test'},
         ],
-        {'store': 'syncRecord'},
+        {'store': 'local_sync_record'},
         [
           1,
           {'store': 'entity', 'key': 'export', 'dirty': true},
