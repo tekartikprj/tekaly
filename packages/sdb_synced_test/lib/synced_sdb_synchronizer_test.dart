@@ -406,18 +406,14 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
           'a1',
           {
             'name': 'test1',
-            'timestamp': {
-              '@': {'@Timestamp': exampleTimestamp1().toIso8601String()},
-            },
+            'timestamp': {r'$Timestamp': exampleTimestamp1().toIso8601String()},
           },
         ],
         {'store': 'local_sync_meta'},
         [
           'info',
           {
-            'lastTimestamp': {
-              '@': {'@Timestamp': lastTimestampString},
-            },
+            'lastTimestamp': {r'$Timestamp': lastTimestampString},
             'lastChangeId': 1,
           },
         ],
@@ -429,9 +425,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             'key': 'a1',
             'deleted': 0,
             'syncId': 'entity|a1',
-            'syncTimestamp': {
-              '@': {'@Timestamp': recordSyncTimestampString},
-            },
+            'syncTimestamp': {r'$Timestamp': recordSyncTimestampString},
           },
         ],
       ]);
