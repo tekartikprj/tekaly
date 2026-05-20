@@ -37,10 +37,7 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
       ).doc('info');
 
   /// Constructor
-  SyncedFsCollection({
-    required this.firestore,
-    required CvCollectionReference<T> collection,
-  }) : _collection = collection {
+  SyncedFsCollection({required this.firestore, required this._collection}) {
     cvAddConstructors([
       SyncedFsMetaInfoRecord.new,
       CvSyncedFsDocumentSyncedInfo.new,
