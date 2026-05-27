@@ -230,7 +230,7 @@ class SyncedSourceFirestore
     fb.DocumentReference doc,
     CvModel record, {
     bool? merge,
-  }) async {
+  }) {
     txn.set(
       doc,
       mapSembastToFirestore(record.toMap()),

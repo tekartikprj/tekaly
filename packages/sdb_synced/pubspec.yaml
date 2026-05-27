@@ -77,7 +77,7 @@ dependencies:
       url: https://github.com/tekartik/firebase_functions.dart
       path: firebase_functions_http
     version: '>=0.2.1'
-  meta: ">=1.16.0"
+  meta: ">=1.18.0"
   synchronized:
   path: ">=1.9.1"
   http:
@@ -111,7 +111,7 @@ dependencies:
       path: packages/sembast_synced
   rxdart: ">=0.27.0"
 dev_dependencies:
-  lints: ">=6.0.0"
-  test: ">=1.26.2"
+  lints: ">=6.1.0"
+  test: ">=1.31.0"
   fs_shim: ">=2.4.0"
 resolution: workspace

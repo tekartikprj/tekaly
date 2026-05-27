@@ -16,6 +16,7 @@ void main() {
       ' and your Dart web app is running!';
   var button = document.querySelector('#text-file-button') as HTMLButtonElement;
   EventStreamProviders.clickEvent.forTarget(button).listen((event) {
+    // ignore: avoid_print
     print('clicked $textFileInfo');
     downloadFile(textFileInfo);
   });
