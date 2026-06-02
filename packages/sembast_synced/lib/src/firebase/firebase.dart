@@ -7,6 +7,7 @@ import 'import_firebase.dart';
 // Globals for anim app and server.
 /// Whether the package is using the Firebase simulator implementation.
 var isFirebaseSim = false;
+
 //@deprecated
 //late Firestore firestore;
 
