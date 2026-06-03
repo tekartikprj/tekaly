@@ -6,7 +6,7 @@ import 'package:sembast/timestamp.dart';
 import 'package:tekaly_media_cache/src/media_cache_session.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_app_http/app_http.dart';
-import 'package:tekartik_app_sembast/sembast.dart';
+
 import 'package:tekartik_common_utils/common_utils_import.dart';
 // ignore: unused_import
 import 'package:tekartik_common_utils/dev_utils.dart';
@@ -233,13 +233,11 @@ class TekalyMediaCacheOptions {
 abstract class TekalyMediaCache {
   /// Create a new media cache
   factory TekalyMediaCache({
-    DatabaseFactory? databaseFactory,
+    required DatabaseFactory databaseFactory,
     Directory? rootDirectory,
     TekalyMediaCacheOptions? options,
   }) {
     rootDirectory ??= fileSystemDefault.currentDirectory;
-    databaseFactory =
-        databaseFactory ?? getDatabaseFactory(rootPath: rootDirectory.path);
     return _TekalyMediaCache(
       options: options ?? TekalyMediaCacheOptions(),
       rootDirectory: rootDirectory,

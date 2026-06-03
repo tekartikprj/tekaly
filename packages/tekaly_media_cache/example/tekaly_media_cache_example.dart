@@ -1,12 +1,22 @@
 // ignore_for_file: avoid_print
 
-import 'package:fs_shim/fs.dart';
+import 'package:fs_shim/fs_shim.dart';
 import 'package:tekaly_media_cache/media_cache.dart';
+import 'package:tekartik_app_sembast/sembast.dart';
+
+DatabaseFactory getSembastDatabaseFactory({Directory? rootDirectory}) {
+  rootDirectory ??= fileSystemDefault.currentDirectory;
+  return getDatabaseFactory(rootPath: rootDirectory.path);
+}
 
 Future<void> main() async {
   var dir = Directory('.local/simple');
   await dir.delete(recursive: true);
-  var mediaCache = TekalyMediaCache(rootDirectory: dir.absolute);
+  var databaseFactory = getSembastDatabaseFactory(rootDirectory: dir.absolute);
+  var mediaCache = TekalyMediaCache(
+    databaseFactory: databaseFactory,
+    rootDirectory: dir.absolute,
+  );
   mediaCache
       .onMedia(TekalyMediaKey.name('test_info'))
       .listen((event) => print('Event: $event'));

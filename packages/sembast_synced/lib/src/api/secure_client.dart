@@ -3,6 +3,7 @@
 import 'package:cv/cv_json.dart';
 import 'package:http/retry.dart';
 import 'package:path/path.dart';
+import 'package:sembast/sembast.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
 
 import 'package:tekaly_sembast_synced/src/firebase/firebase_sim.dart';
@@ -75,6 +76,9 @@ class SecureApiServiceBase implements ApiService {
   final String functionName;
   final String packageName;
 
+  /// For local implementation only
+  DatabaseFactory? sembastDatabaseFactory;
+
   SecureApiServiceBase({
     required this.functionName,
 
@@ -82,6 +86,7 @@ class SecureApiServiceBase implements ApiService {
     required this.packageName,
     required this.app,
     required this.appType,
+    this.sembastDatabaseFactory,
 
     /// For the real server, functionName will be appended
     Uri? commandUri,
@@ -111,7 +116,15 @@ class SecureApiServiceBase implements ApiService {
   Future<void> initClient() async {
     late HttpClientFactory httpClientFactory;
     if (isLocal) {
-      firebaseSimContext ??= initFirebaseSim(packageName: packageName);
+      if (sembastDatabaseFactory == null) {
+        throw StateError(
+          'Missing sembastDatabaseFactory for local api service',
+        );
+      }
+      firebaseSimContext ??= initFirebaseSim(
+        sembastDatabaseFactory: sembastDatabaseFactory!,
+        packageName: packageName,
+      );
 
       // User firestore for sync
       appServiceFirestoreService = firebaseSimContext?.services.firestore;

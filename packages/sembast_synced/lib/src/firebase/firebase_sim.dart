@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs
-
-import 'package:tekartik_app_sembast/sembast.dart';
+import 'package:sembast/sembast.dart';
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
 import 'package:tekartik_firebase_functions_http/firebase_functions_memory.dart';
 // ignore: depend_on_referenced_packages
@@ -19,10 +18,13 @@ FirebaseContext initFirebaseSimMemory() {
   ).initServices()..functions = firebaseFunctionsMemory;
 }
 
-FirebaseContext initFirebaseSim({required String packageName}) {
+FirebaseContext initFirebaseSim({
+  required DatabaseFactory sembastDatabaseFactory,
+  required String packageName,
+}) {
   isFirebaseSim = true;
   var firebase = FirebaseLocal();
-  var sembastDatabaseFactory = getDatabaseFactory(packageName: packageName);
+
   var firestoreService = FirestoreServiceSembast(sembastDatabaseFactory);
   return FirebaseServicesContext(
     firebase: firebase,

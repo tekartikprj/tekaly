@@ -1,4 +1,4 @@
-import 'package:fs_shim/fs.dart';
+import 'package:fs_shim/fs_io.dart';
 import 'package:tekaly_media_cache/media_cache.dart';
 import 'package:tekaly_media_cache/src/media_cache.dart'
     show TekalyMediaCachePrvExt;
@@ -6,6 +6,8 @@ import 'package:tekaly_media_cache/src/media_cache_db.dart' show dbMediaStore;
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 import 'package:test/test.dart';
+
+import '../example/tekaly_media_cache_example.dart';
 
 void main() {
   //debugTekalyMediaCache = devWarning(true);
@@ -15,7 +17,11 @@ void main() {
   });
   test('auto clean', () async {
     var dir = Directory('.local/test/auto_clean');
+    var databaseFactory = getSembastDatabaseFactory(
+      rootDirectory: dir.absolute,
+    );
     var mediaCache = TekalyMediaCache(
+      databaseFactory: databaseFactory,
       rootDirectory: dir.absolute,
       options: TekalyMediaCacheOptions(
         firstAutoCleanDuration: const Duration(milliseconds: 500),
@@ -33,7 +39,13 @@ void main() {
   group('cache', () {
     late TekalyMediaCache mediaCache;
     setUp(() async {
-      mediaCache = TekalyMediaCache(rootDirectory: dir.absolute);
+      var databaseFactory = getSembastDatabaseFactory(
+        rootDirectory: dir.absolute,
+      );
+      mediaCache = TekalyMediaCache(
+        databaseFactory: databaseFactory,
+        rootDirectory: dir.absolute,
+      );
       await mediaCache.clear();
     });
     test('cacheContent onMedia file', () async {
