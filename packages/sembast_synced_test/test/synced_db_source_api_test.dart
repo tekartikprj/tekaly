@@ -4,6 +4,7 @@ import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase_sim.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
+import 'package:sembast/sembast_memory.dart';
 // ignore: depend_on_referenced_packages
 import 'package:test/test.dart';
 
@@ -20,6 +21,7 @@ void main() {
         app: 'test_app',
         appType: 'test_type',
         functionName: 'test_fn',
+        sembastDatabaseFactory: newDatabaseFactoryMemory(),
       );
 
       await apiService.initClient();
