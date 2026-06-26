@@ -6,6 +6,11 @@ import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
+void _log(Object? message) {
+  // ignore: avoid_print
+  print('[synced_sdb] $message');
+}
+
 /// Synced SDB mixin.
 mixin SyncedSdbMixin implements SyncedSdb {
   /// Database factory.
@@ -69,8 +74,7 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
     List<SdbRecordChange<String, SdbModel>> changes,
   ) async {
     if (debugSyncedSync) {
-      // ignore: avoid_print
-      print('onChanges: $changes');
+      _log('onChanges: $changes');
     }
     await onChangesAny(txn, changes);
   }
@@ -84,8 +88,7 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
     for (var change in changes) {
       var changeRef = change.ref;
       if (syncedSdbDebug) {
-        // ignore: avoid_print
-        print('change: ${change.oldSnapshot} => ${change.newSnapshot}');
+        _log('change: ${change.oldSnapshot} => ${change.newSnapshot}');
       }
       if (!trackChangesDisabled) {
         //if (change.isAdd) {
@@ -97,15 +100,13 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
               ..deleted.v = 1
               ..dirty.v = 1;
             if (syncedSdbDebug) {
-              // ignore: avoid_print
-              print('New dirty deleted record $record');
+              _log('New dirty deleted record $record');
             }
             await sdbSyncRecordStoreRef.add(txn, record);
           } else {
             var record = syncRecordFromAny(changeRef)..dirty.v = 1;
             if (syncedSdbDebug) {
-              // ignore: avoid_print
-              print('New dirty record $record');
+              _log('New dirty record $record');
             }
             await sdbSyncRecordStoreRef.add(txn, record);
           }
@@ -116,8 +117,7 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
               existingSyncRecord.deleted.v = 1;
               await existingSyncRecord.put(txn);
               if (syncedSdbDebug) {
-                // ignore: avoid_print
-                print('Mark dirty deleted record $existingSyncRecord');
+                _log('Mark dirty deleted record $existingSyncRecord');
               }
             }
           } else {
@@ -127,8 +127,7 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
               existingSyncRecord.dirty.v = 1;
               existingSyncRecord.deleted.clear();
               if (syncedSdbDebug) {
-                // ignore: avoid_print
-                print('Mark dirty existing sync record $existingSyncRecord');
+                _log('Mark dirty existing sync record $existingSyncRecord');
               }
               await existingSyncRecord.put(txn);
             }
@@ -519,13 +518,20 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
     }
   }
 
+  Future<SdbDatabase> _openDatabase() async {
+    if (debugSyncedSync) {
+      _log('opening database ${databaseFactory.fullPath(name)}');
+    }
+    return await databaseFactory.openDatabase(
+      name,
+      options: options.openDatabaseOptions,
+    );
+  }
+
   @override
   late final rawDatabase = openedDatabase != null
       ? Future.value(openedDatabase)
-      : databaseFactory.openDatabase(
-          name,
-          options: options.openDatabaseOptions,
-        );
+      : _openDatabase();
 
   @override
   ScvStoreRef<String, SdbSyncMetaInfo> get scvSyncMetaStoreRef =>
