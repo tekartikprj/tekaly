@@ -394,6 +394,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
             'syncTimestamp': {
               '@Timestamp': sourceRecord.syncTimestamp.v!.toIso8601String(),
             },
+            'syncChangeId': sourceRecord.syncChangeId.v!,
           },
         ],
       ]);

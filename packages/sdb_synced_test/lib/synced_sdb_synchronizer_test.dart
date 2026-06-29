@@ -426,6 +426,7 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
             'deleted': 0,
             'syncId': 'entity|a1',
             'syncTimestamp': {r'$Timestamp': recordSyncTimestampString},
+            'syncChangeId': 1,
           },
         ],
       ]);

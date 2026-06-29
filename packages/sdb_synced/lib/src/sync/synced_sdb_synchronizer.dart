@@ -362,6 +362,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
               await _syncSourceRecordDown(txn, remoteRecord, stat);
             }
           } else if (local.syncTimestamp.v != remoteRecord.syncTimestamp.v ||
+              local.syncChangeId.v != remoteRecord.syncChangeId.v ||
               newSourceVersion) {
             //if (newSourceVersion || !remoteRecordData!.isDeleted) {
             // update
@@ -438,6 +439,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       (SdbSyncRecord()
         ..syncId.v = remoteRecord.syncId.v
         ..syncTimestamp.v = remoteRecord.syncTimestamp.v
+        ..syncChangeId.v = remoteRecord.syncChangeId.v
         ..store.v = remoteRecord.record.v!.store.v
         ..key.v = remoteRecord.record.v!.key.v
         ..deleted.v = boolToInt(remoteRecord.record.v!.deleted.v)),
