@@ -81,6 +81,7 @@ dependencies:
   synchronized:
   path: ">=1.9.1"
   http:
+  idb_sqflite: ">=1.4.3-1"
   tekartik_http:
     git:
       url: https://github.com/tekartik/http.dart

@@ -520,7 +520,9 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
 
   Future<SdbDatabase> _openDatabase() async {
     if (debugSyncedSync) {
-      _log('opening database ${databaseFactory.fullPath(name)}');
+      _log(
+        'opening database ${await databaseFactory.getDatabaseFullPath(name)}',
+      );
     }
     return await databaseFactory.openDatabase(
       name,
