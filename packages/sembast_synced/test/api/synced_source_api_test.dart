@@ -87,30 +87,38 @@ void main() {
         'string': 'text',
         'timestamp': Timestamp.fromMicrosecondsSinceEpoch(1),
         'blob': DbBlob.fromList([1, 2, 3]),
-        'looksLikeDateTime': {'@DateTime': '1970-01-01T00:00:00.001Z'},
-        'looksLikeTimestamp': {'@Timestamp': '1970-01-01T00:00:00.000001Z'},
-        'looksLikeBlob': {'@Blob': 'AQID'},
-        'looksLikeDummy': {'@': null},
+
+        'looksLikeTimestamp': {r'$timestamp': '1970-01-01T00:00:00.000001Z'},
+        'looksLikeBlob': {r'$Blob': 'AQID'},
+        'looksLikeDummy': {r'$': null},
+
+        'looksLikeTimestampLegacy': {
+          '@Timestamp': '1970-01-01T00:00:00.000001Z',
+        },
+        'looksLikeBlobLegacy': {'@Blob': 'AQID'},
+        'looksLikeDummyLegacy': {'@': null},
       };
       var encoded = {
         'null': null,
         'int': 1,
         'listList': [1, 2, 3],
         'string': 'text',
-        'timestamp': {'@Timestamp': '1970-01-01T00:00:00.000001Z'},
-        'blob': {'@Blob': 'AQID'},
-        'looksLikeDateTime': {
-          '@': {'@DateTime': '1970-01-01T00:00:00.001Z'},
-        },
+        'timestamp': {r'$timestamp': '1970-01-01T00:00:00.000001Z'},
+        'blob': {r'$blob': 'AQID'},
         'looksLikeTimestamp': {
-          '@': {'@Timestamp': '1970-01-01T00:00:00.000001Z'},
+          r'$': {r'$timestamp': '1970-01-01T00:00:00.000001Z'},
         },
         'looksLikeBlob': {
-          '@': {'@Blob': 'AQID'},
+          r'$': {r'$Blob': 'AQID'},
         },
         'looksLikeDummy': {
-          '@': {'@': null},
+          r'$': {r'$': null},
         },
+        'looksLikeTimestampLegacy': {
+          r'@Timestamp': '1970-01-01T00:00:00.000001Z',
+        },
+        'looksLikeBlobLegacy': {r'@Blob': 'AQID'},
+        'looksLikeDummyLegacy': {r'@': null},
       };
       expect(jsonEncodeSembastValueOrNull(decoded), encoded);
       expect(jsonDecodeSembastValueOrNull(encoded), decoded);

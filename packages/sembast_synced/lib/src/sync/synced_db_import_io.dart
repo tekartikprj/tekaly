@@ -9,6 +9,24 @@ import '../../synced_db.dart';
 /// Imports a synced database snapshot from local IO files.
 extension SyncedDbImportIoExt on SyncedDb {
   /// Imports a database snapshot from files written by [exportDatabase].
+  Future<void> importDatabaseFromFilesLegacy({
+    /// Directory containing `export.jsonl` and `export_meta.json`.
+    required String dir,
+  }) async {
+    await fetchAndImportLegacy(
+      fetchExport: (int changeId) async {
+        var file = File(join(dir, syncedDbExportFilename));
+        return file.readAsString();
+      },
+      fetchExportMeta: () async {
+        var fileMeta = File(join(dir, syncedDbExportMetaFilename));
+        var map = jsonDecode(await fileMeta.readAsString()) as Map;
+        return asModel(map);
+      },
+    );
+  }
+
+  /// Imports a database snapshot from files written by [exportDatabase].
   Future<void> importDatabaseFromFiles({
     /// Directory containing `export.jsonl` and `export_meta.json`.
     required String dir,

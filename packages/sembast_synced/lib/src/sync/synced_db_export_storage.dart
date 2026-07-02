@@ -35,7 +35,7 @@ extension SyncedDbExportStorageExt on SyncedDb {
   }) async {
     metaOnly ??= false;
     noMeta ??= false;
-    var exportInfo = await exportInMemory();
+    var exportInfo = await exportInMemoryLegacy();
     int? exportSize;
 
     var exportMeta = exportInfo.metaInfo.toJson();

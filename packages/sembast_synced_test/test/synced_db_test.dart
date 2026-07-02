@@ -154,7 +154,7 @@ void main() {
       expect(map.toMap(), {'name': 'another'});
     });
 
-    test('export', () async {
+    test('export legacy', () async {
       var record = dbEntityStoreRef.record('export');
       var database = await syncedDb.database;
       var artist = record.cv()..name.v = 'test';

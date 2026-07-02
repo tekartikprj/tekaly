@@ -29,7 +29,7 @@ extension SyncedDbImportAssetExt on SyncedDb {
   }) async {
     var assetBundle = importContext.assetBundle;
     var rootPath = importContext.rootPath;
-    await fetchAndImport(
+    await fetchAndImportLegacy(
       fetchExport: (int changeId) async {
         try {
           var data = await assetBundle.loadString(

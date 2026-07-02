@@ -2,16 +2,20 @@
 
 import 'package:sembast/sembast_memory.dart';
 import 'package:sembast/utils/database_utils.dart';
-import 'package:tekaly_sembast_synced/src/export/sembast_import_export.dart';
+import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 
 import 'synced_db_down_synchronizer.dart';
 
+/// Compat
+@Deprecated('Use SyncedDbSynchronizerFromExport instead')
+typedef SyncedDbSynchronizerExport = SyncedDbSynchronizerFromExportLegacy;
+
 /// Sync from export
-class SyncedDbSynchronizerFromTekalyExport
+class SyncedDbSynchronizerFromExportLegacy
     with SyncedDbDownSynchronizerMixin
     implements SyncedDbDownSynchronizer {
-  SyncedDbSynchronizerFromTekalyExport(
+  SyncedDbSynchronizerFromExportLegacy(
     SyncedDb db, {
     required this.fetchExport,
     required this.fetchExportMeta,
@@ -38,8 +42,7 @@ class SyncedDbSynchronizerFromTekalyExport
       }
 
       var data = await fetchExport(newLastChangeId);
-
-      var sourceDb = await tekalyToSembastImportDatabaseAny(
+      var sourceDb = await importDatabaseAny(
         data,
         newDatabaseFactoryMemory(),
         'export',

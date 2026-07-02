@@ -17,7 +17,8 @@ import 'sync_api.dart';
 /// Api model
 class CvMetaInfoRecordApi extends CvModelBase with CvMetaInfoMixin {}
 
-var _codec = sembastCodecJsonEncodableCodec(null);
+//var _codec = sembastCodecJsonEncodableCodec(null);
+var _codec = sembastCodecJsonEncodableCodec(sembastCodecDefaultV2);
 Object? jsonEncodeSembastValueOrNull(Object? value) {
   if (value == null) {
     return null;

@@ -34,7 +34,7 @@ extension SyncedDbFetcherExt on SyncedDb {
     required SyncedDbStringFetcherContext fetcherContext,
   }) async {
     var fetcher = fetcherContext.fetcher;
-    await fetchAndImport(
+    await fetchAndImportLegacy(
       fetchExport: (int changeId) async {
         return fetcher.getString(getExportFileName(changeId));
       },
