@@ -9,6 +9,7 @@ environment:
 # Add regular dependencies here.
 dependencies:
   cv: ">=1.1.10"
+  collection:
   sembast: ">=3.8.10-1"
   tekartik_app_cv_sembast:
     git:

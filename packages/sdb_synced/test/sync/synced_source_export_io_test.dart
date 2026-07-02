@@ -6,6 +6,7 @@ import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_io.dart';
 import 'package:test/test.dart';
 
+import 'synced_source_export_test.dart';
 import 'synced_source_test_common.dart';
 
 final _myStoreRef = SdbStoreRef<String, SdbModel>('my_store');
@@ -70,30 +71,9 @@ void main() {
     expect(await _myStoreRef.record('my_key').getValue(db), {'test': 123});
   });
 
-  Future<SyncedSdb> createSyncedDbWithDemoData() async {
-    var syncedSdb = SyncedSdb.newInMemory(options: _newOptions());
-    var db = await syncedSdb.database;
-
-    // Create some demo data
-    // A list of 2 items, one containing all types (SdbTimestamp, SdbBlob)
-    await _myStoreRef.record('item_1').put(db, {'test': 123});
-    await _myStoreRef.record('item_2').put(db, {
-      'ts': SdbTimestamp(1, 2000),
-      'blob': SdbBlob.fromList([1, 2, 3]),
-    });
-    // Another store with a prefs key 'name': 'demo'
-    await _prefsStoreRef.record('info').put(db, {'name': 'demo'});
-
-    var synchronizer = SyncedSdbSynchronizer(
-      db: syncedSdb,
-      source: newInMemorySyncedSourceMemory(),
-    );
-    await synchronizer.sync();
-    return syncedSdb;
-  }
-
   test('exportDemoDataDatabaseToIo tekaly', () async {
-    var syncedSdb = await createSyncedDbWithDemoData();
+    var source = newInMemorySyncedSourceMemory();
+    var syncedSdb = await createSyncedDbWithDemoData(source);
     var db = await syncedSdb.database;
     var dbMeta = (await syncedSdb.getSyncMetaInfo())!;
     var timestamp = dbMeta.lastTimestamp.v!.toIso8601String();

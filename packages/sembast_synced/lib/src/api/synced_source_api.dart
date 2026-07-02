@@ -5,8 +5,8 @@ import 'dart:async';
 import 'package:cv/cv.dart';
 
 // ignore: implementation_imports
-import 'package:sembast/src/api/protected/codec.dart';
 import 'package:sembast/timestamp.dart';
+import 'package:tekaly_sembast_synced/src/api/synced_source.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 
 import 'model/api_models.dart';
@@ -16,22 +16,6 @@ import 'sync_api.dart';
 
 /// Api model
 class CvMetaInfoRecordApi extends CvModelBase with CvMetaInfoMixin {}
-
-//var _codec = sembastCodecJsonEncodableCodec(null);
-var _codec = sembastCodecJsonEncodableCodec(sembastCodecDefaultV2);
-Object? jsonEncodeSembastValueOrNull(Object? value) {
-  if (value == null) {
-    return null;
-  }
-  return _codec.encode(value);
-}
-
-Object? jsonDecodeSembastValueOrNull(Object? value) {
-  if (value == null) {
-    return null;
-  }
-  return _codec.decode(value);
-}
 
 class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
   final ApiService apiService;

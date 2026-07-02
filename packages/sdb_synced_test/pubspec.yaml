@@ -8,6 +8,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  collection:
   idb_shim: ">=2.8.1-4"
   sembast: ">=3.8.5+1"
   tekaly_sembast_synced:

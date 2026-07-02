@@ -1,7 +1,7 @@
 library;
 
 import 'package:sembast/utils/sembast_import_export.dart';
-import 'package:tekaly_sembast_synced/src/api/synced_source_api.dart';
+import 'package:tekaly_sembast_synced/src/api/synced_source.dart';
 import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';

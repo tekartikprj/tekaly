@@ -4,15 +4,8 @@ import 'package:collection/collection.dart';
 import 'package:tekaly_sdb_synced/src/sync/synced_sdb_codec.dart';
 import 'package:tekaly_sdb_synced/src/sync/synced_sdb_export.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
+import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
-
-/// Must be json encodable.
-typedef SyncedSdbSynchronizerFetchExportMeta =
-    Future<Map<String, Object?>> Function();
-
-/// String but typically jsonl.
-typedef SyncedSdbSynchronizerFetchExport =
-    Future<String> Function(int changeId);
 
 /// Decode export data (either a jsonl string or an already decoded list of
 /// lines) into a list of raw export lines.
@@ -109,15 +102,15 @@ class SyncedSdbSynchronizerFromTekalyExport
   final SyncedSdb db;
 
   /// Only sync if fetch export does not return null.
-  final SyncedSdbSynchronizerFetchExport fetchExport;
+  final SyncedDbSynchronizerFetchExport fetchExport;
 
   /// Only sync if fetch export does not return null.
-  final SyncedSdbSynchronizerFetchExportMeta fetchExportMeta;
+  final SyncedDbSynchronizerFetchExportMeta fetchExportMeta;
 
   @override
   Future<void> sync() async {
     var meta = await db.getSyncMetaInfo();
-    var newMeta = SyncedSdbExportMeta()..fromMap(await fetchExportMeta());
+    var newMeta = SyncedDbExportMeta()..fromMap(await fetchExportMeta());
     var newLastChangeId = newMeta.lastChangeId.v!;
     if ((meta?.sourceVersion.v != newMeta.sourceVersion.v) ||
         (newLastChangeId > (meta?.lastChangeId.v ?? 0))) {
@@ -174,10 +167,10 @@ extension SyncedSdbImportExt on SyncedSdb {
   /// Fetch and import (tekaly format).
   Future<void> fetchAndImport({
     /// Only sync if fetch export does not return null.
-    required SyncedSdbSynchronizerFetchExport fetchExport,
+    required SyncedDbSynchronizerFetchExport fetchExport,
 
     /// Only sync if fetch export does not return null.
-    required SyncedSdbSynchronizerFetchExportMeta fetchExportMeta,
+    required SyncedDbSynchronizerFetchExportMeta fetchExportMeta,
   }) async {
     var synchronizer = SyncedSdbSynchronizerFromTekalyExport(
       this,
@@ -190,7 +183,7 @@ extension SyncedSdbImportExt on SyncedSdb {
   /// Imports a database snapshot exported with [SyncedSdbExportExt.exportInMemory].
   Future<void> importFromMemory({
     /// Export info to import.
-    required SyncedSdbExportInfo exportInfo,
+    required SyncedDbExportInfo exportInfo,
   }) async {
     await fetchAndImport(
       fetchExport: (int changeId) async {

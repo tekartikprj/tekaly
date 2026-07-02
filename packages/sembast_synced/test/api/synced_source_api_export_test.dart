@@ -7,8 +7,6 @@ import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekaly_sembast_synced/synced_source.dart';
 import 'package:test/test.dart';
 
-import 'synced_source_test_common.dart';
-
 /// Creates a [SyncedSourceApi] backed by a fully in-memory simulated backend
 /// (in-memory Firestore + in-memory http server), isolated from other
 /// sources by using [target] both as sync target and as a unique function
@@ -30,7 +28,7 @@ Future<SyncedSourceApi> newInMemorySyncedSourceApi({
 }
 
 void main() {
-  Future<SyncedDb> setupBasicDb(SyncedSource source) async {
+  Future<SyncedDb> setupBasicDb(SyncedSourceApi source) async {
     var syncedDb = SyncedDb.newInMemory();
     var db = await syncedDb.database;
     await stringMapStoreFactory.store('my_store').record('my_key').put(db, {
@@ -42,8 +40,8 @@ void main() {
     return syncedDb;
   }
 
-  test('exportInMemory/importFromMemory through SyncedSource', () async {
-    var source = newInMemorySyncedSourceMemory();
+  test('exportInMemory/importFromMemory through SyncedSourceApi', () async {
+    var source = await newInMemorySyncedSourceApi(target: 'export-test');
     var syncedDb = await setupBasicDb(source);
 
     var exportInfo = await source.exportInMemory();

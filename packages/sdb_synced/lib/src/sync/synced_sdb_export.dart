@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:tekaly_sdb_synced/src/sync/synced_sdb_codec.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
+import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
 const String _dbVersionKey = 'version';
@@ -16,33 +17,6 @@ var syncedSdbExportFilename = 'export.jsonl';
 
 /// Synced sdb export meta filename.
 var syncedSdbExportMetaFilename = 'export_meta.json';
-
-/// Must be json encodable.
-class SyncedSdbExportMeta extends CvModelBase {
-  /// Last change id.
-  final lastChangeId = CvField<int>('lastChangeId');
-
-  /// Last sync timestamp (iso8601 encoded).
-  final lastTimestamp = CvField<String>('lastTimestamp');
-
-  /// Source version.
-  final sourceVersion = CvField<int>('sourceVersion');
-
-  @override
-  List<CvField> get fields => [lastChangeId, lastTimestamp, sourceVersion];
-}
-
-/// Export info.
-class SyncedSdbExportInfo {
-  /// Meta information.
-  final SyncedSdbExportMeta metaInfo;
-
-  /// data.
-  final List<Object> data;
-
-  /// Export info.
-  SyncedSdbExportInfo({required this.metaInfo, required this.data});
-}
 
 /// Names of the stores that should be part of a synced export (excludes
 /// system and local only stores).
@@ -120,7 +94,7 @@ List<String> sdbExportLinesToJsonStringList(List<Object> lines) =>
 /// Export helper.
 extension SyncedSdbExportExt on SyncedSdb {
   /// Export to memory (tekaly format).
-  Future<SyncedSdbExportInfo> exportInMemory() async {
+  Future<SyncedDbExportInfo> exportInMemory() async {
     var db = await database;
     var syncMeta =
         (await getSyncMetaInfo()) ?? (SdbSyncMetaInfo()..lastChangeId.v = 0);
@@ -129,7 +103,7 @@ extension SyncedSdbExportExt on SyncedSdb {
       // ignore: avoid_print
       print('syncMeta: $syncMeta');
     }
-    var exportMeta = SyncedSdbExportMeta()
+    var exportMeta = SyncedDbExportMeta()
       ..sourceVersion.setValue(syncMeta.sourceVersion.v)
       ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())
       ..lastChangeId.setValue(syncMeta.lastChangeId.v);
@@ -139,6 +113,6 @@ extension SyncedSdbExportExt on SyncedSdb {
       storeNames: syncedSdbExportableStoreNames(db),
     );
 
-    return SyncedSdbExportInfo(metaInfo: exportMeta, data: lines);
+    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines, meta: null);
   }
 }

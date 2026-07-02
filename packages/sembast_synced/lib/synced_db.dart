@@ -30,3 +30,8 @@ export 'src/sync/synced_db_lib.dart'
         debugSyncedDbSynchronizer;
 export 'src/sync/synced_db_min_service.dart' show SyncedDbReadMinService;
 export 'src/sync/synced_db_options.dart' show SyncedDbOptions;
+export 'src/sync/synced_source_export.dart'
+    show
+        SyncedDbExportMeta,
+        SyncedDbSynchronizerFetchExport,
+        SyncedDbSynchronizerFetchExportMeta;

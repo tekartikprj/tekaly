@@ -1,8 +1,10 @@
+import 'package:collection/collection.dart';
 import 'package:path/path.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/export/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
+import 'package:tekartik_app_common_utils/common_utils_import.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 /// Synced db export filename
@@ -28,7 +30,7 @@ class SyncedDbExportInfo {
   /// data
   final List<Object> data;
 
-  /// meta
+  /// meta, write only
   final List<Object>? meta;
 
   /// Export info
@@ -37,6 +39,23 @@ class SyncedDbExportInfo {
     required this.data,
     required this.meta,
   });
+
+  @override
+  int get hashCode => metaInfo.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! SyncedDbExportInfo) return false;
+    return metaInfo == other.metaInfo &&
+        const DeepCollectionEquality().equals(metaInfo, other.metaInfo) &&
+        const DeepCollectionEquality().equals(meta, other.meta);
+  }
+
+  @override
+  String toString() =>
+      'SyncedDbExportInfo(metaInfo: $metaInfo, data: ${data.length}, meta: $meta})}';
+  // '${devWarning(data)}';
 }
 
 /// Export helper
