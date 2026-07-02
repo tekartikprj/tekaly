@@ -65,7 +65,7 @@ void main() {
       var encoded = jsonEncodeSembastValueOrNull(value);
       // Encoded as a json encodable representation, not the raw object.
       expect(encoded, {
-        'ts': {'@timestamp': '1970-01-01T00:16:40.000002Z'},
+        'ts': {r'$timestamp': '1970-01-01T00:16:40.000002Z'},
       });
       expect(jsonDecodeSembastValueOrNull(encoded), value);
     });
@@ -75,7 +75,7 @@ void main() {
       var value = <String, Object?>{'blob': dbBlob};
       var encoded = jsonEncodeSembastValueOrNull(value);
       expect(encoded, {
-        'blob': {'@blob': 'AQID'},
+        'blob': {r'$blob': 'AQID'},
       });
       expect(jsonDecodeSembastValueOrNull(encoded), value);
     });

@@ -83,7 +83,7 @@ extension SyncedSourceExportExt on SyncedSource {
       }
     }
 
-    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines, meta: null);
+    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
   }
 
   /// Imports a database snapshot (tekaly format, as produced by

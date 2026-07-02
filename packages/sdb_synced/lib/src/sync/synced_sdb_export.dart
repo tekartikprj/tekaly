@@ -113,6 +113,6 @@ extension SyncedSdbExportExt on SyncedSdb {
       storeNames: syncedSdbExportableStoreNames(db),
     );
 
-    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines, meta: null);
+    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
   }
 }

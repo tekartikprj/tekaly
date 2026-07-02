@@ -30,15 +30,8 @@ class SyncedDbExportInfo {
   /// data
   final List<Object> data;
 
-  /// meta, write only
-  final List<Object>? meta;
-
   /// Export info
-  SyncedDbExportInfo({
-    required this.metaInfo,
-    required this.data,
-    required this.meta,
-  });
+  SyncedDbExportInfo({required this.metaInfo, required this.data});
 
   @override
   int get hashCode => metaInfo.hashCode;
@@ -48,18 +41,29 @@ class SyncedDbExportInfo {
     if (identical(this, other)) return true;
     if (other is! SyncedDbExportInfo) return false;
     return metaInfo == other.metaInfo &&
-        const DeepCollectionEquality().equals(metaInfo, other.metaInfo) &&
-        const DeepCollectionEquality().equals(meta, other.meta);
+        const DeepCollectionEquality().equals(metaInfo, other.metaInfo);
   }
 
   @override
   String toString() =>
-      'SyncedDbExportInfo(metaInfo: $metaInfo, data: ${data.length}, meta: $meta})}';
-  // '${devWarning(data)}';
+      'SyncedDbExportInfo(metaInfo: $metaInfo, data: ${data.length})';
 }
 
 /// Export helper
-extension SyncedDbExportExt on SyncedDb {
+extension SyncedDbExportInfoExt on SyncedDbExportInfo {
+  /// Get json l export
+  String getJsonlExport() {
+    return exportLinesToJsonlString(data);
+  }
+
+  /// Get json meta export
+  String getMetaExport() {
+    return jsonEncode(metaInfo.toMap());
+  }
+}
+
+/// Export helper
+extension SyncedDbExportDbExt on SyncedDb {
   /// Export to memory removing meta
   Future<SyncedDbExportInfo> exportInMemoryLegacy() async {
     var sdb = await database;
@@ -83,7 +87,7 @@ extension SyncedDbExportExt on SyncedDb {
       ..sourceVersion.setValue(syncMeta.sourceVersion.v)
       ..lastTimestamp.setValue(syncMeta.lastTimestamp.v?.toIso8601String())
       ..lastChangeId.setValue(syncMeta.lastChangeId.v);
-    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines, meta: null);
+    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
   }
 
   /// Export to memory removing meta
@@ -111,6 +115,6 @@ extension SyncedDbExportExt on SyncedDb {
       storeNames: stores,
     );
 
-    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines, meta: null);
+    return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
   }
 }
