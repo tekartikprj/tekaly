@@ -64,7 +64,7 @@ void main() {
       var encoded = jsonEncodeSembastValueOrNull(value);
       // Encoded as a json encodable representation, not the raw object.
       expect(encoded, {
-        'ts': {'@Timestamp': '1970-01-01T00:16:40.000002Z'},
+        'ts': {'@timestamp': '1970-01-01T00:16:40.000002Z'},
       });
       expect(jsonDecodeSembastValueOrNull(encoded), value);
     });
@@ -74,9 +74,46 @@ void main() {
       var value = <String, Object?>{'blob': dbBlob};
       var encoded = jsonEncodeSembastValueOrNull(value);
       expect(encoded, {
-        'blob': {'@Blob': 'AQID'},
+        'blob': {'@blob': 'AQID'},
       });
       expect(jsonDecodeSembastValueOrNull(encoded), value);
+    });
+
+    test('round trip all types', () {
+      var decoded = {
+        'null': null,
+        'int': 1,
+        'listList': [1, 2, 3],
+        'string': 'text',
+        'timestamp': Timestamp.fromMicrosecondsSinceEpoch(1),
+        'blob': DbBlob.fromList([1, 2, 3]),
+        'looksLikeDateTime': {'@DateTime': '1970-01-01T00:00:00.001Z'},
+        'looksLikeTimestamp': {'@Timestamp': '1970-01-01T00:00:00.000001Z'},
+        'looksLikeBlob': {'@Blob': 'AQID'},
+        'looksLikeDummy': {'@': null},
+      };
+      var encoded = {
+        'null': null,
+        'int': 1,
+        'listList': [1, 2, 3],
+        'string': 'text',
+        'timestamp': {'@Timestamp': '1970-01-01T00:00:00.000001Z'},
+        'blob': {'@Blob': 'AQID'},
+        'looksLikeDateTime': {
+          '@': {'@DateTime': '1970-01-01T00:00:00.001Z'},
+        },
+        'looksLikeTimestamp': {
+          '@': {'@Timestamp': '1970-01-01T00:00:00.000001Z'},
+        },
+        'looksLikeBlob': {
+          '@': {'@Blob': 'AQID'},
+        },
+        'looksLikeDummy': {
+          '@': {'@': null},
+        },
+      };
+      expect(jsonEncodeSembastValueOrNull(decoded), encoded);
+      expect(jsonDecodeSembastValueOrNull(encoded), decoded);
     });
   });
 
