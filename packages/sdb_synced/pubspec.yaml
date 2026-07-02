@@ -78,6 +78,7 @@ dependencies:
       path: firebase_functions_http
     version: '>=0.2.1'
   meta: ">=1.18.0"
+  collection: ">=1.19.0"
   synchronized:
   path: ">=1.9.1"
   http:
