@@ -778,6 +778,20 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat1, SyncedSyncStat(localUpdatedCount: 1));
     });
 
+    test('simple multi sync down one conflict record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      await (record1.cv()..name.v = 'text2').put(db2);
+      var stat1 = await sync.sync();
+      var stat2 = await sync2.sync();
+      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
+      expect(stat2, SyncedSyncStat(remoteCreatedCount: 1));
+      await (record1.cv()..name.v = 'text1_a').put(db1);
+      await (record1.cv()..name.v = 'text2_a').put(db2);
+      stat1 = await sync.syncDown();
+
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+    });
+
     test('first multi sync two record', () async {
       await (record1.cv()..name.v = 'text1').put(db1);
       await (record2.cv()..name.v = 'text2').put(db2);

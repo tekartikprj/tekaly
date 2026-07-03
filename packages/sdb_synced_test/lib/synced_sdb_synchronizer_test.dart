@@ -16,7 +16,7 @@ Future<SyncSdbTestsContext> setupNewInMemorySyncSdbTestsContext() async {
 }
 
 void main() {
-  debugSyncedDbSynchronizer = devTrue;
+  //debugSyncedDbSynchronizer = devTrue;
   //syncedSdbDebug = devTrue;
   group('synced_sdb_source_sync_memory_test_internal', () {
     syncTests(setupNewInMemorySyncSdbTestsContext);
