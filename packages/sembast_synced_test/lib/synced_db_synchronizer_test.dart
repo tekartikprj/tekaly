@@ -569,6 +569,25 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat());
     });
 
+    test('syncMultiUpdateToRemote', () async {
+      var db = await syncedDb.database;
+      var ref = dbEntityStoreRef.record('counter');
+      var futures = <Future>[];
+      var count = 10;
+      await ref.delete(db);
+      for (var i = 0; i < count; i++) {
+        var record = await ref.get(db);
+        var counter = record?.counter.v ?? 0;
+        await (ref.cv()..counter.v = counter + 1).put(db);
+        futures.add(sync.syncUp());
+      }
+      var results = await Future.wait(futures);
+      print(results);
+      var record = await ref.get(db);
+      var counter = record?.counter.v ?? 0;
+      expect(counter, count);
+    });
+
     test('syncUpdateFromRemote', () async {
       await source.putSourceRecord(
         CvSyncedSourceRecord()

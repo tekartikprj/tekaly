@@ -8,9 +8,10 @@ import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 class DbEntity extends DbStringRecordBase {
   final name = CvField<String>('name');
   final timestamp = CvField<Timestamp>('timestamp');
+  final counter = CvField<int>('counter');
 
   @override
-  List<CvField> get fields => [name, timestamp];
+  List<CvField> get fields => [name, timestamp, counter];
 }
 
 var dbEntityStoreRef = cvStringStoreFactory.store<DbEntity>('entity');

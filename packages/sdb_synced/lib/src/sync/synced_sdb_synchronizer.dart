@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/src/sync/utils.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
@@ -82,57 +83,84 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       run: (txn) async {
         var dirtySyncRecords = await db.txnGetDirtySyncRecords(txn);
         for (var dirtySyncRecord in dirtySyncRecords) {
-          // Try to get event if deleted
-          var dataRecordRef = dirtySyncRecord.dataRecordRef;
-          var snapshot = await dataRecordRef.get(txn);
-          Map<String, Object?>? value;
-          // Check and fix deleted
-          if (dirtySyncRecord.isDeleted) {
-            if (snapshot != null) {
-              if (debugSyncedSync) {
-                // ignore: avoid_print
-                print(
-                  'Found a record. Weird, deleted flag set for $snapshot - deleting record',
-                );
-              }
-              await dataRecordRef.delete(txn);
-            } else {
-              // Ok
-            }
-          } else {
-            if (snapshot == null) {
-              if (debugSyncedSync) {
-                // ignore: avoid_print
-                print(
-                  'Cannot find modified record. Weird, missing the deleted flag for $snapshot - setting the deleted flag',
-                );
-              }
-              // important to set for later
-              dirtySyncRecord.deleted.v = 1;
-              await db.txnPutSyncRecord(txn, dirtySyncRecord);
-            } else {
-              // ok
-              value = mapSdbToSyncedDb(snapshot.value);
-            }
-          }
-
-          var sourceRecord = CvSyncedSourceRecord()
-            //..syncTimestamp.v = dirtySyncRecord.syncTimestamp.v
-            ..syncId.v = dirtySyncRecord.syncId.v
-            ..record.v = (CvSyncedSourceRecordData()
-              ..store.v = dirtySyncRecord.store.v
-              ..key.v = dirtySyncRecord.key.v
-              ..deleted.v = intToBool(dirtySyncRecord.deleted.v)
-              ..value.v = value);
-          list.add(
-            SyncedSdbSyncSourceRecord()
-              ..sourceRecord = sourceRecord
-              ..syncRecord = dirtySyncRecord,
-          );
+          list.add(await _txnGetDirtySyncSourceRecord(txn, dirtySyncRecord));
         }
       },
     );
     return list;
+  }
+
+  /// Reload the source records to push for the given sync record ids,
+  /// skipping the ones no longer dirty.
+  Future<List<SyncedSdbSyncSourceRecord>> _getLocalDirtySourceRecordsByIds(
+    Iterable<int> syncRecordIds,
+  ) async {
+    var list = <SyncedSdbSyncSourceRecord>[];
+    await db.syncTransaction(
+      mode: SdbTransactionMode.readWrite,
+      run: (txn) async {
+        for (var id in syncRecordIds) {
+          var syncRecord = await db.scvSyncRecordStoreRef.record(id).get(txn);
+          if (syncRecord == null || !syncRecord.isDirty) {
+            continue;
+          }
+          list.add(await _txnGetDirtySyncSourceRecord(txn, syncRecord));
+        }
+      },
+    );
+    return list;
+  }
+
+  /// Build the source record to push for a dirty sync record.
+  Future<SyncedSdbSyncSourceRecord> _txnGetDirtySyncSourceRecord(
+    SdbTransaction txn,
+    SdbSyncRecord dirtySyncRecord,
+  ) async {
+    // Try to get event if deleted
+    var dataRecordRef = dirtySyncRecord.dataRecordRef;
+    var snapshot = await dataRecordRef.get(txn);
+    Map<String, Object?>? value;
+    // Check and fix deleted
+    if (dirtySyncRecord.isDeleted) {
+      if (snapshot != null) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print(
+            'Found a record. Weird, deleted flag set for $snapshot - deleting record',
+          );
+        }
+        await dataRecordRef.delete(txn);
+      } else {
+        // Ok
+      }
+    } else {
+      if (snapshot == null) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print(
+            'Cannot find modified record. Weird, missing the deleted flag for $snapshot - setting the deleted flag',
+          );
+        }
+        // important to set for later
+        dirtySyncRecord.deleted.v = 1;
+        await db.txnPutSyncRecord(txn, dirtySyncRecord);
+      } else {
+        // ok
+        value = mapSdbToSyncedDb(snapshot.value);
+      }
+    }
+
+    var sourceRecord = CvSyncedSourceRecord()
+      //..syncTimestamp.v = dirtySyncRecord.syncTimestamp.v
+      ..syncId.v = dirtySyncRecord.syncId.v
+      ..record.v = (CvSyncedSourceRecordData()
+        ..store.v = dirtySyncRecord.store.v
+        ..key.v = dirtySyncRecord.key.v
+        ..deleted.v = intToBool(dirtySyncRecord.deleted.v)
+        ..value.v = value);
+    return SyncedSdbSyncSourceRecord()
+      ..sourceRecord = sourceRecord
+      ..syncRecord = dirtySyncRecord;
   }
 
   /// Sync dirty records up
@@ -146,72 +174,141 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
         // ignore: avoid_print
         print('syncUp: found ${dirtySourceRecords.length} dirty records');
       }
-      for (var chunk in listChunk(dirtySourceRecords, stepLimitUp ?? 10)) {
-        /// Multiple items at once locally
-        var list = <SyncedSdbSyncSourceRecord>[];
-        for (var syncSourceRecord in chunk) {
-          list.add(
-            SyncedSdbSyncSourceRecord()
-              ..sourceRecord = await source.putSourceRecord(
-                syncSourceRecord.sourceRecord!,
-              )
-              ..syncRecord = syncSourceRecord.syncRecord,
-          );
-        }
+      // Loop until no pushed record gets changed locally during the push
+      while (dirtySourceRecords.isNotEmpty) {
+        /// Sync record ids of records changed locally during putSourceRecord
+        var changedSyncRecordIds = <int>[];
+        for (var chunk in listChunk(dirtySourceRecords, stepLimitUp ?? 10)) {
+          /// Multiple items at once locally
+          var list = <SyncedSdbSyncSourceRecord>[];
+          for (var syncSourceRecord in chunk) {
+            list.add(
+              SyncedSdbSyncSourceRecord()
+                ..sourceRecord = await source.putSourceRecord(
+                  syncSourceRecord.sourceRecord!,
+                )
+                ..syncRecord = syncSourceRecord.syncRecord,
+            );
+          }
 
-        await db.syncTransaction(
-          mode: SdbTransactionMode.readWrite,
-          run: (txn) async {
-            for (var syncSourceRecord in list) {
-              var isNew = syncSourceRecord.isNewLocalRecord;
-              var responseRecord = syncSourceRecord.sourceRecord!;
-              var originalSyncRecord = syncSourceRecord.syncRecord!;
-              var newSyncRecord =
-                  db.scvSyncRecordStoreRef.record(originalSyncRecord.id).cv()
-                    ..deleted.v = boolToInt(responseRecord.record.v!.deleted.v)
-                    ..store.v = responseRecord.record.v!.store.v
-                    ..key.v = responseRecord.record.v!.key.v
-                    ..dirty.v = 0
+          await db.syncTransaction(
+            mode: SdbTransactionMode.readWrite,
+            run: (txn) async {
+              for (var i = 0; i < list.length; i++) {
+                var syncSourceRecord = list[i];
+
+                /// The record data that was sent to the source
+                var sentRecordData = chunk[i].sourceRecord!.record.v!;
+                var isNew = syncSourceRecord.isNewLocalRecord;
+                var responseRecord = syncSourceRecord.sourceRecord!;
+                var originalSyncRecord = syncSourceRecord.syncRecord!;
+                var syncRecordRef = db.scvSyncRecordStoreRef.record(
+                  originalSyncRecord.id,
+                );
+                var newSyncRecord = syncRecordRef.cv()
+                  ..deleted.v = boolToInt(responseRecord.record.v!.deleted.v)
+                  ..store.v = responseRecord.record.v!.store.v
+                  ..key.v = responseRecord.record.v!.key.v
+                  ..dirty.v = 0
+                  ..syncId.v = responseRecord.syncId.v
+                  // id from the original syncRecord
+                  //..id = originalSyncRecord.id
+                  ..syncTimestamp.v = responseRecord.syncTimestamp.v
+                  ..syncChangeId.v = responseRecord.syncChangeId.v;
+                var dataRecordRef = newSyncRecord.dataRecordRef;
+
+                /// Check whether another local change happened during
+                /// putSourceRecord, i.e. the current local data no longer
+                /// matches what was sent.
+                var currentSnapshot = await dataRecordRef.get(txn);
+                bool changedDuringPut;
+                if (sentRecordData.deleted.v ?? false) {
+                  changedDuringPut = currentSnapshot != null;
+                } else {
+                  changedDuringPut =
+                      currentSnapshot == null ||
+                      !const DeepCollectionEquality().equals(
+                        mapSdbToSyncedDb(currentSnapshot.value),
+                        sentRecordData.value.v,
+                      );
+                }
+                if (changedDuringPut) {
+                  // Keep the record dirty and the local data untouched, only
+                  // save the sync info from the response so that the next
+                  // push updates the same source record.
+                  var currentSyncRecord =
+                      await syncRecordRef.get(txn) ??
+                      (newSyncRecord
+                        ..deleted.v = boolToInt(currentSnapshot == null));
+                  currentSyncRecord
+                    ..dirty.v = 1
                     ..syncId.v = responseRecord.syncId.v
-                    // id from the original syncRecord
-                    //..id = originalSyncRecord.id
                     ..syncTimestamp.v = responseRecord.syncTimestamp.v
                     ..syncChangeId.v = responseRecord.syncChangeId.v;
-              // copy from response
-              if (debugSyncedSync) {
-                // ignore: avoid_print
-                print(
-                  'syncUp: putting sync record ${newSyncRecord.store.v} - ${newSyncRecord.key.v} : $newSyncRecord',
-                );
-              }
-              await db.txnPutSyncRecord(txn, newSyncRecord);
-
-              var dataRecordRef = newSyncRecord.dataRecordRef;
-
-              /// Handle deleted case too. (!warning that could delete data at some point)
-              if ((newSyncRecord.isDeleted) ||
-                  (responseRecord.record.v!.value.isNull)) {
-                stat.remoteDeletedCount++;
-                await dataRecordRef.delete(txn);
-              } else {
-                if (isNew) {
-                  stat.remoteCreatedCount++;
-                } else {
-                  stat.remoteUpdatedCount++;
+                  if (debugSyncedSync) {
+                    // ignore: avoid_print
+                    print(
+                      'syncUp: record changed during push, will push again $currentSyncRecord',
+                    );
+                  }
+                  await db.txnPutSyncRecord(txn, currentSyncRecord);
+                  changedSyncRecordIds.add(originalSyncRecord.id);
+                  if ((newSyncRecord.isDeleted) ||
+                      (responseRecord.record.v!.value.isNull)) {
+                    stat.remoteDeletedCount++;
+                  } else if (isNew) {
+                    stat.remoteCreatedCount++;
+                  } else {
+                    stat.remoteUpdatedCount++;
+                  }
+                  continue;
                 }
-                var data = mapSyncedDbToSdb(
-                  asModel(responseRecord.record.v!.value.v ?? {}),
-                );
+                // copy from response
                 if (debugSyncedSync) {
                   // ignore: avoid_print
                   print(
-                    'syncUp: putting data record ${dataRecordRef.store.name} - ${dataRecordRef.key} : $data',
+                    'syncUp: putting sync record ${newSyncRecord.store.v} - ${newSyncRecord.key.v} : $newSyncRecord',
                   );
                 }
-                await dataRecordRef.put(txn, data);
+                await db.txnPutSyncRecord(txn, newSyncRecord);
+
+                /// Handle deleted case too. (!warning that could delete data at some point)
+                if ((newSyncRecord.isDeleted) ||
+                    (responseRecord.record.v!.value.isNull)) {
+                  stat.remoteDeletedCount++;
+                  await dataRecordRef.delete(txn);
+                } else {
+                  if (isNew) {
+                    stat.remoteCreatedCount++;
+                  } else {
+                    stat.remoteUpdatedCount++;
+                  }
+                  var data = mapSyncedDbToSdb(
+                    asModel(responseRecord.record.v!.value.v ?? {}),
+                  );
+                  if (debugSyncedSync) {
+                    // ignore: avoid_print
+                    print(
+                      'syncUp: putting data record ${dataRecordRef.store.name} - ${dataRecordRef.key} : $data',
+                    );
+                  }
+                  await dataRecordRef.put(txn, data);
+                }
               }
-            }
-          },
+            },
+          );
+        }
+        if (changedSyncRecordIds.isEmpty) {
+          break;
+        }
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print(
+            'syncUp: ${changedSyncRecordIds.length} record(s) changed during push, pushing again',
+          );
+        }
+        dirtySourceRecords = await _getLocalDirtySourceRecordsByIds(
+          changedSyncRecordIds,
         );
       }
     } else {

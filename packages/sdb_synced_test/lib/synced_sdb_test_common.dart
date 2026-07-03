@@ -9,9 +9,10 @@ export 'package:tekaly_sembast_synced_test/synced_source_test.dart';
 class DbEntity extends ScvStringRecordBase {
   final name = CvField<String>('name');
   final timestamp = CvField<SdbTimestamp>('timestamp');
+  final counter = CvField<int>('counter');
 
   @override
-  List<CvField> get fields => [name, timestamp];
+  List<CvField> get fields => [name, timestamp, counter];
 }
 
 var sdbEntityStoreRef = scvStringStoreFactory.store<DbEntity>('entity');
