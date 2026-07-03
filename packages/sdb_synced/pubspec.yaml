@@ -82,6 +82,7 @@ dependencies:
   synchronized:
   path: ">=1.9.1"
   http:
+
   idb_sqflite: ">=1.4.3-1"
   tekartik_http:
     git:
@@ -106,7 +107,7 @@ dependencies:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
       path: app_cv_sdb
-  idb_shim: ">=2.9.5-2"
+  idb_shim: ">=2.9.6+1"
   tekaly_sembast_synced:
     git:
       url: https://github.com/tekartikprj/tekaly

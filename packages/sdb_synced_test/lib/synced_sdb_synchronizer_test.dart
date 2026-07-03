@@ -16,7 +16,7 @@ Future<SyncSdbTestsContext> setupNewInMemorySyncSdbTestsContext() async {
 }
 
 void main() {
-  //debugSyncedDbSynchronizer = devTrue;
+  debugSyncedDbSynchronizer = devTrue;
   //syncedSdbDebug = devTrue;
   group('synced_sdb_source_sync_memory_test_internal', () {
     syncTests(setupNewInMemorySyncSdbTestsContext);
@@ -728,30 +728,33 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat());
     });
   });
-  /*
+
   group('multi sync', () async {
     late SyncedSdbSynchronizer sync;
     late SyncedSdbSynchronizer sync2;
     late SyncedSource source;
     late SyncedSdb syncedDb;
     late SyncedSdb syncedDb2;
-    late SyncTestsContext context;
+    late SyncSdbTestsContext context;
     late SdbDatabase db1;
     late SdbDatabase db2;
-    var record1 = dbEntityStoreRef.record('r1');
-    var record2 = dbEntityStoreRef.record('r2');
+    var record1 = sdbEntityStoreRef.record('r1');
+    var record2 = sdbEntityStoreRef.record('r2');
 
     setUp(() async {
       context = await setupContext();
       source = context.source;
-      syncedDb = context.syncedDb;
+      syncedDb = context.syncedSdb;
       syncedDb2 = SyncedSdb.newInMemory(
-        syncedStoreNames: syncedStoreNames,
-        options: dbEntityOptions,
+        //syncedStoreNames: syncedStoreNames,
+        options: SyncedSdbOptions(
+          openDatabaseOptions:
+              (await context.syncedSdb.database).openDatabaseOptions!,
+        ),
       );
       sync = SyncedSdbSynchronizer(db: syncedDb, source: source);
       sync2 = SyncedSdbSynchronizer(db: syncedDb2, source: source);
-      db1 = await syncedSdb.database;
+      db1 = await syncedDb.database;
       db2 = await syncedDb2.database;
     });
     tearDown(() async {
@@ -795,6 +798,20 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       expect(stat1, SyncedSyncStat(localUpdatedCount: 1));
     });
 
+    test('simple multi sync down one conflict record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      await (record1.cv()..name.v = 'text2').put(db2);
+      var stat1 = await sync.sync();
+      var stat2 = await sync2.sync();
+      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
+      expect(stat2, SyncedSyncStat(remoteCreatedCount: 1));
+      await (record1.cv()..name.v = 'text1_a').put(db1);
+      await (record1.cv()..name.v = 'text2_a').put(db2);
+      stat1 = await sync.syncDown();
+
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+    });
+
     test('first multi sync two record', () async {
       await (record1.cv()..name.v = 'text1').put(db1);
       await (record2.cv()..name.v = 'text2').put(db2);
@@ -813,5 +830,5 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(localCreatedCount: 1, localDeletedCount: 1));
     });
-  });*/
+  });
 }
