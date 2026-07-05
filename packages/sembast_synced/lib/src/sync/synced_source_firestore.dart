@@ -242,23 +242,25 @@ class SyncedSourceFirestore
   Future<CvSyncedSourceRecord?> getSourceRecord(
     SyncedDataSourceRef sourceRef,
   ) async {
-    /// Try by sync id first
-    if (sourceRef.syncId != null) {
-      var doc = dataCollection.doc(sourceRef.syncId!);
-      var raw = await doc.get();
-      if (raw.exists) {
-        var record = sourceRecordFromSnapshot(raw)!;
-        if (record.recordStore == sourceRef.store &&
-            record.recordKey == sourceRef.key) {
-          return record;
-        }
+    var syncId =
+        sourceRef.syncId ?? _storeKeySyncId(sourceRef.store!, sourceRef.key!);
 
-        if (debugSyncedSync) {
-          // ignore: avoid_print
-          print('getSourceRecord Invalid record $record for ref $sourceRef');
-        }
+    /// Try by sync id first
+    var doc = dataCollection.doc(syncId);
+    var raw = await doc.get();
+    if (raw.exists) {
+      var record = sourceRecordFromSnapshot(raw)!;
+      if (record.recordStore == sourceRef.store &&
+          record.recordKey == sourceRef.key) {
+        return record;
+      }
+
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('getSourceRecord Invalid record $record for ref $sourceRef');
       }
     }
+
     var querySnapshot = await dataCollection
         .where(
           '$recordFieldKey.$recordStoreFieldKey',

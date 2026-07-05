@@ -95,14 +95,25 @@ extension CvSyncedSourceRecordExt on CvSyncedSourceRecord {
 /// Compat
 typedef SyncedSourceRecord = CvSyncedSourceRecord;
 
-/// Source in firestore
-abstract class CvSyncedSourceRecord implements CvModel {
-  factory CvSyncedSourceRecord() => _CvSyncedSourceRecord();
-
+/// Core meta information
+abstract class CvSyncedSourceRecordCoreMeta implements CvModel {
   /// Sync id
   CvField<String> get syncId;
 
   /// Server change id
+  CvField<int> get syncChangeId;
+}
+
+/// Source in firestore
+abstract class CvSyncedSourceRecord implements CvSyncedSourceRecordCoreMeta {
+  factory CvSyncedSourceRecord() => _CvSyncedSourceRecord();
+
+  /// Sync id
+  @override
+  CvField<String> get syncId;
+
+  /// Server change id
+  @override
   CvField<int> get syncChangeId;
 
   /// Server timestamp
