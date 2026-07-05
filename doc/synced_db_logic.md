@@ -126,17 +126,29 @@ a simple ordered range query.
    records to push (`_txnGetDirtySyncSourceRecord`). This step also repairs
    inconsistencies: deleted flag set but data still present (delete the data),
    data missing but deleted flag not set (set the flag).
-2. For each chunk (`stepLimitUp`, default 10), call `source.putSourceRecord` for
-   each record. The **response** carries the authoritative `syncId`,
-   `syncChangeId` and `syncTimestamp`.
-3. In a local `syncTransaction`, for each pushed record:
-   - If the local data still matches what was sent: clear `dirty`, save the sync
-     info from the response, and write the response value back into the data
-     store (the response is authoritative).
-   - If the local data changed **during** the push (compared with
-     `DeepCollectionEquality` against what was sent): keep `dirty = true` and the
-     local data untouched, but save the `syncId`/`syncChangeId`/`syncTimestamp`
-     from the response so the next push updates the same source record.
+2. For each chunk (`stepLimitUp`, default 10), for each record:
+   - **Read the remote record first** (`source.getSourceRecord`) and compare its
+     change num (`syncChangeId`, historical name kept for compatibility) with
+     the one last seen locally (the sync record's `syncChangeId`, 0 if never
+     synced). If the remote change num is **strictly greater**, remote wins:
+     the record is **not pushed**; the remote record is applied locally instead
+     (see below). Otherwise (equal, local above, or no remote record) the local
+     change was made on top of the latest remote version: call
+     `source.putSourceRecord`. The **response** carries the authoritative
+     `syncId`, `syncChangeId` and `syncTimestamp`.
+3. In a local `syncTransaction`:
+   - For each record where remote won: apply the remote record locally
+     (write/delete the data record, save the remote sync info in the sync
+     record, clear `dirty`) — the local change is discarded.
+   - For each pushed record:
+     - If the local data still matches what was sent: clear `dirty`, save the
+       sync info from the response, and write the response value back into the
+       data store (the response is authoritative).
+     - If the local data changed **during** the push (compared with
+       `DeepCollectionEquality` against what was sent): keep `dirty = true` and
+       the local data untouched, but save the
+       `syncId`/`syncChangeId`/`syncTimestamp` from the response so the next
+       push updates the same source record.
 4. Records changed during the push are reloaded and pushed again, looping until
    nothing changes mid-push.
 
@@ -168,10 +180,14 @@ because the local sync record already carries the response's
    `syncChangeId` order):
    - skip invalid records and records of non-synced stores;
    - no local sync record: create the local record (skip if it is a tombstone);
-   - local sync record exists and `syncTimestamp`/`syncChangeId` differ (or the
-     source version changed): apply the remote record — unless a conflict, see
-     below;
-   - identical sync info: nothing to do.
+   - local sync record exists and the remote change num is **strictly greater**
+     than the local one: apply the remote record, **even if the record is dirty
+     locally** (remote wins, the local change is discarded);
+   - local sync record exists, remote change num not greater, record dirty
+     locally: local wins, the record is pushed up after the transaction (see
+     conflicts below);
+   - otherwise apply the remote record if the sync info differs or the source
+     version changed; identical sync info: nothing to do.
 
    Applying a remote record (`_syncSourceRecordDown`) writes/deletes the data
    record and stores the remote sync info in the sync record.
@@ -183,26 +199,38 @@ because the local sync record already carries the response's
 
 ## Conflict resolution
 
-A conflict is a remote change arriving for a record that is locally dirty.
+A conflict is a remote change arriving for a record that is locally dirty (or a
+local dirty change about to be pushed while the remote record changed).
 
-Rule: **remote wins, unless the record is dirty locally — then local wins and the
-local version is pushed up — except that a remote deletion always wins.**
+Rule: **remote always wins when the remote change num (`syncChangeId`) is
+strictly greater than the one last seen locally. Otherwise (same change num or
+local above) the local dirty change was made on top of the latest remote
+version: local wins and is pushed up.**
 
-Concretely, during sync down:
+Concretely:
 
-- local record dirty + remote record changed (not deleted): the remote value is
-  **not** applied; the sync record id is queued in `conflictSyncRecordIds` and,
-  after the transaction, those records are pushed up via the same
-  `_pushLocalDirtySourceRecords` loop as sync up (last-writer-wins at the source,
-  the push allocates a newer `syncChangeId`).
-- local record dirty + remote record deleted: the remote deletion is applied
-  (local data is lost).
+- during sync up, the remote record is read **before** each push
+  (`getSourceRecord`):
+  - remote change num strictly greater than the local one: the local change is
+    **not pushed**; the remote record is applied locally instead (dirty
+    cleared, local change discarded);
+  - same change num, local above or no remote record: the record is pushed
+    (`putSourceRecord`, which allocates a newer `syncChangeId`).
+- during sync down:
+  - local record dirty + remote change num strictly greater (deleted or not):
+    the remote record is applied, the local change is discarded;
+  - local record dirty + same change num (a tombstone included — typically the
+    echo of the client's own previous push followed by a new local change): the
+    remote value is **not** applied; the sync record id is queued in
+    `conflictSyncRecordIds` and, after the transaction, those records are
+    pushed up via the same `_pushLocalDirtySourceRecords` loop as sync up
+    (which re-checks the remote record before pushing).
 - full-sync cleanup: a local record absent from the source is deleted, unless
   dirty — then it is kept and pushed up (it becomes a create/update at the
   source).
 
 There is no field-level merge and no timestamp comparison: conflicts are resolved
-at the record level by the dirty flag.
+at the record level by the dirty flag and the change num comparison.
 
 ## Concurrency and auto sync
 
@@ -224,11 +252,12 @@ counts (`local*` = applied locally by sync down, `remote*` = pushed by sync up).
 
 ## Known limitations of the current logic
 
-- Conflict resolution is coarse (whole record, dirty flag only); concurrent edits
-  on different fields of the same record lose one side.
-- A remote deletion silently discards local dirty changes.
-- Sync up performs one `putSourceRecord` round-trip per record (chunking only
-  batches the local transaction, not the source writes).
+- Conflict resolution is coarse (whole record, dirty flag + change num);
+  concurrent edits on different fields of the same record lose one side.
+- A remote change with a newer change num silently discards local dirty changes.
+- Sync up performs one `getSourceRecord` + one `putSourceRecord` round-trip per
+  record (chunking only batches the local transaction, not the source
+  reads/writes).
 - The source keeps a tombstone forever for every deleted record (until a version
   bump / `minIncrementalChangeId` purge).
 - `syncChangeId` allocation serializes all writers through the source meta record

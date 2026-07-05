@@ -327,9 +327,38 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       /// Sync record ids of records changed locally during putSourceRecord
       var changedSyncRecordIds = <int>[];
       for (var chunk in listChunk(dirtySourceRecords, stepLimitUp ?? 10)) {
-        /// Multiple items at once locally
+        /// Records actually sent to the source
+        var sentList = <SyncedSyncSourceRecord>[];
+
+        /// Put responses, one per sent record
         var list = <SyncedSyncSourceRecord>[];
+
+        /// Remote records winning over the local dirty change (their change
+        /// num is strictly greater), to apply locally instead of pushing.
+        var remoteWinList = <SyncedSyncSourceRecord>[];
         for (var syncSourceRecord in chunk) {
+          /// Remote wins if the remote change num is strictly greater than
+          /// the last change num seen locally: read the remote record first.
+          var localChangeNum = syncSourceRecord.syncRecord!.syncChangeId.v ?? 0;
+          var remoteRecord = await source.getSourceRecord(
+            syncSourceRecord.sourceRecord!.ref,
+          );
+          var remoteChangeNum = remoteRecord?.syncChangeId.v ?? 0;
+          if (remoteRecord != null && remoteChangeNum > localChangeNum) {
+            if (debugSyncedSync) {
+              // ignore: avoid_print
+              print(
+                'syncUp: remote record is newer ($remoteChangeNum > $localChangeNum), remote wins $remoteRecord',
+              );
+            }
+            remoteWinList.add(
+              SyncedSyncSourceRecord()
+                ..sourceRecord = remoteRecord
+                ..syncRecord = syncSourceRecord.syncRecord,
+            );
+            continue;
+          }
+          sentList.add(syncSourceRecord);
           list.add(
             SyncedSyncSourceRecord()
               ..sourceRecord = await source.putSourceRecord(
@@ -340,11 +369,21 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
         }
 
         await db.syncTransaction((txn) async {
+          /// Apply the remote records winning over the local dirty change
+          /// (the local change is discarded, the dirty flag cleared).
+          for (var remoteWin in remoteWinList) {
+            await _syncSourceRecordDown(
+              txn,
+              remoteWin.sourceRecord!,
+              stat,
+              existingSyncRecord: remoteWin.syncRecord,
+            );
+          }
           for (var i = 0; i < list.length; i++) {
             var syncSourceRecord = list[i];
 
             /// The record data that was sent to the source
-            var sentRecordData = chunk[i].sourceRecord!.record.v!;
+            var sentRecordData = sentList[i].sourceRecord!.record.v!;
             var isNew = syncSourceRecord.isNewLocalRecord;
             var responseRecord = syncSourceRecord.sourceRecord!;
             var originalSyncRecord = syncSourceRecord.syncRecord!;
@@ -448,18 +487,27 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   Future<void> _syncSourceRecordDown(
     DatabaseClient client,
     CvSyncedSourceRecord remoteRecord,
-    SyncedSyncStat stat,
-  ) async {
-    await db.dbSyncRecordStoreRef.add(
-      client,
-      (DbSyncRecord()
-        ..syncId.v = remoteRecord.syncId.v
-        ..syncTimestamp.v = remoteRecord.syncTimestamp.v
-        ..syncChangeId.v = remoteRecord.syncChangeId.v
-        ..store.v = remoteRecord.record.v!.store.v
-        ..key.v = remoteRecord.record.v!.key.v
-        ..deleted.v = remoteRecord.record.v!.deleted.v),
-    );
+    SyncedSyncStat stat, {
+    DbSyncRecord? existingSyncRecord,
+  }) async {
+    var syncRecord =
+        (existingSyncRecord == null
+              ? DbSyncRecord()
+              : db.dbSyncRecordStoreRef.record(existingSyncRecord.id).cv())
+          ..syncId.v = remoteRecord.syncId.v
+          ..syncTimestamp.v = remoteRecord.syncTimestamp.v
+          ..syncChangeId.v = remoteRecord.syncChangeId.v
+          ..store.v = remoteRecord.record.v!.store.v
+          ..key.v = remoteRecord.record.v!.key.v
+          ..deleted.v = remoteRecord.record.v!.deleted.v ?? false;
+    if (existingSyncRecord == null) {
+      await db.dbSyncRecordStoreRef.add(client, syncRecord);
+    } else {
+      // Overwrite the existing sync record, clearing the dirty flag
+      // (remote wins).
+      syncRecord.dirty.v = false;
+      await db.txnPutSyncRecord(client, syncRecord);
+    }
 
     var ref = stringMapStoreFactory
         .store(remoteRecord.record.v!.store.v)
@@ -628,21 +676,37 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
             // create
             await _syncSourceRecordDown(txn, remoteRecord, stat);
           }
-        } else if (local.syncTimestamp.v != remoteRecord.syncTimestamp.v ||
-            local.syncChangeId.v != remoteRecord.syncChangeId.v ||
-            newSourceVersion) {
-          if (local.isDirty && !remoteRecord.isDeleted) {
-            // Conflict but the record is dirty locally, local wins!
-            // Keep the local data and push it up after the transaction.
-            // (a remote deletion still wins though)
-            conflictSyncRecordIds.add(local.id);
-          } else {
-            // update
-            await _syncSourceRecordDown(txn, remoteRecord, stat);
-          }
-          localMap?.remove(syncedKey);
         } else {
-          // Ok, don't delete it
+          var localChangeNum = local.syncChangeId.v ?? 0;
+          var remoteChangeNum = remoteRecord.syncChangeId.v!;
+          if (remoteChangeNum > localChangeNum) {
+            // The remote change num is strictly greater, remote wins,
+            // even if the record is dirty locally (the local change is
+            // discarded).
+            await _syncSourceRecordDown(
+              txn,
+              remoteRecord,
+              stat,
+              existingSyncRecord: local,
+            );
+          } else if (local.isDirty) {
+            // Same change num (or local above): the local change was made on
+            // top of the latest remote version, local wins! Keep the local
+            // data and push it up after the transaction.
+            conflictSyncRecordIds.add(local.id);
+          } else if (local.syncTimestamp.v != remoteRecord.syncTimestamp.v ||
+              local.syncChangeId.v != remoteRecord.syncChangeId.v ||
+              newSourceVersion) {
+            // update
+            await _syncSourceRecordDown(
+              txn,
+              remoteRecord,
+              stat,
+              existingSyncRecord: local,
+            );
+          } else {
+            // Ok, in sync, nothing to do
+          }
           localMap?.remove(syncedKey);
         }
       }

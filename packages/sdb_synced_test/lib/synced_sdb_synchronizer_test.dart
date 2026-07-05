@@ -766,12 +766,182 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       await context.dispose();
     });
 
+    Future<void> checkNullStat(SyncedSdbSynchronizer sync) async {
+      var stat = await sync.sync();
+      expect(stat, SyncedSyncStat());
+    }
+
+    test('conflict sync up one new record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      await (record1.cv()..name.v = 'text2').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncUp();
+      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+      expect((await record1.get(db1))!.name.v, 'text1');
+      expect((await record1.get(db2))!.name.v, 'text1');
+    });
+
+    test('conflict sync down one new record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      await (record1.cv()..name.v = 'text2').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncDown();
+      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
+
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+      expect((await record1.get(db1))!.name.v, 'text1');
+      expect((await record1.get(db2))!.name.v, 'text1');
+    });
+
+    test('conflict sync up one existing record', () async {
+      await (record1.cv()..name.v = 'text').put(db1);
+      await sync.sync();
+      await sync2.sync();
+      expect((await record1.get(db1))!.name.v, 'text');
+      expect((await record1.get(db2))!.name.v, 'text');
+      await (record1.cv()..name.v = 'text1bis').put(db1);
+      await (record1.cv()..name.v = 'text2bis').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncUp();
+      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+
+      expect((await record1.get(db1))!.name.v, 'text1bis');
+      expect((await record1.get(db2))!.name.v, 'text1bis');
+    });
+
+    test('conflict sync down one existing record', () async {
+      await (record1.cv()..name.v = 'text1').put(db1);
+      await sync.sync();
+      await sync2.sync();
+
+      await (record1.cv()..name.v = 'text1bis').put(db1);
+      await (record1.cv()..name.v = 'text2bis').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncDown();
+      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+
+      expect((await record1.get(db1))!.name.v, 'text1bis');
+      expect((await record1.get(db2))!.name.v, 'text1bis');
+    });
+    test('conflict sync up one existing locally deleted record', () async {
+      await (record1.cv()..name.v = 'text').put(db1);
+      await sync.sync();
+      await sync2.sync();
+      expect((await record1.get(db1))!.name.v, 'text');
+      expect((await record1.get(db2))!.name.v, 'text');
+      await (record1.cv()..name.v = 'text1bis').put(db1);
+      await record1.delete(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncUp();
+      expect(stat2, SyncedSyncStat(localCreatedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+
+      expect((await record1.get(db1))!.name.v, 'text1bis');
+      expect((await record1.get(db2))!.name.v, 'text1bis');
+    });
+
+    test('conflict sync down one existing locally deleted record', () async {
+      await (record1.cv()..name.v = 'text').put(db1);
+      await sync.sync();
+      await sync2.sync();
+      expect((await record1.get(db1))!.name.v, 'text');
+      expect((await record1.get(db2))!.name.v, 'text');
+      await (record1.cv()..name.v = 'text1bis').put(db1);
+      await record1.delete(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncDown();
+      expect(stat2, SyncedSyncStat(localCreatedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+
+      expect((await record1.get(db1))!.name.v, 'text1bis');
+      expect((await record1.get(db2))!.name.v, 'text1bis');
+    });
+    test('conflict sync up one deleted record', () async {
+      await (record1.cv()..name.v = 'text').put(db1);
+      await sync.sync();
+      await sync2.sync();
+
+      await record1.delete(db1);
+      await (record1.cv()..name.v = 'text2bis').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteDeletedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncUp();
+      expect(stat2, SyncedSyncStat(localDeletedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+
+      expect((await record1.get(db1)), isNull);
+      expect((await record1.get(db2)), isNull);
+    });
+
+    test('conflict sync down one deleted record', () async {
+      await (record1.cv()..name.v = 'text').put(db1);
+      await sync.sync();
+      await sync2.sync();
+
+      await record1.delete(db1);
+      await (record1.cv()..name.v = 'text2bis').put(db2);
+      var stat1 = await sync.sync();
+      expect(stat1, SyncedSyncStat(remoteDeletedCount: 1));
+      // The remote record (change num 1) is newer than the local never
+      // synced record (change num 0): remote wins, the local change is
+      // discarded.
+      var stat2 = await sync2.syncDown();
+      expect(stat2, SyncedSyncStat(localDeletedCount: 1));
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
+
+      expect((await record1.get(db1)), isNull);
+      expect((await record1.get(db2)), isNull);
+    });
+
     test('simple multi sync one record', () async {
       await (record1.cv()..name.v = 'text1').put(db1);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
-      var stat2 = await sync2.sync();
+      var stat2 = await sync2.syncUp();
+      expect(stat2, SyncedSyncStat());
+      stat2 = await sync2.sync();
       expect(stat2, SyncedSyncStat(localCreatedCount: 1));
+
+      await checkNullStat(sync);
+      await checkNullStat(sync2);
       var record = (await record1.get(db2))!;
       expect(record.name.v, 'text1');
       await record1.delete(db2);
@@ -781,35 +951,25 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       expect(stat1, SyncedSyncStat(localDeletedCount: 1));
     });
 
-    test('simple multi sync one conflict record', () async {
-      await (record1.cv()..name.v = 'text1').put(db1);
-      await (record1.cv()..name.v = 'text2').put(db2);
-      var stat1 = await sync.sync();
-      expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
-      var stat2 = await sync2.sync();
-      expect(stat2, SyncedSyncStat(remoteCreatedCount: 1));
-      var record = (await record1.get(db2))!;
-      expect(record.name.v, 'text2');
-
-      stat2 = await sync2.sync();
-      expect(stat2, SyncedSyncStat());
-
-      stat1 = await sync.sync();
-      expect(stat1, SyncedSyncStat(localUpdatedCount: 1));
-    });
-
     test('simple multi sync down one conflict record', () async {
       await (record1.cv()..name.v = 'text1').put(db1);
       await (record1.cv()..name.v = 'text2').put(db2);
       var stat1 = await sync.sync();
       var stat2 = await sync2.sync();
       expect(stat1, SyncedSyncStat(remoteCreatedCount: 1));
-      expect(stat2, SyncedSyncStat(remoteCreatedCount: 1));
+      // Remote wins (newer change num), the local change is discarded.
+      expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
       await (record1.cv()..name.v = 'text1_a').put(db1);
       await (record1.cv()..name.v = 'text2_a').put(db2);
+      // db2 is in sync (change num 1), its local change is pushed up
+      // (change num 2).
+      stat2 = await sync2.syncUp();
+      expect(stat2, SyncedSyncStat(remoteUpdatedCount: 1));
+      // The remote change (change num 2) is newer than the local dirty
+      // record (change num 1): remote wins during sync down.
       stat1 = await sync.syncDown();
-
-      expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
+      expect(stat1, SyncedSyncStat(localUpdatedCount: 1));
+      expect((await record1.get(db1))!.name.v, 'text2_a');
     });
 
     test('first multi sync two record', () async {
