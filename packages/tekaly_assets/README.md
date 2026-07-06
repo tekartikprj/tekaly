@@ -9,7 +9,7 @@ Common assets
 ```yaml
   tekaly_assets:
     git:
-      url: https://github.com/tekartikprj/tekaly.git
+      url: https://github.com/tekartikprj/tekaly
       path: packages/tekaly_assets
 ```
 

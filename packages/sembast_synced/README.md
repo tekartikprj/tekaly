@@ -13,6 +13,6 @@ Sembast synced is a package that allows to sync a sembast database with a remote
 ```yaml
   tekaly_sembast_synced:
     git:
-      url: https://github.com/tekartikprj/tekaly.git
+      url: https://github.com/tekartikprj/tekaly
       path: packages/sembast_synced
 ```

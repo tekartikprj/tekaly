@@ -9,6 +9,6 @@ test helpers
 ```yaml
   tekaly_sembast_synced_test:
     git:
-      url: https://github.com/tekartikprj/tekaly.git
+      url: https://github.com/tekartikprj/tekaly
       path: packages/sembast_synced_test
 ```

@@ -9,6 +9,6 @@ Stat helper (view, read)
 ```yaml
   tekaly_stat:
     git:
-      url: https://github.com/tekartikprj/tekaly.git
+      url: https://github.com/tekartikprj/tekaly
       path: packages/tekaly_stat
 ```
