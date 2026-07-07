@@ -5,6 +5,8 @@ import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
+import 'synced_sdb_import.dart';
+
 const String _dbVersionKey = 'version';
 const String _exportSignatureKey = 'tekaly_export';
 
@@ -91,6 +93,10 @@ Object? _jsonSorted(Object? value) {
 List<String> sdbExportLinesToJsonStringList(List<Object> lines) =>
     lines.map((line) => jsonEncode(_jsonSorted(line))).toList();
 
+/// Read to save string
+String sdbExportLinesToJsonlString(List<Object> lines) =>
+    sdbExportLinesToJsonStringList(lines).map((line) => '$line\n').join();
+
 /// Export helper.
 extension SyncedSdbExportExt on SyncedSdb {
   /// Export to memory (tekaly format).
@@ -114,5 +120,50 @@ extension SyncedSdbExportExt on SyncedSdb {
     );
 
     return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
+  }
+
+  /// Export database to a JSON Lines string.
+  Future<String> exportToJsonlString() async {
+    var exportInfo = await exportInMemory();
+    return sdbExportLinesToJsonlString(exportInfo.data);
+  }
+
+  /// Import database from a JSON Lines string.
+  Future<void> importFromJsonlString(String jsonl) async {
+    var lines = const LineSplitter()
+        .convert(jsonl)
+        .where((line) => line.trim().isNotEmpty)
+        .map((line) => jsonDecode(line))
+        .toList();
+
+    if (lines.isEmpty) {
+      throw const FormatException('empty jsonl');
+    }
+
+    var header = lines.first;
+    if (header is! Map || header['tekaly_export'] != 1) {
+      throw const FormatException('invalid export format');
+    }
+
+    var rest = lines.skip(1).toList();
+    Map<String, Object?>? syncMeta;
+    if (rest.isNotEmpty) {
+      var first = rest.first;
+      if (first is Map && first['store'] == null) {
+        syncMeta = Map<String, Object?>.from(first);
+      }
+    }
+
+    if (syncMeta == null) {
+      throw const FormatException('missing sync meta info');
+    }
+
+    var exportMeta = SyncedDbExportMeta()..fromMap(syncMeta);
+    var exportInfo = SyncedDbExportInfo(
+      metaInfo: exportMeta,
+      data: lines.cast<Object>(),
+    );
+
+    await importFromMemory(exportInfo: exportInfo);
   }
 }

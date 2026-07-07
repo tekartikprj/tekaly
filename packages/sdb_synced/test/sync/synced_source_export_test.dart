@@ -137,4 +137,27 @@ void main() {
 
     //await source.exrt
   });
+
+  test('export/import to/from JSONL string', () async {
+    var (syncedSdb, source) = await setupBasicDb();
+
+    var jsonl = await syncedSdb.exportToJsonlString();
+
+    expect(jsonl, contains('{"tekaly_export":1,"version":1}'));
+    expect(jsonl, contains('["my_key",{"test":123}]'));
+
+    await syncedSdb.close();
+    syncedSdb = SyncedSdb.newInMemory(options: _newOptions());
+    var db = await syncedSdb.database;
+    expect(await _myStoreRef.record('my_key').getValue(db), isNull);
+    expect((await syncedSdb.getSyncMetaInfo()), isNull);
+
+    await syncedSdb.importFromJsonlString(jsonl);
+    expect((await syncedSdb.getSyncMetaInfo())!.lastChangeId.v, 1);
+    expect(await _myStoreRef.record('my_key').getValue(db), {'test': 123});
+
+    var newJsonl = await syncedSdb.exportToJsonlString();
+    expect(newJsonl, jsonl);
+    await syncedSdb.close();
+  });
 }
