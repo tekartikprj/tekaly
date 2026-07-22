@@ -36,7 +36,7 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
         '${_collection.path}_meta',
       ).doc('info');
 
-  /// Constructor
+  /// Creates a [SyncedFsCollection] with [firestore] instance and target [_collection] reference.
   SyncedFsCollection({required this.firestore, required this._collection}) {
     cvAddConstructors([
       SyncedFsMetaInfoRecord.new,

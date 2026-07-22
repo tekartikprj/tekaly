@@ -10,7 +10,7 @@ class StatEventListResult {
   /// Next cursor
   final Object? nextCursor;
 
-  /// Constructor
+  /// Creates a [StatEventListResult] with [events] list and optional [nextCursor].
   StatEventListResult({required this.events, required this.nextCursor});
 }
 
@@ -34,7 +34,7 @@ class StatEventListQuery {
   /// maxCount (default to 1000)
   final int? maxCount;
 
-  /// Constructor
+  /// Creates a [StatEventListQuery] with optional filtering criteria and pagination [cursor].
   StatEventListQuery({
     this.name,
     this.maxCount,
@@ -145,7 +145,7 @@ class StatEventBase with StatEventMixin {
   @override
   String? idOrNull;
 
-  /// Constructor
+  /// Creates a [StatEventBase] instance with optional [timestamp], required event [name], and event [data].
   StatEventBase({DateTime? timestamp, required this.name, required this.data}) {
     this.timestamp = timestamp ?? DateTime.now();
   }

@@ -1,6 +1,4 @@
-/// Support for doing something awesome.
-///
-/// More dartdocs go here.
+/// Local caching service for remote media files and assets.
 library;
 
 export 'src/media_cache.dart'

@@ -17,7 +17,7 @@ class StatStorageOptionsFirebase {
   /// Firebase storage instance.
   final fb.FirebaseStorage? storage;
 
-  /// Constructor.
+  /// Creates a [StatStorageOptionsFirebase] with [firestore], optional [storage], and [fsRootDoc].
   StatStorageOptionsFirebase({
     required this.firestore,
     this.storage,
@@ -30,7 +30,7 @@ class StatStorageFirebase implements StatStorage {
   /// Options.
   final StatStorageOptionsFirebase options;
 
-  /// Constructor.
+  /// Creates a [StatStorageFirebase] instance with the given [options].
   StatStorageFirebase({required this.options});
 }
 
@@ -63,7 +63,7 @@ class StatClientFirebase extends StatClientBase {
 
   fb.Firestore get _firestore => storage.options.firestore;
 
-  /// Constructor
+  /// Creates a [StatClientFirebase] instance with [storage] and [clientId].
   StatClientFirebase({required this.storage, required super.clientId}) {
     cvAddConstructors([_FsStatEvent.new]);
   }
