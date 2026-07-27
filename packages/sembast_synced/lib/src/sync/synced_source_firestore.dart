@@ -152,10 +152,42 @@ class SyncedSourceFirestore
 
     // Warning this does not work in non authenticated mode
     // and even rest auth (not service account).
-    await firestore.runTransaction((txn) async {
-      var meta = await txnGetMetaInfo(txn);
+    if (firestore.supportsTransaction) {
+      await firestore.runTransaction((txn) async {
+        var meta = await txnGetMetaInfo(txn);
 
-      var existing = await txnGetSourceRecordById(txn, ref.syncId!);
+        var existing = await txnGetSourceRecordById(txn, ref.syncId!);
+        if (newRecord) {
+          if (existing != null) {
+            throw StateError(
+              'Expect not existing source record ${ref.syncId}, try again',
+            );
+          }
+        } else {
+          if (existing == null) {
+            throw StateError(
+              'Expect existing source record ${ref.syncId}, try again',
+            );
+          }
+        }
+        // increment change id
+        var lastChangeId = (meta?.lastChangeId.v ?? 0) + 1;
+
+        // Set in map and update meta info
+        map[syncChangeIdKey] = lastChangeId;
+        txn.set(
+          dataCollection.doc(ref.syncId!),
+          map,
+          fb.SetOptions(merge: true),
+        );
+        txn.set(metaInfoReference, {
+          metaLastChangeIdKey: lastChangeId,
+        }, fb.SetOptions(merge: true));
+      });
+    } else {
+      var meta = await getMetaInfo();
+
+      var existing = await getSourceRecordById(ref.syncId!);
       if (newRecord) {
         if (existing != null) {
           throw StateError(
@@ -174,11 +206,14 @@ class SyncedSourceFirestore
 
       // Set in map and update meta info
       map[syncChangeIdKey] = lastChangeId;
-      txn.set(dataCollection.doc(ref.syncId!), map, fb.SetOptions(merge: true));
-      txn.set(metaInfoReference, {
+      await dataCollection
+          .doc(ref.syncId!)
+          .set(map, fb.SetOptions(merge: true));
+
+      await metaInfoReference.set({
         metaLastChangeIdKey: lastChangeId,
       }, fb.SetOptions(merge: true));
-    });
+    }
 
     return (await getSourceRecord(ref))!;
   }
@@ -193,8 +228,26 @@ class SyncedSourceFirestore
 
   @override
   Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) async {
-    await firestore.runTransaction((txn) async {
-      var existing = await _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
+    if (firestore.supportsTransaction) {
+      await firestore.runTransaction((txn) async {
+        var existing = await _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
+        // timestamp can only be later
+        if (existing?.minIncrementalChangeId.v != null) {
+          if (info.minIncrementalChangeId.v != null) {
+            if (info.minIncrementalChangeId.v!.compareTo(
+                  existing!.minIncrementalChangeId.v!,
+                ) <
+                0) {
+              throw StateError(
+                'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}',
+              );
+            }
+          }
+        }
+        _txnSetRecord(txn, metaInfoReference, info, merge: true);
+      });
+    } else {
+      var existing = await getRecord<CvMetaInfo>(metaInfoReference);
       // timestamp can only be later
       if (existing?.minIncrementalChangeId.v != null) {
         if (info.minIncrementalChangeId.v != null) {
@@ -208,8 +261,8 @@ class SyncedSourceFirestore
           }
         }
       }
-      _txnSetRecord(txn, metaInfoReference, info, merge: true);
-    });
+      await setRecord(metaInfoReference, info, merge: true);
+    }
     return (await getMetaInfo())!;
   }
 
@@ -223,6 +276,18 @@ class SyncedSourceFirestore
     fb.DocumentReference doc,
   ) async {
     return cvRecordFromSnapshot<T>(await txn.get(doc));
+  }
+
+  /// Set a record
+  Future<void> setRecord(
+    fb.DocumentReference doc,
+    CvModel record, {
+    bool? merge,
+  }) async {
+    await doc.set(
+      mapSembastToFirestore(record.toMap()),
+      fb.SetOptions(merge: merge ?? false),
+    );
   }
 
   void _txnSetRecord(
@@ -286,10 +351,7 @@ class SyncedSourceFirestore
   }
 
   /// Get source record by id
-  Future<CvSyncedSourceRecord?> getSourceRecordById(
-    fb.Transaction txn,
-    String syncId,
-  ) async {
+  Future<CvSyncedSourceRecord?> getSourceRecordById(String syncId) async {
     return sourceRecordFromSnapshot(await dataCollection.doc(syncId).get());
   }
 
