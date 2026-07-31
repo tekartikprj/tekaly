@@ -150,44 +150,13 @@ class SyncedSourceFirestore
     }
     var map = _prepareRecordMap(record);
 
-    // Warning this does not work in non authenticated mode
-    // and even rest auth (not service account).
-    if (firestore.supportsTransaction) {
-      await firestore.runTransaction((txn) async {
-        var meta = await txnGetMetaInfo(txn);
+    // Warning native transaction does not work in non authenticated mode
+    // and even rest auth (not service account), in which case a write batch
+    // is used instead.
+    await firestore.runTransactionSupport((txn) async {
+      var meta = await txnGetMetaInfo(txn);
 
-        var existing = await txnGetSourceRecordById(txn, ref.syncId!);
-        if (newRecord) {
-          if (existing != null) {
-            throw StateError(
-              'Expect not existing source record ${ref.syncId}, try again',
-            );
-          }
-        } else {
-          if (existing == null) {
-            throw StateError(
-              'Expect existing source record ${ref.syncId}, try again',
-            );
-          }
-        }
-        // increment change id
-        var lastChangeId = (meta?.lastChangeId.v ?? 0) + 1;
-
-        // Set in map and update meta info
-        map[syncChangeIdKey] = lastChangeId;
-        txn.set(
-          dataCollection.doc(ref.syncId!),
-          map,
-          fb.SetOptions(merge: true),
-        );
-        txn.set(metaInfoReference, {
-          metaLastChangeIdKey: lastChangeId,
-        }, fb.SetOptions(merge: true));
-      });
-    } else {
-      var meta = await getMetaInfo();
-
-      var existing = await getSourceRecordById(ref.syncId!);
+      var existing = await txnGetSourceRecordById(txn, ref.syncId!);
       if (newRecord) {
         if (existing != null) {
           throw StateError(
@@ -206,14 +175,11 @@ class SyncedSourceFirestore
 
       // Set in map and update meta info
       map[syncChangeIdKey] = lastChangeId;
-      await dataCollection
-          .doc(ref.syncId!)
-          .set(map, fb.SetOptions(merge: true));
-
-      await metaInfoReference.set({
+      txn.set(dataCollection.doc(ref.syncId!), map, fb.SetOptions(merge: true));
+      txn.set(metaInfoReference, {
         metaLastChangeIdKey: lastChangeId,
       }, fb.SetOptions(merge: true));
-    }
+    });
 
     return (await getSourceRecord(ref))!;
   }
@@ -228,26 +194,8 @@ class SyncedSourceFirestore
 
   @override
   Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) async {
-    if (firestore.supportsTransaction) {
-      await firestore.runTransaction((txn) async {
-        var existing = await _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
-        // timestamp can only be later
-        if (existing?.minIncrementalChangeId.v != null) {
-          if (info.minIncrementalChangeId.v != null) {
-            if (info.minIncrementalChangeId.v!.compareTo(
-                  existing!.minIncrementalChangeId.v!,
-                ) <
-                0) {
-              throw StateError(
-                'minIncrementTimestamp ${info.minIncrementalChangeId.v} cannot be less then existing ${existing.minIncrementalChangeId.v}',
-              );
-            }
-          }
-        }
-        _txnSetRecord(txn, metaInfoReference, info, merge: true);
-      });
-    } else {
-      var existing = await getRecord<CvMetaInfo>(metaInfoReference);
+    await firestore.runTransactionSupport((txn) async {
+      var existing = await _txnGetRecord<CvMetaInfo>(txn, metaInfoReference);
       // timestamp can only be later
       if (existing?.minIncrementalChangeId.v != null) {
         if (info.minIncrementalChangeId.v != null) {
@@ -261,8 +209,8 @@ class SyncedSourceFirestore
           }
         }
       }
-      await setRecord(metaInfoReference, info, merge: true);
-    }
+      _txnSetRecord(txn, metaInfoReference, info, merge: true);
+    });
     return (await getMetaInfo())!;
   }
 
