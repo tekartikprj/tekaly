@@ -4,3 +4,9 @@ include: package:tekartik_lints/strict.yaml
 analyzer:
   exclude:
     - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
