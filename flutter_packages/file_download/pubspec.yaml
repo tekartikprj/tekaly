@@ -1,6 +1,6 @@
 name: tekaly_file_download
 description: "Flutter download helper"
-version: 0.0.2
+version: 0.0.3
 publish_to: none
 
 environment:
@@ -10,18 +10,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  web:
-  pub_semver: ">=2.2.0"
-  file_picker: ">=11.0.1"
-  tekartik_platform_browser:
+  tekaly_file_download_web:
     git:
-      url: https://github.com/tekartik/platform.dart
-      path: platform_browser
-    version: '>=0.2.1'
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/file_download_web
+  tekaly_file_picker_flutter:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: flutter_packages/file_picker_flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ">=6.0.0"
+  tekaly_file_picker:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/file_picker
   tekartik_lints_flutter:
     git:
       url: https://github.com/tekartik/common_flutter.dart

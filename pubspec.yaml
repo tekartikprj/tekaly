@@ -4,9 +4,13 @@ environment:
   sdk: ^3.12.0
 workspace:
   - flutter_packages/file_download
+  - flutter_packages/file_download_flutter_example
+  - flutter_packages/file_picker_flutter
+  - flutter_packages/file_picker_flutter_example
   - flutter_packages/firestore_explorer
   - test/firestore_explorer_test_app
   - packages/file_download_web
+  - packages/file_picker
   - packages/firestore_synced
   - packages/sembast_synced
   - packages/sembast_synced_test

@@ -1,4 +1,5 @@
+/// Flutter image download helper, on top of `download_file.dart`.
 library;
 
 export 'src/download/download_image.dart'
-    show DownloadImageInfo, downloadImage; // ignore: uri_does_not_exist
+    show DownloadImageInfo, DownloadImageInfoExtension, downloadImage;
