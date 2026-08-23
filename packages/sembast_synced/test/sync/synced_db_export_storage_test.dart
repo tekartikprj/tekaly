@@ -75,14 +75,23 @@ void main() {
     var result = await syncedDb.exportDatabaseToStorage(
       exportContext: importExportContext,
     );
-    expect(result.exportSize, 195);
+
+    var dbMeta = (await syncedDb.getSyncMetaInfo())!;
+    var timestamp = dbMeta.lastTimestamp.v!.toIso8601String();
+    try {
+      // this assumes a micro precision
+      expect(result.exportSize, 195);
+    } catch (_) {
+      // ignore: avoid_print
+      print('not 195?: $dbMeta (timestamp $timestamp)');
+      // this assumes a millis
+      expect(result.exportSize, 192);
+    }
     var meta = await storage
         .bucket()
         .file('my_test/export_meta.json')
         .readAsString();
 
-    var dbMeta = (await syncedDb.getSyncMetaInfo())!;
-    var timestamp = dbMeta.lastTimestamp.v!.toIso8601String();
     expect(meta, '{"lastChangeId":1,"lastTimestamp":"$timestamp"}');
     var content = await storage
         .bucket()
