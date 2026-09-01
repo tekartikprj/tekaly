@@ -8,6 +8,13 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  collection: ">=1.19.0"
+  cv: ">=1.1.10"
+  meta: ">=1.18.0"
+  path: ">=1.9.1"
+  tekartik_common_utils:
+    git:
+      url: https://github.com/tekartik/common_utils.dart
   tekartik_firebase_firestore:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart
@@ -20,6 +27,10 @@ dependencies:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
       path: app_cv_firestore
+  tekartik_app_cv_sdb:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      path: app_cv_sdb
   tekartik_app_sembast_firestore_type_adapters:
     git:
       url: https://github.com/tekartik/app_common_utils.dart
