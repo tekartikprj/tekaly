@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:tekaly_file_picker/file_picker_memory.dart';
 import 'package:tekaly_file_picker_flutter/file_picker_flutter.dart';
 
@@ -53,17 +54,15 @@ void main() {
   });
   group('TekalyPickedFileXFile', () {
     test('read', () async {
+      // XFile.name splits on the platform separator, so use a native path.
+      var path = p.absolute(p.join('tmp', 'test.bin'));
       var file = TekalyPickedFileXFile(
-        XFile.fromData(
-          Uint8List.fromList([1, 2, 3]),
-          path: '/tmp/test.bin',
-          length: 3,
-        ),
+        XFile.fromData(Uint8List.fromList([1, 2, 3]), path: path, length: 3),
       );
       expect(file.name, 'test.bin');
       expect(file.extension, 'bin');
-      expect(file.path, '/tmp/test.bin');
-      expect(file.uri, Uri.file('/tmp/test.bin'));
+      expect(file.path, path);
+      expect(file.uri, Uri.file(path));
       expect(await file.length(), 3);
       expect(await file.readAsBytes(), [1, 2, 3]);
       expect(await file.readAsByteStream().toList(), [
