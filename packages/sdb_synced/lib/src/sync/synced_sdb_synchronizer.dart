@@ -34,17 +34,32 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
             var localLastChangeId = local?.lastChangeId.v ?? 0;
             // devPrint('remote $remote, local: $local');
             if (remoteLastChangeId != localLastChangeId) {
-              lazySync();
+              _autoLazySync();
             } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
-              lazySync();
+              _autoLazySync();
             }
           });
       _autoSyncDbSubscription = db.onDirty().listen((dirty) {
         if (dirty) {
-          lazySync();
+          _autoLazySync();
         }
       });
     }
+  }
+
+  /// A lazy sync nobody awaits: its error is logged rather than left as an
+  /// unhandled one (a source that became unreadable, a database closed while
+  /// synchronizing).
+  void _autoLazySync() {
+    unawaited(
+      lazySync().catchError((Object e) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('auto sync error: $e');
+        }
+        return SyncedSyncStat();
+      }),
+    );
   }
 
   late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
