@@ -48,14 +48,14 @@ void main() {
       expect(await file.readAsString(), 'héllo');
     });
     test('file', () async {
-      var file = TekalyPickedFileMemory.file(
-        path: '/tmp/dir/My Image.PNG',
-        bytes: [1],
-      );
+      var path = '/tmp/dir/My Image.PNG';
+      var uri = Uri.file(path);
+      var file = TekalyPickedFileMemory.file(path: path, bytes: [1]);
       expect(file.name, 'My Image.PNG');
       expect(file.extension, 'png');
-      expect(file.uri, Uri.file('/tmp/dir/My Image.PNG'));
-      expect(file.path, '/tmp/dir/My Image.PNG');
+      expect(file.uri, uri);
+      // The path uses the platform separator (backslashes on Windows).
+      expect(file.path, uri.toFilePath());
     });
     test('is a TekalyPickedFile', () {
       expect(
