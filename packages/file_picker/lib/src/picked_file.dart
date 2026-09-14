@@ -22,7 +22,7 @@ abstract class TekalyPickedFile {
   }
 
   /// The length of the file in bytes.
-  Future<int> length();
+  Future<int?> length();
 
   /// Read the whole content at once.
   ///

@@ -22,7 +22,7 @@ class TekalyPickedFilePlatformFile extends TekalyPickedFile {
   String? get path => platformFile.path;
 
   @override
-  Future<int> length() => platformFile.length();
+  Future<int?> length() => platformFile.length();
 
   @override
   Future<Uint8List> readAsBytes() => platformFile.readAsBytes();

@@ -95,15 +95,15 @@ class _PickedFileTileState extends State<PickedFileTile> {
             _buildField('path', file.path),
             _buildField('uri', file.uri?.toString()),
             _buildField('runtimeType', '${file.runtimeType}'),
-            FutureBuilder<int>(
+            FutureBuilder<int?>(
               future: file.length(),
               builder: (context, snapshot) => _buildField(
                 'length()',
                 snapshot.hasError
                     ? '${snapshot.error}'
-                    : (snapshot.data == null
+                    : (snapshot.connectionState == ConnectionState.waiting
                           ? '...'
-                          : formatSize(snapshot.data!)),
+                          : (formatSizeOrNull(snapshot.data) ?? '<null>')),
               ),
             ),
             if (_bytes case var bytes?)

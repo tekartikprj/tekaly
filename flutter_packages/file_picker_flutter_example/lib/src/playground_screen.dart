@@ -355,6 +355,12 @@ String formatSize(int bytes) {
   return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
 
+/// Format or null
+String? formatSizeOrNull(int? bytes) {
+  if (bytes == null) return null;
+  return formatSize(bytes);
+}
+
 /// Read [file] chunk by chunk, returning the chunk count and the total size.
 Future<(int, int)> readByteStreamInfo(TekalyPickedFile file) async {
   var chunkCount = 0;
