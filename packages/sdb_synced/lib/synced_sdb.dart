@@ -28,4 +28,5 @@ export 'src/sync/synced_sdb_import.dart'
         SyncedSdbSynchronizerFromTekalyExport;
 export 'src/sync/synced_sdb_min_service.dart' show SyncedSdbReadMinService;
 export 'src/sync/synced_sdb_synchronizer.dart' show SyncedSdbSynchronizer;
-export 'synced_sdb_internals.dart' show SyncedSource, SyncedDataSourceRef;
+export 'synced_sdb_internals.dart'
+    show SyncedSource, SyncedSourceRead, SyncedSourceWrite, SyncedDataSourceRef;

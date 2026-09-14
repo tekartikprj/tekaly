@@ -42,51 +42,135 @@ extension SyncedDataSourceRefExt on SyncedDataSourceRef {
       SyncedDataSourceRef(syncId: _sourceSyncId, store: store, key: key);
 }
 
-/// Default mixin implementation.
-mixin SyncedSourceDefaultMixin implements SyncedSource {
-  void initBuilders() {
-    cvAddConstructor(CvSyncedSourceRecord.new);
-    cvAddConstructor(CvMetaInfo.new);
-    cvAddConstructor(CvSyncedSourceRecordData.new);
-  }
+/// Default polling implementation of [SyncedSourceRead.onMetaInfo], reading
+/// the meta info every [checkDelay] (1 hour by default).
+Stream<CvMetaInfo?> syncedSourceReadPollMetaInfo(
+  SyncedSourceRead source, {
+  Duration? checkDelay,
+}) {
+  checkDelay ??= const Duration(minutes: 60);
+  late StreamController<CvMetaInfo?> controller;
+  controller = StreamController<CvMetaInfo?>(
+    onListen: () async {
+      while (true) {
+        var info = await source.getMetaInfo();
+        if (!controller.isClosed) {
+          controller.add(info);
+        } else {
+          break;
+        }
+        await Future<void>.delayed(checkDelay!);
+        if (controller.isClosed) {
+          break;
+        }
+      }
+    },
+    onCancel: () {
+      controller.close();
+    },
+  );
+  return controller.stream;
+}
 
-  /// Fix and check
-  void fixAndCheckPutSyncedRecord(CvSyncedSourceRecord record) {
-    if (record.record.v!.store.v == null) {
-      throw ArgumentError.notNull(record.record.v!.store.name);
-    }
-    if (record.record.v!.key.v == null) {
-      throw ArgumentError.notNull(record.record.v!.key.name);
-    }
-    // Set delete field if not done
-    record.record.v!.deleted.v ??= false;
+/// Register the cv builders used by the synced sources.
+void syncedSourceInitBuilders() {
+  cvAddConstructor(CvSyncedSourceRecord.new);
+  cvAddConstructor(CvMetaInfo.new);
+  cvAddConstructor(CvSyncedSourceRecordData.new);
+}
+
+/// Fix and check a record before putting it (store and key must be set,
+/// the deleted flag defaults to false).
+void syncedSourceFixAndCheckPutSyncedRecord(CvSyncedSourceRecord record) {
+  if (record.record.v!.store.v == null) {
+    throw ArgumentError.notNull(record.record.v!.store.name);
+  }
+  if (record.record.v!.key.v == null) {
+    throw ArgumentError.notNull(record.record.v!.key.name);
+  }
+  // Set delete field if not done
+  record.record.v!.deleted.v ??= false;
+}
+
+/// Default mixin implementation for a read-only source.
+mixin SyncedSourceReadDefaultMixin implements SyncedSourceRead {
+  void initBuilders() {
+    syncedSourceInitBuilders();
   }
 
   @override
-  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) {
-    checkDelay ??= const Duration(minutes: 60);
-    late StreamController<CvMetaInfo?> controller;
-    controller = StreamController<CvMetaInfo?>(
-      onListen: () async {
-        while (true) {
-          var info = await getMetaInfo();
-          if (!controller.isClosed) {
-            controller.add(info);
-          } else {
-            break;
-          }
-          await Future<void>.delayed(checkDelay!);
-          if (controller.isClosed) {
-            break;
-          }
-        }
-      },
-      onCancel: () {
-        controller.close();
-      },
-    );
-    return controller.stream;
+  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) =>
+      syncedSourceReadPollMetaInfo(this, checkDelay: checkDelay);
+
+  @override
+  Future<CvMetaInfo?> getMetaInfo() {
+    throw UnimplementedError('SyncedSourceRead.getMetaInfo');
   }
+
+  @override
+  Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) {
+    throw UnimplementedError('SyncedSourceRead.getSourceRecord');
+  }
+
+  @override
+  Future<SyncedSourceRecordList> getSourceRecordList({
+    int? afterChangeId,
+    int? limit,
+    bool? includeDeleted,
+  }) {
+    throw UnimplementedError('SyncedSourceRead.getSourceRecordList');
+  }
+
+  @override
+  Future<void> close() async {
+    // Do nothing by default
+  }
+}
+
+/// Default mixin implementation for a write-only source.
+mixin SyncedSourceWriteDefaultMixin implements SyncedSourceWrite {
+  void initBuilders() {
+    syncedSourceInitBuilders();
+  }
+
+  /// Fix and check
+  void fixAndCheckPutSyncedRecord(CvSyncedSourceRecord record) =>
+      syncedSourceFixAndCheckPutSyncedRecord(record);
+
+  @override
+  Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) {
+    throw UnimplementedError('SyncedSourceWrite.putMetaInfo');
+  }
+
+  @override
+  Future<void> putRawRecord(CvSyncedSourceRecord record) {
+    throw UnimplementedError('SyncedSourceWrite.putRawRecord');
+  }
+
+  @override
+  Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record) {
+    throw UnimplementedError('SyncedSourceWrite.putSourceRecord');
+  }
+
+  @override
+  Future<void> close() async {
+    // Do nothing by default
+  }
+}
+
+/// Default mixin implementation (read and write).
+mixin SyncedSourceDefaultMixin implements SyncedSource {
+  void initBuilders() {
+    syncedSourceInitBuilders();
+  }
+
+  /// Fix and check
+  void fixAndCheckPutSyncedRecord(CvSyncedSourceRecord record) =>
+      syncedSourceFixAndCheckPutSyncedRecord(record);
+
+  @override
+  Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) =>
+      syncedSourceReadPollMetaInfo(this, checkDelay: checkDelay);
 
   @override
   Future<CvMetaInfo?> getMetaInfo() {
@@ -128,19 +212,16 @@ mixin SyncedSourceDefaultMixin implements SyncedSource {
   }
 }
 
-abstract class SyncedSource {
-  /// Sync id, change Id is generated or looked for if not given, store and key must be set
-  Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record);
-
+/// Read side of a synced source (fetching records and meta info).
+///
+/// A read-only source (an export on a storage, a public api...) only needs to
+/// implement this; a [SyncedSource] implements both the read and write side.
+abstract class SyncedSourceRead {
   /// Get a record using
   Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef);
 
   /// Get the meta info
   Future<CvMetaInfo?> getMetaInfo();
-
-  /// Update meta info, source should check the existing for the worst case.
-  @visibleForTesting
-  Future<CvMetaInfo?> putMetaInfo(CvMetaInfo info);
 
   /// if [afterChangeId] is not null, only the update after it are fetched
   ///
@@ -150,10 +231,6 @@ abstract class SyncedSource {
     int? limit,
     bool? includeDeleted,
   });
-
-  /// Put a raw record on the storage
-  @visibleForTesting
-  Future<void> putRawRecord(CvSyncedSourceRecord record);
 
   /// Stream of meta info change
   /// If [checkDelay] is set, meta info will be checked every [checkDelay] duration
@@ -165,7 +242,30 @@ abstract class SyncedSource {
   Future<void> close();
 }
 
-extension SyncedSourceExt on SyncedSource {
+/// Write side of a synced source (pushing records and meta info).
+///
+/// A [SyncedSource] implements both the read and write side.
+abstract class SyncedSourceWrite {
+  /// Sync id, change Id is generated or looked for if not given, store and key must be set
+  Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record);
+
+  /// Update meta info, source should check the existing for the worst case.
+  @visibleForTesting
+  Future<CvMetaInfo?> putMetaInfo(CvMetaInfo info);
+
+  /// Put a raw record on the storage
+  @visibleForTesting
+  Future<void> putRawRecord(CvSyncedSourceRecord record);
+
+  /// Close the source.
+  Future<void> close();
+}
+
+/// Read-write synced source.
+abstract class SyncedSource implements SyncedSourceRead, SyncedSourceWrite {}
+
+/// Helpers on the read side of a source (any [SyncedSource] too).
+extension SyncedSourceExt on SyncedSourceRead {
   Future<SyncedSourceRecordList> getAllSourceRecordList({
     int? afterChangeId,
     int? stepLimit,

@@ -20,14 +20,25 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
   StreamSubscription? _autoSyncDbSubscription;
 
   /// Synced SDB synchronizer constructor.
+  ///
+  /// Either a read-write [source], or a [readSource] and an optional
+  /// [writeSource] must be given (see [SyncedDbSynchronizerCommon]):
+  /// - [source] only: regular read-write synchronization.
+  /// - [readSource] only: read-only synchronization (sync down only).
+  /// - [readSource] and [writeSource]: hybrid, for example read from firestore
+  ///   and write through an api.
   SyncedSdbSynchronizer({
     required SyncedSdb db,
-    required super.source,
+    super.source,
+    super.readSource,
+    super.writeSource,
     super.autoSync = false,
   }) : super(db: db) {
     if (autoSync) {
       _autoSyncSourceSubscription =
-          streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
+          streamJoin2(readSource.onMetaInfo(), db.onSyncMetaInfo()).listen((
+            event,
+          ) {
             var remote = event.$1;
             var local = event.$2;
             var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
@@ -39,11 +50,14 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
               _autoLazySync();
             }
           });
-      _autoSyncDbSubscription = db.onDirty().listen((dirty) {
-        if (dirty) {
-          _autoLazySync();
-        }
-      });
+      // Local changes can only be pushed when there is a write source.
+      if (!isReadOnly) {
+        _autoSyncDbSubscription = db.onDirty().listen((dirty) {
+          if (dirty) {
+            _autoLazySync();
+          }
+        });
+      }
     }
   }
 
@@ -182,6 +196,13 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
   @override
   Future<SyncedSyncStat> doSyncUp({bool fullSync = false}) async {
     var stat = SyncedSyncStat();
+    if (isReadOnly) {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('syncUp: read-only, skipped');
+      }
+      return stat;
+    }
 
     var dirtySourceRecords = await getLocalDirtySourceRecords();
     if (dirtySourceRecords.isNotEmpty) {
@@ -208,6 +229,11 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     List<SyncedSdbSyncSourceRecord> dirtySourceRecords,
     SyncedSyncStat stat,
   ) async {
+    var writeSource = this.writeSource;
+    if (writeSource == null) {
+      // Read-only: local changes stay dirty.
+      return;
+    }
     // Loop until no pushed record gets changed locally during the push
     while (dirtySourceRecords.isNotEmpty) {
       /// Sync record ids of records changed locally during putSourceRecord
@@ -226,7 +252,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
           /// Remote wins if the remote change num is strictly greater than
           /// the last change num seen locally: read the remote record first.
           var localChangeNum = syncSourceRecord.syncRecord!.syncChangeId.v ?? 0;
-          var remoteRecord = await source.getSourceRecord(
+          var remoteRecord = await readSource.getSourceRecord(
             syncSourceRecord.sourceRecord!.ref,
           );
           var remoteChangeNum = remoteRecord?.syncChangeId.v ?? 0;
@@ -247,7 +273,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
           sentList.add(syncSourceRecord);
           list.add(
             SyncedSdbSyncSourceRecord()
-              ..sourceRecord = await source.putSourceRecord(
+              ..sourceRecord = await writeSource.putSourceRecord(
                 syncSourceRecord.sourceRecord!,
               )
               ..syncRecord = syncSourceRecord.syncRecord,
@@ -456,7 +482,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       includeDeleted = true;
       afterChangeId = initialLastChangeId;
     }
-    dirtyRemoteSourceRecords = await source.getAllSourceRecordList(
+    dirtyRemoteSourceRecords = await readSource.getAllSourceRecordList(
       afterChangeId: afterChangeId,
       stepLimit: stepLimitDown,
       includeDeleted: includeDeleted,
@@ -603,8 +629,9 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       },
     );
 
-    /// Push up the locally dirty records for which local wins.
-    if (conflictSyncRecordIds.isNotEmpty) {
+    /// Push up the locally dirty records for which local wins (they stay
+    /// dirty for a read-only synchronizer).
+    if (conflictSyncRecordIds.isNotEmpty && !isReadOnly) {
       var conflictDirtySourceRecords = await _getLocalDirtySourceRecordsByIds(
         conflictSyncRecordIds,
       );

@@ -25,10 +25,10 @@ Object? jsonDecodeSembastValueOrNull(Object? value) {
   return _codec.decode(value);
 }
 
-/// Export/import helper for any [SyncedSource] (e.g. [SyncedSourceApi]),
+/// Export helper for any [SyncedSourceRead] (e.g. [SyncedSourceApi]),
 /// using the same tekaly export format as [SyncedDb]/[SyncedSdb] (see
 /// `SyncedDbExportExt.exportInMemory`/`SyncedDbImportExt.importFromMemory`).
-extension SyncedSourceExportExt on SyncedSource {
+extension SyncedSourceExportExt on SyncedSourceRead {
   /// Export to memory (tekaly format).
   ///
   /// Since a [SyncedSource] is a change log (not a snapshot store), this
@@ -85,10 +85,13 @@ extension SyncedSourceExportExt on SyncedSource {
 
     return SyncedDbExportInfo(metaInfo: exportMeta, data: lines);
   }
+}
 
+/// Import helper for any [SyncedSourceWrite] (e.g. [SyncedSourceApi]).
+extension SyncedSourceImportExt on SyncedSourceWrite {
   /// Imports a database snapshot (tekaly format, as produced by
-  /// [exportInMemory]) into this source, pushing each record as a new
-  /// change.
+  /// [SyncedSourceExportExt.exportInMemory]) into this source, pushing each
+  /// record as a new change.
   Future<void> importFromMemory({
     /// Export info to import.
     required SyncedDbExportInfo exportInfo,

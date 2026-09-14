@@ -15,6 +15,8 @@ export 'src/sync/synced_db_lib.dart'
         SyncedDbExtension,
         SyncedDataSourceRef,
         SyncedSource,
+        SyncedSourceRead,
+        SyncedSourceWrite,
         SyncedSourceMemory,
         SyncedSourceMemoryCompat,
         syncedDbStoreFactory,

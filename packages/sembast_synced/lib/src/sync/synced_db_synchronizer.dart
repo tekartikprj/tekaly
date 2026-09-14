@@ -246,15 +246,22 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   StreamSubscription? _autoSyncSourceSubscription;
   StreamSubscription? _autoSyncDbSubscription;
 
-  /// Synchronizer
+  /// Synchronizer.
+  ///
+  /// Either a read-write [source], or a [readSource] and an optional
+  /// [writeSource] must be given (see [SyncedDbSynchronizerCommon]).
   SyncedDbSynchronizer({
     required SyncedDb db,
-    required super.source,
+    super.source,
+    super.readSource,
+    super.writeSource,
     super.autoSync = false,
   }) : super(db: db) {
     if (autoSync) {
       _autoSyncSourceSubscription =
-          streamJoin2(source.onMetaInfo(), db.onSyncMetaInfo()).listen((event) {
+          streamJoin2(readSource.onMetaInfo(), db.onSyncMetaInfo()).listen((
+            event,
+          ) {
             var remote = event.$1;
             var local = event.$2;
             var remoteLastChangeId = remote?.lastChangeId.v ?? 0;
@@ -266,12 +273,15 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
               lazySync();
             }
           });
-      _autoSyncDbSubscription = db.onDirty().listen((dirty) {
-        // devPrint('localDirty $dirty');
-        if (dirty) {
-          lazySync();
-        }
-      });
+      // Local changes can only be pushed when there is a write source.
+      if (!isReadOnly) {
+        _autoSyncDbSubscription = db.onDirty().listen((dirty) {
+          // devPrint('localDirty $dirty');
+          if (dirty) {
+            lazySync();
+          }
+        });
+      }
     }
   }
 
@@ -305,6 +315,13 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   @override
   Future<SyncedSyncStat> doSyncUp({bool fullSync = false}) async {
     var stat = SyncedSyncStat();
+    if (isReadOnly) {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('syncUp: read-only, skipped');
+      }
+      return stat;
+    }
 
     var dirtySourceRecords = await getLocalDirtySourceRecords();
     if (dirtySourceRecords.isNotEmpty) {
@@ -322,6 +339,11 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
     List<SyncedSyncSourceRecord> dirtySourceRecords,
     SyncedSyncStat stat,
   ) async {
+    var writeSource = this.writeSource;
+    if (writeSource == null) {
+      // Read-only: local changes stay dirty.
+      return;
+    }
     // Loop until no pushed record gets changed locally during the push
     while (dirtySourceRecords.isNotEmpty) {
       /// Sync record ids of records changed locally during putSourceRecord
@@ -340,7 +362,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
           /// Remote wins if the remote change num is strictly greater than
           /// the last change num seen locally: read the remote record first.
           var localChangeNum = syncSourceRecord.syncRecord!.syncChangeId.v ?? 0;
-          var remoteRecord = await source.getSourceRecord(
+          var remoteRecord = await readSource.getSourceRecord(
             syncSourceRecord.sourceRecord!.ref,
           );
           var remoteChangeNum = remoteRecord?.syncChangeId.v ?? 0;
@@ -361,7 +383,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
           sentList.add(syncSourceRecord);
           list.add(
             SyncedSyncSourceRecord()
-              ..sourceRecord = await source.putSourceRecord(
+              ..sourceRecord = await writeSource.putSourceRecord(
                 syncSourceRecord.sourceRecord!,
               )
               ..syncRecord = syncSourceRecord.syncRecord,
@@ -610,7 +632,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       includeDeleted = true;
       afterChangeId = initialLastChangeId;
     }
-    dirtyRemoteSourceRecords = await source.getAllSourceRecordList(
+    dirtyRemoteSourceRecords = await readSource.getAllSourceRecordList(
       afterChangeId: afterChangeId,
       stepLimit: stepLimitDown,
       includeDeleted: includeDeleted,
@@ -760,8 +782,9 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       }
     });
 
-    /// Push up the locally dirty records for which local wins.
-    if (conflictSyncRecordIds.isNotEmpty) {
+    /// Push up the locally dirty records for which local wins (they stay
+    /// dirty for a read-only synchronizer).
+    if (conflictSyncRecordIds.isNotEmpty && !isReadOnly) {
       var conflictDirtySourceRecords = await _getLocalDirtySourceRecordsByIds(
         conflictSyncRecordIds,
       );
@@ -793,8 +816,26 @@ abstract class SyncedDbSynchronizerCommon {
   /// On synced stream
   Stream<SyncedSyncStat> onSynced() => _onSyncedSubject.stream;
 
-  /// The source being synchronized
-  final SyncedSource source;
+  /// The source records and meta info are read from (sync down).
+  final SyncedSourceRead readSource;
+
+  /// The source local changes are pushed to (sync up), null for a read-only
+  /// synchronizer (local changes are then never pushed and stay dirty).
+  final SyncedSourceWrite? writeSource;
+
+  /// The read-write source being synchronized, when a single [SyncedSource]
+  /// was given, null for a read-only or hybrid (different read and write
+  /// sources) synchronizer.
+  SyncedSource? get source {
+    var readSource = this.readSource;
+    if (readSource is SyncedSource && identical(readSource, writeSource)) {
+      return readSource;
+    }
+    return null;
+  }
+
+  /// True when no write source is set: local changes are never pushed.
+  bool get isReadOnly => writeSource == null;
 
   /// Default to 10 up
   int? stepLimitUp;
@@ -805,12 +846,26 @@ abstract class SyncedDbSynchronizerCommon {
   /// Sync lock
   final syncLock = Lock();
 
-  /// Constructor
+  /// Constructor.
+  ///
+  /// Either a read-write [source], or a [readSource] and an optional
+  /// [writeSource] must be given:
+  /// - [source] only: regular read-write synchronization.
+  /// - [readSource] only: read-only synchronization (sync down only).
+  /// - [readSource] and [writeSource]: hybrid, for example read from firestore
+  ///   and write through an api.
   SyncedDbSynchronizerCommon({
-    required this.source,
+    SyncedSource? source,
+    SyncedSourceRead? readSource,
+    SyncedSourceWrite? writeSource,
     this.autoSync = false,
     required SyncedDbCommon db,
-  }) : dbCommon = db;
+  }) : readSource =
+           readSource ??
+           source ??
+           (throw ArgumentError('source or readSource must be set')),
+       writeSource = writeSource ?? source,
+       dbCommon = db;
 
   /// Db common
   final SyncedDbCommon dbCommon;
@@ -879,7 +934,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Use it internally to cache the source meta info.
   Future<CvMetaInfo?> getSourceMetaInfo() async {
-    var sourceMetaInfo = await source.getMetaInfo();
+    var sourceMetaInfo = await readSource.getMetaInfo();
     _lastSyncMetaInfo = sourceMetaInfo;
     return lastSyncMetaInfo;
   }
