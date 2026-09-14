@@ -43,6 +43,47 @@ Future<void> main() async {
         'lastChangeId': 1,
       });
     });
+    test('read only', () async {
+      var firestore = newFirestoreMemory();
+      var databaseFactory = newSdbFactoryMemory();
+      var rootPath = 'test/read_only';
+      // A writer fills the source.
+      var writer = await AutoSynchronizedFirestoreSyncedSdb.open(
+        options: AutoSynchronizedFirestoreSyncedSdbOptions(
+          syncedSdbOptions: sdbEntityOptions,
+          firestore: firestore,
+          databaseFactory: databaseFactory,
+          rootDocumentPath: rootPath,
+          dbName: 'writer.db',
+        ),
+      );
+      await writer.initialSynchronizationDone();
+      await record.put(writer.database, DbEntity()..name.v = 'remote');
+      await writer.synchronize();
+      await writer.close();
+
+      // A read-only reader gets it, its own changes never go up.
+      syncedSdb = await AutoSynchronizedFirestoreSyncedSdb.open(
+        options: AutoSynchronizedFirestoreSyncedSdbOptions(
+          syncedSdbOptions: sdbEntityOptions,
+          firestore: firestore,
+          databaseFactory: databaseFactory,
+          rootDocumentPath: rootPath,
+          dbName: 'reader.db',
+          readOnly: true,
+        ),
+      );
+      expect(syncedSdb.synchronizer.isReadOnly, isTrue);
+      await syncedSdb.initialSynchronizationDone();
+      var db = syncedSdb.database;
+      expect(await record.get(db), DbEntity()..name.v = 'remote');
+      await record.put(db, DbEntity()..name.v = 'local');
+      await syncedSdb.synchronize();
+      expect((await firestore.doc('$rootPath/meta/info').get()).data, {
+        'lastChangeId': 1,
+      });
+      await syncedSdb.close();
+    });
     test('add', () async {
       // debugSyncedSync = true;
       // syncedSdbDebug = devTrue;

@@ -23,12 +23,17 @@ class AutoSynchronizedFirestoreSyncedSdbOptions
   /// Sembast db name
   final String dbName;
 
+  /// Read-only: only sync down, local changes are never pushed to firestore
+  /// (a public source the user cannot write to).
+  final bool readOnly;
+
   /// Firestore synced db options
   AutoSynchronizedFirestoreSyncedSdbOptions({
     Firestore? firestore,
     required this.syncedSdbOptions,
     required this.databaseFactory,
     required this.dbName,
+    this.readOnly = false,
 
     /// Default ok for tests only
     this.rootDocumentPath = 'test/local',
@@ -111,14 +116,17 @@ class _AutoSynchronizedFirestoreSyncedSdb
       name: options.dbName,
     );
     database = await syncedSdb.database;
-    synchronizer = SyncedSdbSynchronizer(
-      db: syncedSdb,
-      source: SyncedSourceFirestore(
-        firestore: options.firestore,
-        rootPath: options.rootDocumentPath,
-      ),
-      autoSync: true,
+    var source = SyncedSourceFirestore(
+      firestore: options.firestore,
+      rootPath: options.rootDocumentPath,
     );
+    synchronizer = options.readOnly
+        ? SyncedSdbSynchronizer(
+            db: syncedSdb,
+            readSource: source,
+            autoSync: true,
+          )
+        : SyncedSdbSynchronizer(db: syncedSdb, source: source, autoSync: true);
   }();
 
   @override
