@@ -196,8 +196,7 @@ abstract class SyncedDbSynchronizerCommon {
            source ??
            (throw ArgumentError('source or readSource must be set')),
        writeSource = writeSource ?? source,
-       retryOptions =
-           retryOptions ?? const SyncedDbSynchronizerRetryOptions(),
+       retryOptions = retryOptions ?? const SyncedDbSynchronizerRetryOptions(),
        dbCommon = db;
 
   /// Db common

@@ -161,7 +161,10 @@ void main() {
       );
       expect(firstSync(Duration.zero), const Duration(seconds: 1));
       expect(firstSync(const Duration(seconds: 9)), const Duration(seconds: 1));
-      expect(firstSync(const Duration(seconds: 15)), const Duration(seconds: 6));
+      expect(
+        firstSync(const Duration(seconds: 15)),
+        const Duration(seconds: 6),
+      );
       expect(
         firstSync(const Duration(seconds: 20)),
         const Duration(seconds: 11),

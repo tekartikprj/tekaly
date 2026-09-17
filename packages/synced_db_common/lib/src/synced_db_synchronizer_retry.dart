@@ -93,7 +93,8 @@ class SyncedDbSynchronizerRetryOptions {
     if (retryingFor < firstSyncShortDuration) {
       return firstSyncDelay;
     }
-    if (firstSyncDelay >= maxDelay || retryingFor >= firstSyncMaxDelayDuration) {
+    if (firstSyncDelay >= maxDelay ||
+        retryingFor >= firstSyncMaxDelayDuration) {
       return maxDelay;
     }
     var growDuration = firstSyncMaxDelayDuration - firstSyncShortDuration;

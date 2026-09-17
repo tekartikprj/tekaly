@@ -42,9 +42,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
             // info: it must start the retries, it never reaches the join.
             readSource.onMetaInfo().handleError(handleAutoSyncSourceError),
             db.onSyncMetaInfo(),
-          ).listen((
-            event,
-          ) {
+          ).listen((event) {
             var remote = event.$1;
             var local = event.$2;
             var remoteLastChangeId = remote?.lastChangeId.v ?? 0;

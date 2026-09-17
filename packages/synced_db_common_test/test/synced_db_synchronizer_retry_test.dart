@@ -55,8 +55,9 @@ class _SilentMetaInfoSource
       (await inner.putMetaInfo(info))!;
 
   @override
-  Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) =>
-      inner.getSourceRecord(sourceRef);
+  Future<CvSyncedSourceRecord?> getSourceRecord(
+    SyncedDataSourceRef sourceRef,
+  ) => inner.getSourceRecord(sourceRef);
 
   @override
   Future<SyncedSourceRecordList> getSourceRecordList({

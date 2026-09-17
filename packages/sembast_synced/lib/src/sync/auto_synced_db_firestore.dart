@@ -47,8 +47,7 @@ class AutoSynchronizedFirestoreSyncedDbOptions
     this.rootDocumentPath = 'test/local',
   }) : syncedDbOptions = syncedDbOptions ?? SyncedDbOptions(),
        firestore = firestore ?? Firestore.instance,
-       retryOptions =
-           retryOptions ?? const SyncedDbSynchronizerRetryOptions();
+       retryOptions = retryOptions ?? const SyncedDbSynchronizerRetryOptions();
 }
 
 /// Auto synchronized firestore synced db
