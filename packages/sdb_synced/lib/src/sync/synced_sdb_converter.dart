@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cv/cv.dart';
 import 'package:idb_shim/idb_sdb.dart';
-import 'package:tekaly_sembast_synced/synced_db.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart' as firestore;
 
 /// True for null, num, String, bool

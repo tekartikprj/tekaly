@@ -4,7 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:tekaly_sdb_synced/src/sync/synced_sdb_codec.dart';
 import 'package:tekaly_sdb_synced/src/sync/synced_sdb_export.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
-import 'package:tekaly_sembast_synced/synced_db.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
 /// Decode export data (either a jsonl string or an already decoded list of

@@ -1,0 +1,39 @@
+name: tekaly_synced_db_common
+description: Synchronized database common code (synced source, models, export format, synchronizer base) shared by tekaly_sembast_synced and tekaly_sdb_synced.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+# Add regular dependencies here.
+dependencies:
+  collection: ">=1.19.0"
+  cv: ">=1.1.10"
+  meta: ">=1.18.0"
+  path: ">=1.9.1"
+  # Only for the value types (Timestamp, Blob) and the json encodable codec,
+  # both shared by sembast and sdb (idb_shim).
+  sembast: ">=3.8.10-1"
+  synchronized:
+  tekartik_app_common_utils:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      path: app
+  tekartik_app_cv_firestore:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      path: app_cv_firestore
+    version: '>=0.1.0'
+  tekartik_common_utils:
+    git:
+      url: https://github.com/tekartik/common_utils.dart
+  tekartik_firebase_firestore:
+    git:
+      url: https://github.com/tekartik/firebase_firestore.dart
+      path: firestore
+    version: '>=0.8.0'
+dev_dependencies:
+  lints: ">=6.1.0"
+  test: ">=1.31.0"
+resolution: workspace

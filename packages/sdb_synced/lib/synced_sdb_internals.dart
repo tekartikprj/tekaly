@@ -1,4 +1,4 @@
-export 'package:tekaly_sembast_synced/synced_db_internals.dart'
+export 'package:tekaly_synced_db_common/synced_db_common.dart'
     show
         SyncedDbTimestamp,
         SyncedDbBlob,
@@ -9,7 +9,6 @@ export 'package:tekaly_sembast_synced/synced_db_internals.dart'
         DbSyncMetaInfoCommon,
         CvSyncedSourceRecord,
         CvSyncedSourceRecordData,
-        SyncedDbSynchronizer,
         CvMetaInfo,
         SyncedSource,
         SyncedSourceRead,

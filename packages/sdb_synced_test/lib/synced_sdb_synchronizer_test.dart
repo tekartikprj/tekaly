@@ -3,7 +3,7 @@ import 'package:idb_shim/utils/sdb_import_export.dart';
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/synced_sdb.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
-import 'package:tekaly_sembast_synced_test/synced_db_synchronizer_test.dart';
+import 'package:tekaly_synced_db_common_test/synced_db_common_test_utils.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
 import 'synced_sdb_test_common.dart';

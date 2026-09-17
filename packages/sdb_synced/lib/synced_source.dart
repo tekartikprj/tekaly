@@ -1,1 +1,1 @@
-export 'package:tekaly_sembast_synced/synced_source.dart';
+export 'package:tekaly_synced_db_common/synced_source.dart';

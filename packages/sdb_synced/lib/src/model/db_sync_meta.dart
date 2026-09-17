@@ -1,5 +1,5 @@
 // /syncedM/info
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
 /// Sync meta info

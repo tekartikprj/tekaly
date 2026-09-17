@@ -5,8 +5,11 @@ This document describes the current synchronization mechanism implemented in:
 - `packages/sembast_synced/lib/src/sync/synced_db_synchronizer.dart` (`SyncedDbSynchronizer`, sembast based)
 - `packages/sdb_synced/lib/src/sync/synced_sdb_synchronizer.dart` (`SyncedSdbSynchronizer`, sdb/idb based)
 
-Both share the same base class `SyncedDbSynchronizerCommon` and implement the exact
-same logic; only the local database API differs (sembast `Transaction` vs
+Both share the same base class `SyncedDbSynchronizerCommon` (in
+`packages/synced_db_common/lib/src/synced_db_synchronizer_common.dart`, package
+`tekaly_synced_db_common`, which also holds the synced source abstraction, its
+models, the memory and firestore sources and the export format) and implement
+the exact same logic; only the local database API differs (sembast `Transaction` vs
 `SdbTransaction`, `bool` vs `int` for flags, value conversion via
 `mapSdbToSyncedDb`/`mapSyncedDbToSdb` on the sdb side).
 

@@ -1,4 +1,4 @@
-export 'package:tekaly_sembast_synced/sembast_synced.dart'
+export 'package:tekaly_synced_db_common/synced_db_common.dart'
     show
         CvSyncedSourceRecord,
         CvMetaInfo,

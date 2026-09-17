@@ -1,7 +1,7 @@
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/synced_sdb.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:test/test.dart';
 
 import 'synced_source_test_common.dart';

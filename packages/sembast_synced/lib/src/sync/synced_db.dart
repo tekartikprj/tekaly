@@ -1,7 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:sembast/sembast_memory.dart';
-import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
@@ -9,12 +8,6 @@ import 'package:tekartik_common_utils/common_utils_import.dart';
 import 'model/db_sync_record.dart';
 
 const unsyncedLocalStoreNamePrefix = 'local_';
-
-/// Synced db timestamp (sembast based)
-typedef SyncedDbTimestamp = DbTimestamp;
-
-/// Synced db blob (sembast based)
-typedef SyncedDbBlob = DbBlob;
 
 /// Synced db store factory
 final syncedDbStoreFactory = stringMapStoreFactory;
@@ -196,15 +189,6 @@ abstract class SyncedDbBase with SyncedDbMixin {
     }
   }
 }
-
-/// Synced db common transaction
-abstract class SyncedDbCommonTransaction implements SyncedDbCommonClient {}
-
-/// Synced db common client
-abstract class SyncedDbCommonClient {}
-
-/// Common synced db
-abstract class SyncedDbCommon {}
 
 /// Synced db
 abstract class SyncedDb implements SyncedDbCommon {

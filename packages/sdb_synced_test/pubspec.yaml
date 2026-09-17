@@ -1,5 +1,5 @@
 name: tekaly_sdb_synced_test
-description: Testing sembast_synced
+description: Testing sdb_synced
 version: 1.0.0
 publish_to: none
 
@@ -10,24 +10,15 @@ environment:
 dependencies:
   collection:
   idb_shim: ">=2.8.1-4"
-  sembast: ">=3.8.5+1"
-  tekaly_sembast_synced:
+  dev_test: ">=1.0.1"
+  tekaly_synced_db_common_test:
     git:
       url: https://github.com/tekartikprj/tekaly
-      path: packages/sembast_synced
-  dev_test: ">=1.0.1"
+      path: packages/synced_db_common_test
   tekaly_sdb_synced:
     git:
       url: https://github.com/tekartikprj/tekaly
       path: packages/sdb_synced
-  tekaly_sembast_synced_test:
-    git:
-      url: https://github.com/tekartikprj/tekaly
-      path: packages/sembast_synced_test
-  tekartik_app_cv_sembast:
-    git:
-      url: https://github.com/tekartik/app_common_utils.dart
-      path: app_cv_sembast
   tekartik_firebase_firestore:
     git:
       url: https://github.com/tekartik/firebase_firestore.dart

@@ -1,0 +1,328 @@
+// ignore_for_file: avoid_print, invalid_use_of_visible_for_testing_member
+
+import 'dart:async';
+
+import 'package:dev_test/test.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
+
+SyncedSourceMemory newInMemorySyncedSourceMemory() {
+  return SyncedSourceMemory();
+}
+
+Future<SyncedSourceMemory> setupNewInMemorySyncedSourceMemory() async {
+  return newInMemorySyncedSourceMemory();
+}
+
+void main() {
+  group('synced_source_default_memory', () {
+    runSyncedSourceTest(
+      setupNewInMemorySyncedSourceMemory,
+      skipRealTimeChanges: true,
+    );
+    strictSyncedSourceTest(setupNewInMemorySyncedSourceMemory);
+  });
+}
+
+void strictSyncedSourceTest(
+  Future<SyncedSource> Function() createSyncedSource, {
+  bool? skipRealTimeChanges,
+}) {
+  late SyncedSource source;
+  setUp(() async {
+    source = await createSyncedSource();
+  });
+  tearDown(() async {
+    await source.close();
+  });
+  test('putRecord format', () async {
+    var resultRecord = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..value.v = {'int': 1, 'timestamp': SyncedDbTimestamp(2, 3000)}
+          ..key.v = '1'),
+    ));
+    var readRecord = await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '1'),
+    );
+    expect(readRecord, resultRecord);
+    var syncTimestamp = readRecord!.syncTimestamp.v;
+    expect(syncTimestamp, isNotNull);
+    var map = (readRecord.toMap());
+    expect(map, {
+      'syncId': 'test|1',
+      'syncTimestamp': syncTimestamp,
+      'syncChangeId': 1,
+      'record': {
+        'store': 'test',
+        'key': '1',
+        'value': {'int': 1, 'timestamp': SyncedDbTimestamp(2, 3000)},
+        'deleted': false,
+      },
+    });
+    // Read using the fixed sync id (what a read min service does)
+    var readRecordData = await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '1').fixedSourceSyncId(),
+    );
+    expect(readRecordData?.record.v?.value.v, {
+      'int': 1,
+      'timestamp': SyncedDbTimestamp(2, 3000),
+    });
+  });
+}
+
+void runSyncedSourceTest(
+  Future<SyncedSource> Function() createSyncedSource, {
+  bool? skipRealTimeChanges,
+}) {
+  skipRealTimeChanges ??= false;
+  late SyncedSource source;
+  setUp(() async {
+    source = await createSyncedSource();
+  });
+
+  test('putRecord', () async {
+    var record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '1'),
+    ));
+    print('syncId: ${record.syncId.v}');
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': 1,
+      'record': {'store': 'test', 'key': '1', 'deleted': false},
+    });
+    var syncId = record.syncId.v;
+    expect(syncId, isNotNull);
+    expect(record.syncTimestamp.v, isNotNull);
+    expect(record.recordStore, 'test');
+    expect(record.syncChangeId.v, 1);
+
+    record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '1')
+        ..syncId.v = syncId,
+    ));
+
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': 2,
+      'record': {'store': 'test', 'key': '1', 'deleted': false},
+    });
+
+    expect(record.syncId.v, syncId);
+    expect(record.syncChangeId.v, 2);
+    // Changing!
+    record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test2'
+          ..key.v = '2')
+        ..syncId.v = syncId,
+    ));
+    expect(record.syncChangeId.v, 3);
+    expect(record.syncId.v, isNot(syncId));
+    expect(record.syncTimestamp.v, isNotNull);
+    expect(record.recordStore, 'test2');
+    expect(record.recordKey, '2');
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': 3,
+      'record': {'store': 'test2', 'key': '2', 'deleted': false},
+    });
+  });
+  test('put/getRecord data', () async {
+    var record = (await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..value.v = {
+            'string': 'Some test',
+            'bool': true,
+            'double': 1.5,
+            'int': 1,
+            'timestamp': SyncedDbTimestamp(2, 3000),
+            'blob': SyncedDbBlob.fromList([1, 2, 3]),
+          }
+          ..key.v = '1'),
+    ));
+    var syncChangeId = record.syncChangeId.v;
+    print(
+      'syncId: ${record.syncId.v}, syncChangeId: $syncChangeId, record: ${record.toMap()}',
+    );
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': syncChangeId,
+
+      'record': {
+        'store': 'test',
+        'key': '1',
+        'value': {
+          'string': 'Some test',
+          'bool': true,
+          'double': 1.5,
+          'int': 1,
+          'timestamp': SyncedDbTimestamp(2, 3000),
+          'blob': SyncedDbBlob.fromList([1, 2, 3]),
+        },
+        'deleted': false,
+      },
+    });
+    var syncId = record.syncId.v;
+    expect(syncId, isNotNull);
+    expect(record.syncTimestamp.v, isNotNull);
+    expect(record.recordStore, 'test');
+    //expect(record.syncChangeId.v, 1);
+    var ref = SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId);
+    record = (await source.getSourceRecord(ref))!;
+    expect(record.toMap(), {
+      'syncId': record.syncId.v,
+      'syncTimestamp': record.syncTimestamp.v,
+      'syncChangeId': syncChangeId,
+
+      'record': {
+        'store': 'test',
+        'key': '1',
+        'value': {
+          'string': 'Some test',
+          'bool': true,
+          'double': 1.5,
+          'int': 1,
+          'timestamp': SyncedDbTimestamp(2, 3000),
+          'blob': SyncedDbBlob.fromList([1, 2, 3]),
+        },
+        'deleted': false,
+      },
+    });
+  });
+  test('getRecord', () async {
+    var syncId = '1234';
+    var ref = SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId);
+
+    //var record = await source.getSourceRecord(ref);
+    // expect(record, isNull);
+    SyncedSourceRecord? record = await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '1')
+        ..syncId.v = syncId,
+    );
+    var newSyncId = record.syncId.v!;
+    record = (await source.getSourceRecord(ref))!;
+    expect(record.syncId.v, newSyncId);
+    expect(newSyncId, isNot(syncId));
+
+    // Without syncId
+    record = (await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '1'),
+    ))!;
+    expect(record.syncId.v, newSyncId);
+    // Wrong syncId
+    record = (await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '1'),
+    ))!;
+    expect(record.syncId.v, newSyncId);
+    // Wrong key (fail)
+    record = await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '2', syncId: newSyncId),
+    );
+    expect(record, isNull);
+  });
+  test('getSourceRecordList', () async {
+    //var list = await source.getSourceRecordList();
+    //expect(list.lastChangeId, isNull);
+    //expect(list.list, isEmpty);
+    var meta = await source.getMetaInfo();
+    var lastChangeId = meta?.lastChangeId.v ?? 0;
+    var record = await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '1'),
+    );
+
+    var list = await source.getSourceRecordList(
+      includeDeleted: true,
+      afterChangeId: lastChangeId,
+    );
+    expect(list.list, hasLength(1));
+    expect(list.list.first.syncId.v, record.syncId.v);
+    var record2 = await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '2'),
+    );
+    list = await source.getSourceRecordList(
+      includeDeleted: true,
+      afterChangeId: lastChangeId,
+    );
+    //print(list);
+    expect(list.list.map((e) => e.syncId.v), [
+      record.syncId.v,
+      record2.syncId.v,
+    ]);
+  });
+  test('metaInfo', () async {
+    var info = await source.getMetaInfo();
+    var lastChangedId = info?.lastChangeId.v ?? 0;
+    info = await source.putMetaInfo(
+      CvMetaInfo()..lastChangeId.v = ++lastChangedId,
+    );
+    expect(info!.lastChangeId.v!, lastChangedId);
+    info = (await source.putMetaInfo(
+      CvMetaInfo()..lastChangeId.v = ++lastChangedId,
+    ))!;
+    expect(info.lastChangeId.v, lastChangedId);
+    try {
+      await source.putMetaInfo(
+        CvMetaInfo()..lastChangeId.v = lastChangedId - 1,
+      );
+      fail('should fail');
+    } catch (e) {
+      print(e);
+    }
+  });
+  test('onMetaInfo simple', () async {
+    var info = await source.getMetaInfo();
+    var lastChangeId = info?.lastChangeId.v ?? 0;
+    await source.putMetaInfo(CvMetaInfo()..lastChangeId.v = ++lastChangeId);
+    expect((await source.onMetaInfo().first)!.lastChangeId.v!, lastChangeId);
+  });
+  test('onMetaInfo real time', () async {
+    var info = await source.getMetaInfo();
+    var lastChangeId = info?.lastChangeId.v ?? 0;
+    await source.putMetaInfo(CvMetaInfo()..lastChangeId.v = ++lastChangeId);
+    late Completer<void> completer;
+    Future<void> newCompleter() {
+      completer = Completer<void>();
+      return completer.future;
+    }
+
+    var future = newCompleter();
+    var list = <CvMetaInfo?>[];
+
+    var subscription = source.onMetaInfo().listen((metaInfo) {
+      // print('onMetaInfo $metaInfo');
+      list.add(metaInfo);
+      completer.complete();
+    });
+
+    await future;
+    expect(list, hasLength(1));
+    future = newCompleter();
+    await source.putMetaInfo(CvMetaInfo()..lastChangeId.v = ++lastChangeId);
+    await future;
+    expect(list, hasLength(2));
+    await subscription.cancel();
+  }, skip: skipRealTimeChanges);
+}

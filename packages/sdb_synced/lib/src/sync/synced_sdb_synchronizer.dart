@@ -4,7 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/src/sync/utils.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_common_utils/common_utils_import.dart';
 import 'package:tekartik_app_common_utils/lazy_runner.dart';
 import 'package:tekartik_common_utils/list_utils.dart';

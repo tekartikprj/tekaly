@@ -3,7 +3,7 @@ import 'package:tekaly_sdb_synced/synced_sdb.dart';
 import 'package:tekaly_sdb_synced_test/synced_sdb_synchronizer_test.dart';
 
 import 'synced_db_read_min_service_test.dart';
-export 'package:tekaly_sembast_synced_test/synced_source_test.dart';
+export 'package:tekaly_synced_db_common_test/synced_source_test.dart';
 
 /// Entity in the database.
 class DbEntity extends ScvStringRecordBase {

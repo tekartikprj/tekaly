@@ -50,5 +50,3 @@ mixin CvMetaInfoMixin implements CvMetaInfo {
   @override
   List<CvField> get fields => [minIncrementalChangeId, lastChangeId, version];
 }
-
-/// /meta/info

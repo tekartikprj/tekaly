@@ -19,7 +19,8 @@ bool _looksLikeEncodedValue(Map map) {
 /// export format (values encoded as `{"$timestamp": ...}` / `{"$blob": ...}`).
 ///
 /// This must stay in sync with the format produced by
-/// `sembastToTekalyExportDatabaseLines` in `tekaly_sembast_synced` since both
+/// `sembastToTekalyExportDatabaseLines` in `tekaly_sembast_synced` and
+/// `syncedDbValueToJsonEncodable` in `tekaly_synced_db_common` since all
 /// providers must produce/parse the same tekaly export content.
 Object? sdbValueToJsonEncodable(Object? value) {
   if (_isBasicTypeOrNull(value)) {

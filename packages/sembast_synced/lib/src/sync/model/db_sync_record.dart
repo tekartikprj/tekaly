@@ -1,45 +1,22 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:sembast/timestamp.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
-import 'source_record.dart';
-
-const syncTimestampKey = 'syncTimestamp';
-const syncChangeIdKey = 'syncChangeId';
-const recordStoreFieldKey = 'store';
-const recordKeyFieldKey = 'key';
-const recordDeletedFieldKey = 'deleted';
-const recordValueFieldKey = 'value';
-const recordDirtyFieldKey = 'dirty';
-const recordFieldKey = 'record';
-const syncIdKey = 'syncId';
+export 'package:tekaly_synced_db_common/synced_db_common.dart'
+    show
+        DbSyncRecordCommon,
+        syncTimestampKey,
+        syncChangeIdKey,
+        recordStoreFieldKey,
+        recordKeyFieldKey,
+        recordDeletedFieldKey,
+        recordValueFieldKey,
+        recordDirtyFieldKey,
+        recordFieldKey,
+        syncIdKey;
 
 final dbSyncRecordModel = DbSyncRecord();
-
-abstract class DbSyncRecordCommon implements CvModel {
-  /// Local store
-  CvField<String> get store;
-
-  /// Local key
-  CvField<String> get key;
-
-  /// Whether the record is deleted
-  bool get isDeleted;
-
-  /// Local dirty/deleted/added
-  /// Whether the record is dirty
-  bool get isDirty;
-
-  /// Source id
-  CvField<String> get syncId;
-
-  /// Source timestamp
-  CvField<Timestamp> get syncTimestamp;
-
-  /// Source change id
-  CvField<int> get syncChangeId;
-}
 
 class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
   /// Local store
@@ -63,7 +40,7 @@ class DbSyncRecord extends DbIntRecordBase implements DbSyncRecordCommon {
 
   /// Source timestamp
   @override
-  final syncTimestamp = CvField<Timestamp>(syncTimestampKey);
+  final syncTimestamp = CvField<SyncedDbTimestamp>(syncTimestampKey);
 
   /// Source change id
   @override

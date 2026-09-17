@@ -1,14 +1,10 @@
 import 'package:path/path.dart';
-import 'package:tekaly_sembast_synced/src/api/import_common.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
-// ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart' as fb;
-//import 'package:tekartik_firebase_firestore/utils/auto_id_generator.dart' as fb;
 import 'package:tekartik_firebase_firestore/utils/track_changes_support.dart';
 
-import 'sembast_firestore_converter.dart';
+import 'synced_db_common_lib.dart';
 
 /// Synced source firestore
 class SyncedSourceFirestore

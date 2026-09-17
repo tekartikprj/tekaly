@@ -2,9 +2,9 @@
 
 import 'package:cv/cv.dart';
 import 'package:meta/meta.dart';
-import 'package:sembast/timestamp.dart';
 import 'package:synchronized/synchronized.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+
+import 'synced_db_common_lib.dart';
 
 typedef _Key = (String store, String key);
 
@@ -105,7 +105,7 @@ class SyncedSourceMemoryCompat
       var newRecord = CvSyncedSourceRecord()
         ..copyFrom(record)
         ..syncId.v = syncId
-        ..syncTimestamp.v = Timestamp.now()
+        ..syncTimestamp.v = SyncedDbTimestamp.now()
         ..syncChangeId.v = lastChangeId;
       _sourceRecordsBySyncId[syncId] = newRecord;
       _sourceRecordsByStoreAndKey[(

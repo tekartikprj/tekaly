@@ -1,10 +1,10 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:tekaly_sembast_synced/src/sembast/sembast_import.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
+import 'package:cv/cv.dart';
 
-import 'db_sync_record.dart';
+import '../synced_db_common_types.dart';
+import '../synced_source.dart';
+import 'db_sync_common.dart';
 
 /// Compat
 typedef SyncedSourceRecordData = CvSyncedSourceRecordData;
@@ -66,15 +66,11 @@ mixin SyncedSourceRecordMixin implements CvSyncedSourceRecord {
 
   /// Server timestamp
   @override
-  final syncTimestamp = CvField<DbTimestamp>(syncTimestampKey);
+  final syncTimestamp = CvField<SyncedDbTimestamp>(syncTimestampKey);
 
   /// The record data
   @override
   final record = CvModelField<CvSyncedSourceRecordData>(recordFieldKey);
-  //final store = CvField<String>(recordStoreFieldKey);
-  //final key = CvField<String>(recordKeyFieldKey);
-  //final deleted = CvField<bool>(recordDeletedFieldKey);
-  //final value = CvField<Map>(recordValueFieldKey);
 
   @override
   List<CvField> get fields => [syncId, syncTimestamp, syncChangeId, record];
@@ -117,7 +113,7 @@ abstract class CvSyncedSourceRecord implements CvSyncedSourceRecordCoreMeta {
   CvField<int> get syncChangeId;
 
   /// Server timestamp
-  CvField<DbTimestamp> get syncTimestamp;
+  CvField<SyncedDbTimestamp> get syncTimestamp;
 
   /// The record data
   CvModelField<CvSyncedSourceRecordData> get record;

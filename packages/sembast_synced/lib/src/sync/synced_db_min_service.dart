@@ -1,4 +1,4 @@
-import 'package:tekaly_sembast_synced/src/sync/synced_source.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 import '../../synced_db.dart';

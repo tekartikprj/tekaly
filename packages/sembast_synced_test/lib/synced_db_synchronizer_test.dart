@@ -4,12 +4,15 @@ import 'package:dev_test/test.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_synced_db_common_test/synced_db_common_test_utils.dart';
 import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
-import 'package:tekartik_common_utils/env_utils.dart';
 
 import 'synced_db_test_common.dart';
 import 'synced_source_test.dart';
+
+export 'package:tekaly_synced_db_common_test/synced_db_common_test_utils.dart'
+    show exampleTimestamp1;
 
 Future<SyncTestsContext> setupNewInMemorySyncTestsContext() async {
   //    setUp(() async {
@@ -17,10 +20,6 @@ Future<SyncTestsContext> setupNewInMemorySyncTestsContext() async {
     ..syncedDb = SyncedDb.newInMemory(syncedStoreNames: syncedStoreNames)
     ..source = newInMemorySyncedSourceMemory();
 }
-
-/// Web steps might not handled microseconds
-Timestamp exampleTimestamp1() =>
-    kDartIsWeb ? Timestamp(1, 1000000) : Timestamp(1, 1000);
 
 var syncedStoreNames = [dbEntityStoreName];
 

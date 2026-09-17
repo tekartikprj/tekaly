@@ -12,6 +12,8 @@ workspace:
   - packages/file_download_web
   - packages/file_picker
   - packages/firestore_synced
+  - packages/synced_db_common
+  - packages/synced_db_common_test
   - packages/sembast_synced
   - packages/sembast_synced_test
   - packages/sdb_synced

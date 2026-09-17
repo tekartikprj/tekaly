@@ -1,3 +1,1 @@
-export 'src/api/synced_source.dart'
-    show SyncedSourceExportExt, SyncedSourceImportExt;
-export 'src/sync/synced_source_memory.dart' show SyncedSourceMemory;
+export 'package:tekaly_synced_db_common/synced_source.dart';

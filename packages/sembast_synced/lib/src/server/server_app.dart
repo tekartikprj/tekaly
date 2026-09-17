@@ -17,7 +17,7 @@ import 'package:tekaly_sembast_synced/src/api/sync_api.dart';
 import 'package:tekaly_sembast_synced/src/api/synced_source_api.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
 import 'package:tekaly_sembast_synced/src/firebase/model/fs_models.dart';
-import 'package:tekaly_sembast_synced/src/sync/synced_source_firestore.dart';
+import 'package:tekaly_synced_db_common/synced_db_common_firestore.dart';
 //import 'package:tekartik_firebase_functions_node/firebase_functions_universal.dart';
 /*
 import 'firebase_universal.dart';
@@ -28,8 +28,6 @@ import 'model/info_response.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart';
 import 'package:tekartik_firebase_functions/firebase_functions.dart';
 import 'package:tekartik_http/http.dart';
-
-import '../sync/model/source_meta_info.dart';
 
 Model bodyAsMap(ExpressHttpRequest request) {
   return requestBodyAsJsonObject(request.body)!;

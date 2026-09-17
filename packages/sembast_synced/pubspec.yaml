@@ -9,6 +9,10 @@ environment:
 # Add regular dependencies here.
 dependencies:
   cv: ">=1.1.10"
+  tekaly_synced_db_common:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/synced_db_common
   collection:
   sembast: ">=3.8.10-1"
   tekartik_app_cv_sembast:

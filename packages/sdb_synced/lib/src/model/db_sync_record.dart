@@ -1,33 +1,18 @@
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
-import 'source_record.dart';
 
-/// Sync timestamp key.
-const syncTimestampKey = 'syncTimestamp';
-
-/// Sync change id key.
-const syncChangeIdKey = 'syncChangeId';
-
-/// Record store field key.
-const recordStoreFieldKey = 'store';
-
-/// Record key field key.
-const recordKeyFieldKey = 'key';
-
-/// Record deleted field key.
-const recordDeletedFieldKey = 'deleted';
-
-/// Record value field key.
-const recordValueFieldKey = 'value';
-
-/// Record dirty field key.
-const recordDirtyFieldKey = 'dirty';
-
-/// Record field key.
-const recordFieldKey = 'record';
-
-/// Sync id key.
-const syncIdKey = 'syncId';
+export 'package:tekaly_synced_db_common/synced_db_common.dart'
+    show
+        syncTimestampKey,
+        syncChangeIdKey,
+        recordStoreFieldKey,
+        recordKeyFieldKey,
+        recordDeletedFieldKey,
+        recordValueFieldKey,
+        recordDirtyFieldKey,
+        recordFieldKey,
+        syncIdKey;
 
 /// Sync record model.
 final dbSyncRecordModel = SdbSyncRecord();

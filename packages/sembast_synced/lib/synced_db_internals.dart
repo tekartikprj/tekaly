@@ -31,6 +31,6 @@ export 'src/sync/synced_db_lib.dart'
         SyncedSourceRecordList,
         CvMetaInfoMixin,
         debugSyncedSync,
-        CvMetaInfoRecord;
-export 'src/sync/synced_db_synchronizer.dart' show SyncedDbSynchronizerCommon;
+        CvMetaInfoRecord,
+        SyncedDbSynchronizerCommon;
 export 'synced_db.dart';

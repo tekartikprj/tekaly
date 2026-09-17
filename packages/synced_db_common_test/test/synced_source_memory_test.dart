@@ -1,10 +1,8 @@
 // ignore_for_file: avoid_print
 
-import 'package:sembast/timestamp.dart';
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
-import 'package:tekaly_sembast_synced_test/synced_source_test.dart';
-
 import 'package:dev_test/test.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
+import 'package:tekaly_synced_db_common_test/synced_source_test.dart';
 
 Future<SyncedSourceMemory> setupNewInMemorySyncedSourceMemory() async {
   return newInMemorySyncedSourceMemory();
@@ -30,7 +28,7 @@ void main() {
         CvSyncedSourceRecord()
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = 'test'
-            ..value.v = {'int': 1, 'timestamp': Timestamp(2, 3000)}
+            ..value.v = {'int': 1, 'timestamp': SyncedDbTimestamp(2, 3000)}
             ..key.v = '1'),
       ));
 

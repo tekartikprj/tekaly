@@ -1,11 +1,18 @@
 // ignore_for_file: directives_ordering
 
-import 'package:tekaly_sembast_synced/synced_db_internals.dart';
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
-import 'db_sync_record.dart';
-
-export 'package:tekaly_sembast_synced/src/sync/model/source_record.dart';
+export 'package:tekaly_synced_db_common/synced_db_common.dart'
+    show
+        SyncedSourceRecordData,
+        SyncedRecordKey,
+        CvSyncedSourceRecordData,
+        SyncedSourceRecordMixin,
+        CvSyncedSourceRecordExt,
+        SyncedSourceRecord,
+        CvSyncedSourceRecordCoreMeta,
+        CvSyncedSourceRecord;
 
 /// Mixin
 mixin SdbSyncedSourceRecordMixin implements CvSyncedSourceRecord {
