@@ -1,6 +1,6 @@
-## sembast_synced
+## sdb_synced
 
-Sembast synced is a package that allows to sync a sembast database with a remote server:
+Sdb synced is a package that allows to sync an sdb (idb_shim) database with a remote server:
 - firestore database
 - export/import to/from a file
 - predefined api
