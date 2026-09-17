@@ -30,11 +30,6 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
   /// The database being synchronized
   late final SyncedDb db = dbCommon as SyncedDb;
 
-  final _firstSyncDoneCompleter = Completer<void>.sync();
-
-  /// True when the first sync is done (could take forever the first time if offline)
-  Future<void> firstSyncDownDone() => _firstSyncDoneCompleter.future;
-
   /// Get local dirty source records
   Future<List<SyncedSyncSourceRecord>> getLocalDirtySourceRecords() async {
     var list = <SyncedSyncSourceRecord>[];
@@ -131,10 +126,16 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
     super.readSource,
     super.writeSource,
     super.autoSync = false,
+    super.retryOptions,
   }) : super(db: db) {
     if (autoSync) {
       _autoSyncSourceSubscription =
-          streamJoin2(readSource.onMetaInfo(), db.onSyncMetaInfo()).listen((
+          streamJoin2(
+            // An unreachable source reports an error rather than its meta
+            // info: it must start the retries, it never reaches the join.
+            readSource.onMetaInfo().handleError(handleAutoSyncSourceError),
+            db.onSyncMetaInfo(),
+          ).listen((
             event,
           ) {
             var remote = event.$1;
@@ -143,9 +144,9 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
             var localLastChangeId = local?.lastChangeId.v ?? 0;
             // devPrint('remote $remote, local: $local');
             if (remoteLastChangeId != localLastChangeId) {
-              lazySync();
+              triggerAutoSync();
             } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
-              lazySync();
+              triggerAutoSync();
             }
           });
       // Local changes can only be pushed when there is a write source.
@@ -153,15 +154,19 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
         _autoSyncDbSubscription = db.onDirty().listen((dirty) {
           // devPrint('localDirty $dirty');
           if (dirty) {
-            lazySync();
+            triggerAutoSync();
           }
         });
       }
+      // The joined meta info stream above only emits once the source has
+      // reported its meta info, which never happens while the source is
+      // unreachable: make sure a first synchronization is attempted anyway.
+      startFirstSyncWatchdog();
     }
   }
 
-  // ignore: unused_field
-  var _closing = false;
+  @override
+  FutureOr<SyncedSyncStat> autoSyncAction() => lazySync();
 
   /// Needed for autoSync.
   /// Wait for last sync to terminate.
@@ -169,7 +174,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
     _autoSyncSourceSubscription?.cancel().unawait();
     _autoSyncDbSubscription?.cancel().unawait();
     await syncLock.synchronized(() {
-      _closing = true;
+      closeCommon();
     });
     try {
       await closeSingleFlight();
@@ -666,9 +671,7 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       await _pushLocalDirtySourceRecords(conflictDirtySourceRecords, stat);
     }
 
-    if (!_firstSyncDoneCompleter.isCompleted) {
-      _firstSyncDoneCompleter.complete();
-    }
+    markFirstSyncDone();
     if (debugSyncedSync) {
       // ignore: avoid_print
       print('syncDown: $stat');

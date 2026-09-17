@@ -7,6 +7,7 @@ import 'package:meta/meta.dart';
 
 import 'model/source_meta_info.dart';
 import 'model/source_record.dart';
+import 'synced_db_synchronizer_common.dart' show debugSyncedSync;
 
 /// Synced data source reference
 class SyncedDataSourceRef {
@@ -44,6 +45,10 @@ extension SyncedDataSourceRefExt on SyncedDataSourceRef {
 
 /// Default polling implementation of [SyncedSourceRead.onMetaInfo], reading
 /// the meta info every [checkDelay] (1 hour by default).
+///
+/// A read failure (the source is unreachable) is added to the stream as an
+/// error and polling continues: a synchronizer in auto sync mode uses it to
+/// schedule a retry, see `SyncedDbSynchronizerRetryOptions`.
 Stream<CvMetaInfo?> syncedSourceReadPollMetaInfo(
   SyncedSourceRead source, {
   Duration? checkDelay,
@@ -53,11 +58,22 @@ Stream<CvMetaInfo?> syncedSourceReadPollMetaInfo(
   controller = StreamController<CvMetaInfo?>(
     onListen: () async {
       while (true) {
-        var info = await source.getMetaInfo();
-        if (!controller.isClosed) {
-          controller.add(info);
-        } else {
-          break;
+        try {
+          var info = await source.getMetaInfo();
+          if (!controller.isClosed) {
+            controller.add(info);
+          } else {
+            break;
+          }
+        } catch (e, st) {
+          if (controller.isClosed) {
+            break;
+          }
+          if (debugSyncedSync) {
+            // ignore: avoid_print
+            print('syncedSourceReadPollMetaInfo error $e');
+          }
+          controller.addError(e, st);
         }
         await Future<void>.delayed(checkDelay!);
         if (controller.isClosed) {

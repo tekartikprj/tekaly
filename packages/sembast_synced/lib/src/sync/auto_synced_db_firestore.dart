@@ -28,6 +28,11 @@ class AutoSynchronizedFirestoreSyncedDbOptions
   /// (a public source the user cannot write to).
   final bool readOnly;
 
+  /// Retry strategy when a synchronization fails (the network is down...),
+  /// the default one retries every 5s until the first synchronization is
+  /// done, then every 15s up to 1 minute.
+  final SyncedDbSynchronizerRetryOptions retryOptions;
+
   /// Firestore synced db options
   AutoSynchronizedFirestoreSyncedDbOptions({
     Firestore? firestore,
@@ -35,11 +40,14 @@ class AutoSynchronizedFirestoreSyncedDbOptions
     required this.databaseFactory,
     this.sembastDbName = 'synced.db',
     this.readOnly = false,
+    SyncedDbSynchronizerRetryOptions? retryOptions,
 
     /// Default ok for tests only
     this.rootDocumentPath = 'test/local',
   }) : syncedDbOptions = syncedDbOptions ?? SyncedDbOptions(),
-       firestore = firestore ?? Firestore.instance;
+       firestore = firestore ?? Firestore.instance,
+       retryOptions =
+           retryOptions ?? const SyncedDbSynchronizerRetryOptions();
 }
 
 /// Auto synchronized firestore synced db
@@ -68,7 +76,12 @@ abstract class AutoSynchronizedFirestoreSyncedDb implements AutoSynchronizedDb {
     return db;
   }
 
-  /// Wait for first synchronization (could take forever if offline the first time)
+  /// Wait for the first synchronization.
+  ///
+  /// A failed synchronization is retried (see
+  /// [AutoSynchronizedFirestoreSyncedDbOptions.retryOptions]), so this
+  /// terminates once the source becomes reachable, it does not wait forever
+  /// when the network is down when the database is opened.
   Future<void> initialSynchronizationDone();
 
   /// Close the db
@@ -91,9 +104,10 @@ class _AutoSynchronizedFirestoreSyncedDb
   @override
   late final SyncedDbSynchronizer synchronizer;
 
-  /// Wait for first synchronization (could take forever if offline the first time)
+  /// Wait for the first synchronization, retried when it fails.
   @override
   Future<void> initialSynchronizationDone() async {
+    await ready;
     await syncedDb.initialSynchronizationDone();
   }
 
@@ -122,8 +136,18 @@ class _AutoSynchronizedFirestoreSyncedDb
       rootPath: options.rootDocumentPath,
     );
     synchronizer = options.readOnly
-        ? SyncedDbSynchronizer(db: syncedDb, readSource: source, autoSync: true)
-        : SyncedDbSynchronizer(db: syncedDb, source: source, autoSync: true);
+        ? SyncedDbSynchronizer(
+            db: syncedDb,
+            readSource: source,
+            autoSync: true,
+            retryOptions: options.retryOptions,
+          )
+        : SyncedDbSynchronizer(
+            db: syncedDb,
+            source: source,
+            autoSync: true,
+            retryOptions: options.retryOptions,
+          );
   }();
 
   @override

@@ -9,6 +9,7 @@ import 'model/db_sync_common.dart';
 import 'model/source_meta_info.dart';
 import 'model/source_record.dart';
 import 'synced_db_common_types.dart';
+import 'synced_db_synchronizer_retry.dart';
 import 'synced_source.dart';
 
 var _debugSyncedSync = false;
@@ -181,17 +182,22 @@ abstract class SyncedDbSynchronizerCommon {
   /// - [readSource] only: read-only synchronization (sync down only).
   /// - [readSource] and [writeSource]: hybrid, for example read from firestore
   ///   and write through an api.
+  /// [retryOptions] only applies in [autoSync] mode, see
+  /// [SyncedDbSynchronizerRetryOptions].
   SyncedDbSynchronizerCommon({
     SyncedSource? source,
     SyncedSourceRead? readSource,
     SyncedSourceWrite? writeSource,
     this.autoSync = false,
+    SyncedDbSynchronizerRetryOptions? retryOptions,
     required SyncedDbCommon db,
   }) : readSource =
            readSource ??
            source ??
            (throw ArgumentError('source or readSource must be set')),
        writeSource = writeSource ?? source,
+       retryOptions =
+           retryOptions ?? const SyncedDbSynchronizerRetryOptions(),
        dbCommon = db;
 
   /// Db common
@@ -199,6 +205,177 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Auto sync
   final bool autoSync;
+
+  /// Retry strategy used in [autoSync] mode when a synchronization fails.
+  final SyncedDbSynchronizerRetryOptions retryOptions;
+
+  final _onSyncErrorSubject = StreamController<Object>.broadcast();
+
+  /// Errors of the synchronizations triggered through [sync] (a failing
+  /// source, the network being down...). In [autoSync] mode a new
+  /// synchronization is scheduled after each error, see [retryOptions].
+  Stream<Object> onSyncError() => _onSyncErrorSubject.stream;
+
+  final _firstSyncDoneCompleter = Completer<void>.sync();
+
+  /// Done when the first sync down is done (could take a while the first time
+  /// if offline, it is retried in [autoSync] mode).
+  Future<void> firstSyncDownDone() => _firstSyncDoneCompleter.future;
+
+  /// True when the first sync down has been done.
+  bool get isFirstSyncDone => _firstSyncDoneCompleter.isCompleted;
+
+  /// Called by the implementations at the end of a successful sync down.
+  @protected
+  void markFirstSyncDone() {
+    if (!_firstSyncDoneCompleter.isCompleted) {
+      _firstSyncDoneCompleter.complete();
+    }
+  }
+
+  var _closed = false;
+
+  /// True once [closeCommon] was called (closing or closed).
+  bool get closed => _closed;
+
+  Timer? _retryTimer;
+  Timer? _firstSyncTimer;
+  var _consecutiveSyncFailureCount = 0;
+
+  /// Number of consecutive failed synchronizations, 0 when the last one
+  /// succeeded.
+  @visibleForTesting
+  int get consecutiveSyncFailureCount => _consecutiveSyncFailureCount;
+
+  /// True when a synchronization retry is scheduled.
+  @visibleForTesting
+  bool get hasPendingSyncRetry => _retryTimer?.isActive ?? false;
+
+  /// The synchronization triggered automatically, overriden to be the lazy
+  /// one in the implementations.
+  @protected
+  FutureOr<SyncedSyncStat> autoSyncAction() => sync();
+
+  /// Trigger an automatic synchronization nobody awaits: its error is
+  /// reported through [onSyncError] and retried rather than left as an
+  /// unhandled one (a source that became unreachable, a database closed while
+  /// synchronizing).
+  @protected
+  void triggerAutoSync() {
+    if (_closed) {
+      return;
+    }
+    void handleError(Object e) {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('auto sync error: $e');
+      }
+    }
+
+    try {
+      var result = autoSyncAction();
+      if (result is Future<SyncedSyncStat>) {
+        unawaited(
+          result.catchError((Object e) {
+            handleError(e);
+            return SyncedSyncStat(notExecuted: true);
+          }),
+        );
+      }
+    } catch (e) {
+      // Typically closed while triggering.
+      handleError(e);
+    }
+  }
+
+  /// Called by the implementations when the source meta info stream reports
+  /// an error in [autoSync] mode (the source is unreachable): counted as a
+  /// failed synchronization so that a new one is scheduled, see
+  /// [retryOptions].
+  @protected
+  void handleAutoSyncSourceError(Object error) {
+    if (!autoSync || _closed) {
+      return;
+    }
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('auto sync source error: $error');
+    }
+    _handleSyncFailure(error);
+  }
+
+  /// Make sure a first synchronization is attempted in [autoSync] mode even
+  /// when the source never reports its meta info nor fails (an unreachable
+  /// source that just hangs): one is triggered after
+  /// [SyncedDbSynchronizerRetryOptions.firstSyncDelay] when none happened yet.
+  ///
+  /// Called by the implementations when auto sync is set up.
+  @protected
+  void startFirstSyncWatchdog() {
+    if (!autoSync || !retryOptions.enabled || _closed) {
+      return;
+    }
+    _firstSyncTimer?.cancel();
+    _firstSyncTimer = Timer(retryOptions.firstSyncDelay, () {
+      _firstSyncTimer = null;
+      if (_closed || isFirstSyncDone || hasPendingSyncRetry) {
+        return;
+      }
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('first sync watchdog');
+      }
+      triggerAutoSync();
+    });
+  }
+
+  void _handleSyncSuccess() {
+    _consecutiveSyncFailureCount = 0;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _firstSyncTimer?.cancel();
+    _firstSyncTimer = null;
+  }
+
+  void _handleSyncFailure(Object error) {
+    _consecutiveSyncFailureCount++;
+    if (!_onSyncErrorSubject.isClosed) {
+      _onSyncErrorSubject.add(error);
+    }
+    _scheduleSyncRetry();
+  }
+
+  /// Schedule a new synchronization after a failed one, the delay growing
+  /// with the number of consecutive failures once the first sync is done.
+  void _scheduleSyncRetry() {
+    if (!autoSync || !retryOptions.enabled || _closed) {
+      return;
+    }
+    var delay = retryOptions.delayForFailureCount(
+      _consecutiveSyncFailureCount,
+      firstSyncDone: isFirstSyncDone,
+    );
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('sync retry #$_consecutiveSyncFailureCount in $delay');
+    }
+    _retryTimer?.cancel();
+    _retryTimer = Timer(delay, () {
+      _retryTimer = null;
+      triggerAutoSync();
+    });
+  }
+
+  /// Common close, cancelling any pending retry. Called by the
+  /// implementations [close].
+  @protected
+  void closeCommon() {
+    _closed = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _firstSyncTimer?.cancel();
+    _firstSyncTimer = null;
+  }
 
   /// Sync down
   Future<SyncedSyncStat> doSyncDown();
@@ -238,12 +415,15 @@ abstract class SyncedDbSynchronizerCommon {
   late final _singleFlight = SingleFlight<SyncedSyncStat>(() async {
     return await syncLock.synchronized(() async {
       try {
-        return await doSync();
+        var stat = await doSync();
+        _handleSyncSuccess();
+        return stat;
       } catch (e, st) {
         if (debugSyncedSync) {
           // ignore: avoid_print
           print('sync error $e $st');
         }
+        _handleSyncFailure(e);
         rethrow;
       }
     });
@@ -276,6 +456,8 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Closing
   void dispose() {
+    closeCommon();
     _onSyncedSubject.close();
+    _onSyncErrorSubject.close();
   }
 }

@@ -8,7 +8,9 @@ import 'synced_db_common_lib.dart';
 
 typedef _Key = (String store, String key);
 
-class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
+class SyncedSourceMemory
+    with SyncedSourceDefaultMixin, SyncedSourceFailureMixin
+    implements SyncedSource {
   final _lock = Lock();
   CvMetaInfo? _metaInfo;
   final _sourceRecordsBySyncId = <String, CvSyncedSourceRecord>{};
@@ -26,6 +28,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   @override
   Future<CvMetaInfo?> getMetaInfo() {
     return _lock.synchronized(() {
+      checkFailure(SyncedSourceOperation.getMetaInfo);
       return _metaInfo;
     });
   }
@@ -42,6 +45,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   @override
   Future<CvMetaInfo> putMetaInfo(CvMetaInfo info) {
     return _lock.synchronized(() {
+      checkFailure(SyncedSourceOperation.putMetaInfo);
       var existing = _lockedGetMetaInfo();
       // timestamp can only be later
       if (existing?.minIncrementalChangeId.v != null) {
@@ -63,6 +67,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   @override
   Future<CvSyncedSourceRecord?> getSourceRecord(SyncedDataSourceRef sourceRef) {
     return _lock.synchronized(() async {
+      checkFailure(SyncedSourceOperation.getSourceRecord);
       return _lockedGetSourceRecord(sourceRef);
     });
   }
@@ -83,6 +88,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   @override
   Future<CvSyncedSourceRecord> putSourceRecord(CvSyncedSourceRecord record) {
     return _lock.synchronized(() {
+      checkFailure(SyncedSourceOperation.putSourceRecord);
       fixAndCheckPutSyncedRecord(record);
       var metaInfo = _lockedGetMetaInfo() ?? CvMetaInfo();
       var lastChangeId = (metaInfo.lastChangeId.v ?? 0) + 1;
@@ -128,6 +134,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
     bool? includeDeleted,
   }) {
     return _lock.synchronized(() {
+      checkFailure(SyncedSourceOperation.getSourceRecordList);
       var list = <CvSyncedSourceRecord>[];
       var all = sorterSourceRecords;
       var allLength = all.length;
@@ -159,6 +166,7 @@ class SyncedSourceMemory with SyncedSourceDefaultMixin implements SyncedSource {
   @visibleForTesting
   Future<void> putRawRecord(CvSyncedSourceRecord record) async {
     return _lock.synchronized(() {
+      checkFailure(SyncedSourceOperation.putRawRecord);
       var newRecord = CvSyncedSourceRecord()..copyFrom(record);
       var syncId = record.syncId.v!;
       _sourceRecordsBySyncId[syncId] = newRecord;

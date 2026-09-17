@@ -33,10 +33,16 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     super.readSource,
     super.writeSource,
     super.autoSync = false,
+    super.retryOptions,
   }) : super(db: db) {
     if (autoSync) {
       _autoSyncSourceSubscription =
-          streamJoin2(readSource.onMetaInfo(), db.onSyncMetaInfo()).listen((
+          streamJoin2(
+            // An unreachable source reports an error rather than its meta
+            // info: it must start the retries, it never reaches the join.
+            readSource.onMetaInfo().handleError(handleAutoSyncSourceError),
+            db.onSyncMetaInfo(),
+          ).listen((
             event,
           ) {
             var remote = event.$1;
@@ -45,36 +51,28 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
             var localLastChangeId = local?.lastChangeId.v ?? 0;
             // devPrint('remote $remote, local: $local');
             if (remoteLastChangeId != localLastChangeId) {
-              _autoLazySync();
+              triggerAutoSync();
             } else if (remoteLastChangeId == 0 && localLastChangeId == 0) {
-              _autoLazySync();
+              triggerAutoSync();
             }
           });
       // Local changes can only be pushed when there is a write source.
       if (!isReadOnly) {
         _autoSyncDbSubscription = db.onDirty().listen((dirty) {
           if (dirty) {
-            _autoLazySync();
+            triggerAutoSync();
           }
         });
       }
+      // The joined meta info stream above only emits once the source has
+      // reported its meta info, which never happens while the source is
+      // unreachable: make sure a first synchronization is attempted anyway.
+      startFirstSyncWatchdog();
     }
   }
 
-  /// A lazy sync nobody awaits: its error is logged rather than left as an
-  /// unhandled one (a source that became unreadable, a database closed while
-  /// synchronizing).
-  void _autoLazySync() {
-    unawaited(
-      lazySync().catchError((Object e) {
-        if (debugSyncedSync) {
-          // ignore: avoid_print
-          print('auto sync error: $e');
-        }
-        return SyncedSyncStat();
-      }),
-    );
-  }
+  @override
+  FutureOr<SyncedSyncStat> autoSyncAction() => lazySync();
 
   late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
     action: (count) async {
@@ -91,15 +89,12 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     return (await _lazyLauncher.triggerAndWait());
   }
 
-  // ignore: unused_field
-  var _closing = false;
-
   /// Close synchronizer.
   Future<void> close() async {
     _autoSyncSourceSubscription?.cancel().unawait();
     _autoSyncDbSubscription?.cancel().unawait();
     await syncLock.synchronized(() {
-      _closing = true;
+      closeCommon();
     });
     await _lazyLauncher.close();
   }
@@ -638,9 +633,7 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
       await _pushLocalDirtySourceRecords(conflictDirtySourceRecords, stat);
     }
 
-    if (!_firstSyncDoneCompleter.isCompleted) {
-      _firstSyncDoneCompleter.complete();
-    }
+    markFirstSyncDone();
     if (debugSyncedSync) {
       // ignore: avoid_print
       print('syncDown: $stat');
@@ -649,7 +642,6 @@ class SyncedSdbSynchronizer extends SyncedDbSynchronizerCommon {
     return stat;
   }
 
-  final _firstSyncDoneCompleter = Completer<void>.sync();
   Future<void> _syncSourceRecordDown(
     SdbClient client,
     CvSyncedSourceRecord remoteRecord,

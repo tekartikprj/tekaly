@@ -18,6 +18,7 @@ export 'package:tekaly_synced_db_common/synced_db_common.dart'
         SyncedSourceWriteDefaultMixin,
         SyncedSourceExt,
         SyncedDbSynchronizerCommon,
+        SyncedDbSynchronizerRetryOptions,
         debugSyncedSync,
         SyncedDbCommon;
 export 'src/model/db_sync_meta.dart' show SdbSyncMetaInfo;

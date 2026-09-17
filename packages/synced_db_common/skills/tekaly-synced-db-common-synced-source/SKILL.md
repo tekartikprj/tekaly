@@ -51,6 +51,17 @@ change log a local database synchronizes with.
   database exports; `source.importFromMemory(exportInfo:)` pushes every record
   as a new change. Values are json encoded with
   `syncedDbValueToJsonEncodable` (`{"$timestamp": iso}`, `{"$blob": base64}`).
+* Testing: `SyncedSourceMemory` fails on purpose through
+  `source.failureControl.fail(error:, duration:, count:, operations:)` /
+  `.stop()` (a `SyncedSourceFailureException` by default, every
+  `SyncedSourceOperation` unless restricted). Use it to check that a
+  synchronizer retries while the source is unreachable.
+* `SyncedDbSynchronizerCommon` retries a failed synchronization in auto sync
+  mode, driven by `SyncedDbSynchronizerRetryOptions(firstSyncDelay: 5s,
+  delay: 15s, maxDelay: 1mn, backoffFactor: 2)`: a constant short delay while
+  `isFirstSyncDone` is false, then a growing one, reset on success.
+  `firstSyncDownDone()` completes on the first successful sync down,
+  `onSyncError()` streams the failures, `.noRetry()` disables retrying.
 * `debugSyncedDbSynchronizer = true` prints the synchronization steps (dev
   only, `@doNotSubmit`).
 * Extend `SyncedDbSynchronizerCommon` only when writing a new local database
@@ -137,6 +148,26 @@ class ReadOnlySource
   @override
   Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) =>
       inner.onMetaInfo(checkDelay: checkDelay);
+}
+```
+
+### Checking that a synchronizer retries an unreachable source
+
+```dart
+import 'package:tekaly_synced_db_common/synced_db_common.dart';
+
+Future<void> testRetry(SyncedDbSynchronizerCommon Function(SyncedSource) open) async {
+  var source = SyncedSourceMemory();
+  // The source is down when the database opens.
+  source.failureControl.fail();
+  var synchronizer = open(source); // built with autoSync: true
+  await Future<void>.delayed(const Duration(seconds: 1));
+  print(synchronizer.isFirstSyncDone); // false, but it keeps retrying
+  print(synchronizer.consecutiveSyncFailureCount); // > 1
+
+  // The source is back: the next retry succeeds, no need to sync by hand.
+  source.failureControl.stop();
+  await synchronizer.firstSyncDownDone();
 }
 ```
 

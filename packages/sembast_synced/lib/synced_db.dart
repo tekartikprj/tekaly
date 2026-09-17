@@ -25,6 +25,7 @@ export 'src/sync/synced_db_lib.dart'
         // Compat
         SyncedDbSourceSync,
         SyncedDbSynchronizer,
+        SyncedDbSynchronizerRetryOptions,
         CvSyncedSourceRecord,
         CvMetaInfo,
         CvSyncedSourceRecordExt,

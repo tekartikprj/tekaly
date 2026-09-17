@@ -5,6 +5,7 @@ export 'package:tekaly_synced_db_common/synced_db_common.dart'
         CvSyncedSourceRecordExt,
         debugSyncedDbSynchronizer,
         SyncedSyncStat,
+        SyncedDbSynchronizerRetryOptions,
         SyncedDbExportInfo,
         SyncedDbExportMeta,
         SyncedDbSynchronizerFetchExport,

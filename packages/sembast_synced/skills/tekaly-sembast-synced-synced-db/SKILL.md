@@ -44,12 +44,19 @@ abstraction, records and the synchronizer base come from
   `writeSource:` for a hybrid (read from firestore, write through an api).
 * `autoSync: true` synchronizes on remote meta info changes and on local dirty
   records. Wait for the first sync with `syncedDb.initialSynchronizationDone()`.
+* In auto sync mode a failed sync is retried (`retryOptions:`, a
+  `SyncedDbSynchronizerRetryOptions`): every 5s while the first sync has not
+  succeeded, then 15s doubling up to 1mn, reset on success. So
+  `initialSynchronizationDone()` terminates once the source is reachable
+  again instead of waiting forever. `onSyncError()` streams the failures,
+  `SyncedDbSynchronizerRetryOptions.noRetry()` disables retrying.
 * Conflict rule: a remote record with a strictly greater change id wins over a
   local dirty change; otherwise the local change is pushed. Deleting a record
   locally pushes a deletion; a remote deletion deletes locally.
 * For firestore use `AutoSynchronizedFirestoreSyncedDb.open(options:)`: it
   opens the database, creates the `SyncedSourceFirestore` at `rootDocumentPath`
-  and an auto synchronizer. `readOnly: true` for public data.
+  and an auto synchronizer. `readOnly: true` for public data, `retryOptions:`
+  to change the retry strategy.
 * `SyncedDbReadMinService.syncedDb(syncedDb:)` /
   `SyncedDbReadMinService.syncedSource(syncedSource:)` read one record from
   the local database or the remote source with the same api.

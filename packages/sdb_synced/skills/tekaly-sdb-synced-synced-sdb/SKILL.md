@@ -44,13 +44,19 @@ the local database api differs.
 * `autoSync: true` syncs on remote meta changes (`readSource.onMetaInfo`) and
   local dirty records; `syncedSdb.initialSynchronizationDone()` waits for the
   first sync. `syncedSdb.onSyncMetaInfo()` streams the local sync meta.
+* In auto sync mode a failed sync is retried (`retryOptions:`, a
+  `SyncedDbSynchronizerRetryOptions`): every 5s while the first sync has not
+  succeeded, then 15s doubling up to 1mn, reset on success. So
+  `initialSynchronizationDone()` terminates once the source is reachable
+  again instead of waiting forever. `onSyncError()` streams the failures,
+  `SyncedDbSynchronizerRetryOptions.noRetry()` disables retrying.
 * Sync record flags are ints (`dirty`, `deleted`: 0/1); use `isDirty` /
   `isDeleted`.
 * Conflict rule: a remote record with a strictly greater change id wins over a
   local dirty change; otherwise the local change is pushed.
 * Firestore: `AutoSynchronizedFirestoreSyncedSdb.open(options:
   AutoSynchronizedFirestoreSyncedSdbOptions(syncedSdbOptions:, firestore:,
-  databaseFactory:, rootDocumentPath:, dbName:, readOnly:))`.
+  databaseFactory:, rootDocumentPath:, dbName:, readOnly:, retryOptions:))`.
 * `SyncedSdbReadMinService.syncedDb(syncedDb:)` /
   `.syncedSource(syncedSource:)` read one record locally or remotely with the
   same api. `mapSdbToSyncedDb` / `mapSyncedDbToSdb` convert values when
