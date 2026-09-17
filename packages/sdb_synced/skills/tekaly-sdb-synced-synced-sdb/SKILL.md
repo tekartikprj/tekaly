@@ -45,8 +45,9 @@ the local database api differs.
   local dirty records; `syncedSdb.initialSynchronizationDone()` waits for the
   first sync. `syncedSdb.onSyncMetaInfo()` streams the local sync meta.
 * In auto sync mode a failed sync is retried (`retryOptions:`, a
-  `SyncedDbSynchronizerRetryOptions`): every 5s while the first sync has not
-  succeeded, then 15s doubling up to 1mn, reset on success. So
+  `SyncedDbSynchronizerRetryOptions`): while the first sync has not succeeded,
+  every 5s during 1mn then growing to reach 1mn after 5mn of retrying; once it
+  is done, 15s doubling up to 1mn. Reset on success. So
   `initialSynchronizationDone()` terminates once the source is reachable
   again instead of waiting forever. `onSyncError()` streams the failures,
   `SyncedDbSynchronizerRetryOptions.noRetry()` disables retrying.

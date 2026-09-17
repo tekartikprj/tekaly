@@ -58,10 +58,15 @@ change log a local database synchronizes with.
   synchronizer retries while the source is unreachable.
 * `SyncedDbSynchronizerCommon` retries a failed synchronization in auto sync
   mode, driven by `SyncedDbSynchronizerRetryOptions(firstSyncDelay: 5s,
-  delay: 15s, maxDelay: 1mn, backoffFactor: 2)`: a constant short delay while
-  `isFirstSyncDone` is false, then a growing one, reset on success.
-  `firstSyncDownDone()` completes on the first successful sync down,
-  `onSyncError()` streams the failures, `.noRetry()` disables retrying.
+  firstSyncShortDuration: 1mn, firstSyncMaxDelayDuration: 5mn, delay: 15s,
+  maxDelay: 1mn, backoffFactor: 2)`. While `isFirstSyncDone` is false the
+  delay is time based (`retryingFor`): `firstSyncDelay` during
+  `firstSyncShortDuration`, then growing linearly to `maxDelay` at
+  `firstSyncMaxDelayDuration`. Once it is done it is count based: `delay`
+  multiplied by `backoffFactor` per consecutive failure, capped at `maxDelay`.
+  Everything resets on success. `firstSyncDownDone()` completes on the first
+  successful sync down, `onSyncError()` streams the failures, `.noRetry()`
+  disables retrying.
 * `debugSyncedDbSynchronizer = true` prints the synchronization steps (dev
   only, `@doNotSubmit`).
 * Extend `SyncedDbSynchronizerCommon` only when writing a new local database

@@ -241,11 +241,24 @@ abstract class SyncedDbSynchronizerCommon {
   Timer? _retryTimer;
   Timer? _firstSyncTimer;
   var _consecutiveSyncFailureCount = 0;
+  DateTime? _firstSyncFailureTimestamp;
 
   /// Number of consecutive failed synchronizations, 0 when the last one
   /// succeeded.
   @visibleForTesting
   int get consecutiveSyncFailureCount => _consecutiveSyncFailureCount;
+
+  /// Time elapsed since the first of the current consecutive failures,
+  /// [Duration.zero] when the last synchronization succeeded. The delay
+  /// between 2 retries grows with it while the first synchronization is
+  /// pending, see [SyncedDbSynchronizerRetryOptions].
+  @visibleForTesting
+  Duration get retryingFor {
+    var timestamp = _firstSyncFailureTimestamp;
+    return timestamp == null
+        ? Duration.zero
+        : DateTime.timestamp().difference(timestamp);
+  }
 
   /// True when a synchronization retry is scheduled.
   @visibleForTesting
@@ -331,6 +344,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   void _handleSyncSuccess() {
     _consecutiveSyncFailureCount = 0;
+    _firstSyncFailureTimestamp = null;
     _retryTimer?.cancel();
     _retryTimer = null;
     _firstSyncTimer?.cancel();
@@ -339,6 +353,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   void _handleSyncFailure(Object error) {
     _consecutiveSyncFailureCount++;
+    _firstSyncFailureTimestamp ??= DateTime.timestamp();
     if (!_onSyncErrorSubject.isClosed) {
       _onSyncErrorSubject.add(error);
     }
@@ -351,8 +366,9 @@ abstract class SyncedDbSynchronizerCommon {
     if (!autoSync || !retryOptions.enabled || _closed) {
       return;
     }
-    var delay = retryOptions.delayForFailureCount(
-      _consecutiveSyncFailureCount,
+    var delay = retryOptions.delayForFailure(
+      failureCount: _consecutiveSyncFailureCount,
+      retryingFor: retryingFor,
       firstSyncDone: isFirstSyncDone,
     );
     if (debugSyncedSync) {

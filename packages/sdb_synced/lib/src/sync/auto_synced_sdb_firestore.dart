@@ -27,9 +27,10 @@ class AutoSynchronizedFirestoreSyncedSdbOptions
   /// (a public source the user cannot write to).
   final bool readOnly;
 
-  /// Retry strategy when a synchronization fails (the network is down...),
-  /// the default one retries every 5s until the first synchronization is
-  /// done, then every 15s up to 1 minute.
+  /// Retry strategy when a synchronization fails (the network is down...).
+  /// By default, while the first synchronization is pending, every 5s during
+  /// 1 minute then growing to reach 1 minute after 5 minutes of retrying;
+  /// once it is done, 15s doubled on each failure up to 1 minute.
   final SyncedDbSynchronizerRetryOptions retryOptions;
 
   /// Firestore synced db options

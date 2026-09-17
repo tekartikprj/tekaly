@@ -87,58 +87,92 @@ void main() {
   });
 
   group('synced_db_synchronizer_retry_options', () {
-    test('default delays', () {
-      const options = SyncedDbSynchronizerRetryOptions();
+    const options = SyncedDbSynchronizerRetryOptions();
+
+    Duration firstSyncDelay(Duration retryingFor) => options.delayForFailure(
+      failureCount: 1,
+      retryingFor: retryingFor,
+      firstSyncDone: false,
+    );
+    Duration delayAfterFailures(int failureCount) => options.delayForFailure(
+      failureCount: failureCount,
+      retryingFor: Duration.zero,
+      firstSyncDone: true,
+    );
+
+    test('default delays while the first sync is pending', () {
       expect(options.enabled, isTrue);
-      // Short constant delay while the first sync has not been done.
-      for (var count in [1, 2, 10]) {
+      // Short delay, kept during the first minute of retrying.
+      expect(firstSyncDelay(Duration.zero), const Duration(seconds: 5));
+      expect(
+        firstSyncDelay(const Duration(seconds: 59)),
+        const Duration(seconds: 5),
+      );
+      // Then growing to reach the 1 minute maximum after 5 minutes.
+      expect(
+        firstSyncDelay(const Duration(minutes: 1)),
+        const Duration(seconds: 5),
+      );
+      expect(
+        firstSyncDelay(const Duration(minutes: 2)),
+        const Duration(seconds: 5) + const Duration(seconds: 55) * 0.25,
+      );
+      expect(
+        firstSyncDelay(const Duration(minutes: 3)),
+        const Duration(seconds: 5) + const Duration(seconds: 55) * 0.5,
+      );
+      expect(firstSyncDelay(const Duration(minutes: 5)), options.maxDelay);
+      expect(firstSyncDelay(const Duration(hours: 1)), options.maxDelay);
+      // The delay never goes above the maximum.
+      for (var minutes in [0, 1, 2, 3, 4, 5, 60]) {
         expect(
-          options.delayForFailureCount(count, firstSyncDone: false),
-          const Duration(seconds: 5),
+          firstSyncDelay(Duration(minutes: minutes)),
+          lessThanOrEqualTo(options.maxDelay),
         );
       }
-      // Then 15s, doubled on each failure, up to 1 minute.
-      expect(
-        options.delayForFailureCount(1, firstSyncDone: true),
-        const Duration(seconds: 15),
-      );
-      expect(
-        options.delayForFailureCount(2, firstSyncDone: true),
-        const Duration(seconds: 30),
-      );
-      expect(
-        options.delayForFailureCount(3, firstSyncDone: true),
-        const Duration(minutes: 1),
-      );
-      expect(
-        options.delayForFailureCount(100, firstSyncDone: true),
-        const Duration(minutes: 1),
-      );
+    });
+
+    test('default delays once the first sync is done', () {
+      // 15s, doubled on each failure, up to 1 minute.
+      expect(delayAfterFailures(1), const Duration(seconds: 15));
+      expect(delayAfterFailures(2), const Duration(seconds: 30));
+      expect(delayAfterFailures(3), const Duration(minutes: 1));
+      expect(delayAfterFailures(100), const Duration(minutes: 1));
     });
 
     test('custom delays', () {
       const options = SyncedDbSynchronizerRetryOptions(
         firstSyncDelay: Duration(seconds: 1),
+        firstSyncShortDuration: Duration(seconds: 10),
+        firstSyncMaxDelayDuration: Duration(seconds: 20),
         delay: Duration(seconds: 2),
-        maxDelay: Duration(seconds: 10),
+        maxDelay: Duration(seconds: 11),
         backoffFactor: 3,
       );
+      Duration firstSync(Duration retryingFor) => options.delayForFailure(
+        failureCount: 1,
+        retryingFor: retryingFor,
+        firstSyncDone: false,
+      );
+      Duration done(int failureCount) => options.delayForFailure(
+        failureCount: failureCount,
+        retryingFor: Duration.zero,
+        firstSyncDone: true,
+      );
+      expect(firstSync(Duration.zero), const Duration(seconds: 1));
+      expect(firstSync(const Duration(seconds: 9)), const Duration(seconds: 1));
+      expect(firstSync(const Duration(seconds: 15)), const Duration(seconds: 6));
       expect(
-        options.delayForFailureCount(1, firstSyncDone: false),
-        const Duration(seconds: 1),
+        firstSync(const Duration(seconds: 20)),
+        const Duration(seconds: 11),
       );
       expect(
-        options.delayForFailureCount(1, firstSyncDone: true),
-        const Duration(seconds: 2),
+        firstSync(const Duration(minutes: 1)),
+        const Duration(seconds: 11),
       );
-      expect(
-        options.delayForFailureCount(2, firstSyncDone: true),
-        const Duration(seconds: 6),
-      );
-      expect(
-        options.delayForFailureCount(3, firstSyncDone: true),
-        const Duration(seconds: 10),
-      );
+      expect(done(1), const Duration(seconds: 2));
+      expect(done(2), const Duration(seconds: 6));
+      expect(done(3), const Duration(seconds: 11));
     });
 
     test('constant delay when there is no backoff', () {
@@ -148,7 +182,11 @@ void main() {
         backoffFactor: 1,
       );
       expect(
-        options.delayForFailureCount(5, firstSyncDone: true),
+        options.delayForFailure(
+          failureCount: 5,
+          retryingFor: Duration.zero,
+          firstSyncDone: true,
+        ),
         const Duration(seconds: 2),
       );
     });

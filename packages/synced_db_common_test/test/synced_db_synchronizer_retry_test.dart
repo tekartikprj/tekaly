@@ -201,6 +201,7 @@ void main() {
           reason: 'the sync must have been retried several times',
         );
         expect(context.synchronizer.hasPendingSyncRetry, isTrue);
+        expect(context.synchronizer.retryingFor, greaterThan(Duration.zero));
 
         // The source is reachable again, a retry eventually succeeds.
         source.failureControl.stop();
@@ -212,6 +213,7 @@ void main() {
         // A completed synchronization clears the failure state.
         await context.synchronizer.sync();
         expect(context.synchronizer.consecutiveSyncFailureCount, 0);
+        expect(context.synchronizer.retryingFor, Duration.zero);
         expect(context.synchronizer.hasPendingSyncRetry, isFalse);
       });
 
@@ -245,17 +247,19 @@ void main() {
           const Duration(seconds: 5),
         );
 
-        // Now that the first sync is done, the longer delays apply.
+        // Now that the first sync is done, the count based delays apply.
         expect(
-          context.synchronizer.retryOptions.delayForFailureCount(
-            1,
+          context.synchronizer.retryOptions.delayForFailure(
+            failureCount: 1,
+            retryingFor: Duration.zero,
             firstSyncDone: true,
           ),
           _fastRetryOptions.delay,
         );
         expect(
-          context.synchronizer.retryOptions.delayForFailureCount(
-            3,
+          context.synchronizer.retryOptions.delayForFailure(
+            failureCount: 3,
+            retryingFor: Duration.zero,
             firstSyncDone: true,
           ),
           _fastRetryOptions.maxDelay,
