@@ -8,6 +8,7 @@ export 'src/model/db_sync_common.dart';
 export 'src/model/source_meta_info.dart';
 export 'src/model/source_record.dart';
 export 'src/synced_db_common_types.dart';
+export 'src/synced_db_export_compare.dart';
 export 'src/synced_db_export_info.dart';
 export 'src/synced_db_synchronizer_common.dart';
 export 'src/synced_db_synchronizer_retry.dart';
