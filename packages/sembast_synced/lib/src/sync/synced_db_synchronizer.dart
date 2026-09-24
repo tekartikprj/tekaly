@@ -1,4 +1,3 @@
-
 import 'package:collection/collection.dart';
 import 'package:sembast/timestamp.dart';
 import 'package:tekaly_synced_db_common/synced_db_common.dart';
