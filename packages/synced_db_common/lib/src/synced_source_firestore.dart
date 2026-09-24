@@ -6,6 +6,34 @@ import 'package:tekartik_firebase_firestore/utils/track_changes_support.dart';
 
 import 'synced_db_common_lib.dart';
 
+/// A firestore read answered by the local cache of the client instead of the
+/// server: the client is offline (a web or mobile firestore falls back to
+/// its cache silently).
+///
+/// A synchronization must not trust it: an empty cached record list with a
+/// meta info cached by its listener would make the synchronizer believe it
+/// is up to date and skip the records it never received.
+class SyncedSourceOfflineException implements Exception {
+  /// What was read from the cache.
+  final String message;
+
+  /// A read answered by the cache.
+  SyncedSourceOfflineException(this.message);
+
+  @override
+  String toString() => 'SyncedSourceOfflineException($message)';
+}
+
+/// True when [snapshot] comes from the local cache of the client, false when
+/// from the server or when the implementation does not tell (rest, memory).
+bool _isFromCache(fb.DocumentSnapshot snapshot) {
+  try {
+    return snapshot.metadata.isFromCache;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Synced source firestore
 class SyncedSourceFirestore
     with SyncedSourceDefaultMixin
@@ -180,9 +208,17 @@ class SyncedSourceFirestore
     return (await getSourceRecord(ref))!;
   }
 
+  /// The meta info, from the server: throws [SyncedSourceOfflineException]
+  /// when the client answers from its cache (offline), so that a sync down
+  /// fails (and is retried) rather than trusting it.
   @override
-  Future<CvMetaInfo?> getMetaInfo() async =>
-      getRecord<CvMetaInfo>(metaInfoReference);
+  Future<CvMetaInfo?> getMetaInfo() async {
+    var snapshot = await metaInfoReference.get();
+    if (_isFromCache(snapshot)) {
+      throw SyncedSourceOfflineException('meta info read from the cache');
+    }
+    return cvRecordFromSnapshot<CvMetaInfo>(snapshot);
+  }
 
   /// Txn get meta info
   Future<CvMetaInfo?> txnGetMetaInfo(fb.Transaction txn) async =>
@@ -331,6 +367,9 @@ class SyncedSourceFirestore
 
      */
 
+    if (querySnapshot.docs.any(_isFromCache)) {
+      throw SyncedSourceOfflineException('record list read from the cache');
+    }
     var unfilteredList = querySnapshot.docs
         .map(
           (snapshot) =>

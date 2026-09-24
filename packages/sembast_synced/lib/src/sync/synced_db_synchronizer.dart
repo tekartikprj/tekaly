@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:sembast/timestamp.dart';
@@ -473,8 +472,6 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       fullSync = true;
       fetchLastChangeId = 0;
     }
-    // If reading records is empty, we can use this number.
-    var sourceMetaLastChangeNum = initialSourceMeta?.lastChangeId.v;
     var sourceMeta = initialSourceMeta;
     if (debugSyncedSync) {
       // ignore: avoid_print
@@ -632,11 +629,10 @@ class SyncedDbSynchronizer extends SyncedDbSynchronizerCommon {
       if (dirtyRemoteSourceRecords.lastChangeId != null) {
         newLastChangeId = dirtyRemoteSourceRecords.lastChangeId!;
       }
-      if (dirtyRemoteSourceRecords.isEmpty) {
-        if (sourceMetaLastChangeNum != null) {
-          newLastChangeId = max(newLastChangeId, sourceMetaLastChangeNum);
-        }
-      }
+      // An empty list does not move the cursor to the source meta last change
+      // id: a client answering from its cache (offline) returns an empty list,
+      // the records it never received would then be skipped for good. The
+      // next sync reads again from the current cursor, which is cheap.
       Future<void> saveMetaInfo() async {
         var metaInfo = this.db.dbSyncMetaInfoRef.cv()
           ..lastChangeId.v = newLastChangeId
