@@ -48,10 +48,16 @@ an export made by one can be imported by any other.
   not published before the next sync. Pass `exportCacheControl: null` (and
   `metaCacheControl: null`) for an export that is not public.
 * Readers use `SyncedSdbSynchronizerFromTekalyExport(db, fetchExport:
-  context.fetchExport, fetchExportMeta: context.fetchExportMeta)`, or their
-  own http fetchers: read the meta, then the file named by
-  `syncedDbExportFileName(meta.lastChangeId.v!, sourceVersion:
-  meta.sourceVersion.v)`, never by the change id alone. The sembast storage
+  context.fetchExport, fetchExportMeta: context.fetchExportMeta)` (Storage
+  api), or over http a `SyncedSdbHttpExportFetcher.folder(client:,
+  folderUri:)` (Hosting, tkwhost, a CDN, a public bucket) or
+  `.firebaseStorage(client:, bucket:, rootPath:)` (the `v0` download api,
+  the Storage rules must let read) with the same two members. The http one
+  sends the meta ETag back (`If-None-Match`): a `304` returns the meta it
+  has and nothing is imported (`metaNotModifiedCount`). An own fetcher reads
+  the meta, then the file named by `syncedDbExportFileName(
+  meta.lastChangeId.v!, sourceVersion: meta.sourceVersion.v)`, never by the
+  change id alone, and decodes it as utf8. The sembast storage
   export keeps unversioned names: its readers cannot read a versioned folder.
 * Old export files stay until `context.pruneExports()` (after a publish or
   from a cron): it keeps the 2 (`keep:`, at least 2) most recent files (by
