@@ -2,7 +2,10 @@
 name: tekaly-sdb-synced-export-import
 description: >-
   Use when exporting a synced sdb database to the tekaly export format (jsonl
-  string, memory, files) or importing one, with tekaly_sdb_synced.
+  string, memory, files, Firebase Storage with cache headers) or importing
+  one, with tekaly_sdb_synced: exportInMemory, exportToJsonlString,
+  exportDatabase, exportDatabaseToStorage, SyncedSdbStorageExportContext,
+  SyncedSdbSynchronizerFromTekalyExport, fetchAndImport.
 ---
 
 # Export and import a synced sdb database (tekaly_sdb_synced)
@@ -28,6 +31,21 @@ an export made by one can be imported by any other.
 * On io (`synced_sdb_io.dart`): `exportDatabase(dir:)` writes
   `export.jsonl` and `export_meta.json`, `importDatabaseFromFiles(dir:)`
   reads them.
+* On Storage (`synced_sdb_storage.dart`), to publish a database to many
+  readers: `exportDatabaseToStorage(exportContext:
+  SyncedSdbStorageExportContext(storage:, rootPath:))` writes
+  `<rootPath>/export_<changeId>.jsonl` (public, immutable cache control) then
+  `<rootPath>/export_meta.json` (`no-cache`), so a reader never gets a meta
+  pointing to a missing file. It writes nothing when the published meta
+  already has the database change id (`result.written` is false). The change
+  id only moves on a sync: publish a synced mirror of the source, local
+  changes are not published before the next sync. Pass
+  `exportCacheControl: null` (and `metaCacheControl: null`) for an export
+  that is not public. Readers use `SyncedSdbSynchronizerFromTekalyExport(db,
+  fetchExport: context.fetchExport, fetchExportMeta:
+  context.fetchExportMeta)` or their own http fetchers on the same files.
+* A store whose last record was deleted is left out of the export, so an
+  import keeps its old records: do not rely on emptying a store.
 * Values are json encoded as `{"$timestamp": iso8601}` and
   `{"$blob": base64}` (`sdbValueToJsonEncodable`), map keys are sorted so the
   files are stable in git.
@@ -66,5 +84,35 @@ Future<void> main() async {
   // or: await other.importFromJsonlString(jsonl);
   print(await myStore.record('k').getValue(await other.database));
   await other.close();
+}
+```
+
+### Publish to Storage, read back as an audience
+
+```dart
+import 'package:tekaly_sdb_synced/synced_sdb_storage.dart';
+import 'package:tekartik_firebase_storage/storage.dart';
+
+/// [server] is a synced mirror of the source, [audience] an empty local db
+/// with the same schema.
+Future<void> publishAndRead(
+  Storage storage,
+  SyncedSdb server,
+  SyncedSdb audience,
+) async {
+  var exportContext = SyncedSdbStorageExportContext(
+    storage: storage,
+    rootPath: 'published/my_project',
+  );
+  var result = await server.exportDatabaseToStorage(
+    exportContext: exportContext,
+  );
+  print('published ${result.changeId}, written: ${result.written}');
+
+  await SyncedSdbSynchronizerFromTekalyExport(
+    audience,
+    fetchExport: exportContext.fetchExport,
+    fetchExportMeta: exportContext.fetchExportMeta,
+  ).sync();
 }
 ```

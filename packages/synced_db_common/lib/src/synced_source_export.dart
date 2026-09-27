@@ -21,3 +21,14 @@ typedef SyncedDbSynchronizerFetchExportMeta =
 
 /// String but typically jsonl
 typedef SyncedDbSynchronizerFetchExport = Future<String> Function(int changeId);
+
+/// Name of the export file of [changeId] (`export_<changeId>.jsonl`).
+///
+/// A file never changes once written: a new change id gives a new file, so it
+/// can be cached forever.
+String syncedDbExportFileName(int changeId) => 'export_$changeId.jsonl';
+
+/// Name of the export meta file (`export_meta<suffix>.json`), the small file
+/// pointing to the current export file.
+String syncedDbExportMetaFileName({String? suffix}) =>
+    'export_meta${suffix ?? ''}.json';
