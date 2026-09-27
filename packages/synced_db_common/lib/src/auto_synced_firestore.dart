@@ -2,6 +2,7 @@ import 'package:meta/meta.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart';
 
 import 'synced_db_common_types.dart';
+import 'synced_db_sync_status.dart';
 import 'synced_db_synchronizer_common.dart';
 import 'synced_db_synchronizer_retry.dart';
 import 'synced_source.dart';
@@ -45,13 +46,35 @@ abstract class AutoSynchronizedFirestoreSyncedDbCommon {
   /// Synchronizer
   SyncedDbSynchronizerCommon get synchronizer;
 
-  /// Wait for the first synchronization.
+  /// Wait for the first synchronization, done in this or a previous session.
   ///
   /// A failed synchronization is retried (see
   /// [AutoSynchronizedFirestoreOptionsCommon.retryOptions]), so this
-  /// terminates once the source becomes reachable, it does not wait forever
-  /// when the network is down when the database is opened.
+  /// terminates once the source becomes reachable. It never completes while
+  /// the source is unreachable on a first run: see [waitInitialSync] for a
+  /// timeout and a finer policy. Throws a [StateError] when closed before.
   Future<void> initialSynchronizationDone();
+
+  /// The synchronization status, the current one first, then its changes:
+  /// never/previously/freshly synchronized, syncing, retrying...
+  Stream<SyncedDbSyncStatus> onSyncStatus();
+
+  /// Wait until the app can display the local data according to [policy]
+  /// (a sync done in this or a previous session by default).
+  ///
+  /// Completes with the status satisfying [policy], or with the current one
+  /// once closed or when [timeout] expires: the caller checks the returned
+  /// status, for example to show an offline screen with a retry button
+  /// ([requestSync]).
+  Future<SyncedDbSyncStatus> waitInitialSync({
+    SyncedDbInitialSyncPolicy policy = SyncedDbInitialSyncPolicy.any,
+    Duration? timeout,
+  });
+
+  /// Trigger a synchronization now without waiting for it, cancelling a
+  /// scheduled retry (retry button, network back). Its outcome shows in
+  /// [onSyncStatus].
+  void requestSync();
 
   /// Close the db
   Future<void> close();
@@ -111,8 +134,31 @@ abstract class AutoSynchronizedFirestoreSyncedDbBase<
   /// Wait for the first synchronization, retried when it fails.
   @override
   Future<void> initialSynchronizationDone() async {
+    var status = await waitInitialSync();
+    if (!status.isInitialSyncDone) {
+      throw StateError('Closed before the initial synchronization');
+    }
+  }
+
+  @override
+  Stream<SyncedDbSyncStatus> onSyncStatus() async* {
     await ready;
-    await syncedDb.initialSynchronizationDone();
+    yield* synchronizer.onSyncStatus();
+  }
+
+  @override
+  Future<SyncedDbSyncStatus> waitInitialSync({
+    SyncedDbInitialSyncPolicy policy = SyncedDbInitialSyncPolicy.any,
+    Duration? timeout,
+  }) async {
+    // Opening the local database is quick, the timeout is for the sync.
+    await ready;
+    return await synchronizer.waitInitialSync(policy: policy, timeout: timeout);
+  }
+
+  @override
+  void requestSync() {
+    ready.then((_) => synchronizer.requestSync()).catchError((Object _) {});
   }
 
   @override

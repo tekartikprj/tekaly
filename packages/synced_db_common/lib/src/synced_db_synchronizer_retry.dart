@@ -9,10 +9,13 @@
 ///   [firstSyncMaxDelayDuration] of retrying,
 /// - once the first synchronization is done, after [delay], doubled
 ///   ([backoffFactor]) on each consecutive failure up to [maxDelay].
+/// - after a permanent error (no access, invalid data, see
+///   `isSyncedSourcePermanentError`), after [permanentErrorDelay], retrying
+///   quickly being useless.
 ///
 /// With the default values: 5s for 1 minute, then growing up to 1 minute after
 /// 5 minutes of retrying; and 15s, 30s, 1mn, 1mn... once the first
-/// synchronization is done.
+/// synchronization is done; 1mn after a permanent error.
 ///
 /// Everything is reset as soon as a synchronization succeeds.
 class SyncedDbSynchronizerRetryOptions {
@@ -39,6 +42,9 @@ class SyncedDbSynchronizerRetryOptions {
   /// 1 or less for a constant [delay].
   final double backoffFactor;
 
+  /// Delay before a retry after a permanent error (1 minute by default).
+  final Duration permanentErrorDelay;
+
   /// False for [SyncedDbSynchronizerRetryOptions.noRetry], a failed
   /// synchronization is then never retried.
   final bool enabled;
@@ -51,6 +57,7 @@ class SyncedDbSynchronizerRetryOptions {
     this.delay = const Duration(seconds: 15),
     this.maxDelay = const Duration(minutes: 1),
     this.backoffFactor = 2,
+    this.permanentErrorDelay = const Duration(minutes: 1),
   }) : enabled = true;
 
   /// Never retry a failed synchronization.
@@ -61,6 +68,7 @@ class SyncedDbSynchronizerRetryOptions {
       delay = Duration.zero,
       maxDelay = Duration.zero,
       backoffFactor = 1,
+      permanentErrorDelay = Duration.zero,
       enabled = false;
 
   /// Delay before the retry following [failureCount] consecutive failures
@@ -112,6 +120,6 @@ class SyncedDbSynchronizerRetryOptions {
       ? 'SyncedDbSynchronizerRetryOptions(firstSync: $firstSyncDelay for '
             '$firstSyncShortDuration to $maxDelay after '
             '$firstSyncMaxDelayDuration, then $delay to $maxDelay '
-            'x$backoffFactor)'
+            'x$backoffFactor, $permanentErrorDelay after a permanent error)'
       : 'SyncedDbSynchronizerRetryOptions.noRetry()';
 }

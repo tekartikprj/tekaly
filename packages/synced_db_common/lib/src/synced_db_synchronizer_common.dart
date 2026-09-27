@@ -9,8 +9,10 @@ import 'model/db_sync_common.dart';
 import 'model/source_meta_info.dart';
 import 'model/source_record.dart';
 import 'synced_db_common_types.dart';
+import 'synced_db_sync_status.dart';
 import 'synced_db_synchronizer_retry.dart';
 import 'synced_source.dart';
+import 'synced_source_error.dart';
 
 var _debugSyncedSync = false;
 
@@ -227,12 +229,209 @@ abstract class SyncedDbSynchronizerCommon {
   /// Called by the implementations at the end of a successful sync down.
   @protected
   void markFirstSyncDone() {
+    _syncedDownThisSession = true;
+    _localSynced = true;
+    _lastSyncTime = DateTime.timestamp();
     if (!_firstSyncDoneCompleter.isCompleted) {
       _firstSyncDoneCompleter.complete();
     }
+    _notifySyncStatus();
   }
 
   var _closed = false;
+
+  /// Sync status
+  var _syncing = false;
+  Object? _lastError;
+  var _lastErrorPermanent = false;
+  DateTime? _nextRetryTime;
+  DateTime? _lastSyncTime;
+
+  /// Whether the local database was synchronized once (local meta info
+  /// last change id set), null until known.
+  bool? _localSynced;
+  var _syncedDownThisSession = false;
+  var _hasLocalChanges = false;
+  var _syncStatusTrackingStarted = false;
+  final _syncStatusController = StreamController<SyncedDbSyncStatus>.broadcast(
+    sync: true,
+  );
+  SyncedDbSyncStatus? _lastNotifiedSyncStatus;
+
+  /// The current synchronization status, see [onSyncStatus].
+  SyncedDbSyncStatus get syncStatus {
+    ensureSyncStatusTracking();
+    return _computeSyncStatus();
+  }
+
+  /// The synchronization status, the current one first, then its changes.
+  ///
+  /// Done once closed (after a last [SyncedDbSyncActivity.closed] status).
+  Stream<SyncedDbSyncStatus> onSyncStatus() {
+    late StreamController<SyncedDbSyncStatus> controller;
+    StreamSubscription<SyncedDbSyncStatus>? subscription;
+    controller = StreamController<SyncedDbSyncStatus>(
+      onListen: () {
+        ensureSyncStatusTracking();
+        SyncedDbSyncStatus? last = _computeSyncStatus();
+        controller.add(last);
+        if (_syncStatusController.isClosed) {
+          controller.close();
+          return;
+        }
+        subscription = _syncStatusController.stream.listen((status) {
+          if (status != last) {
+            last = status;
+            controller.add(status);
+          }
+        }, onDone: controller.close);
+      },
+      onCancel: () => subscription?.cancel(),
+    );
+    return controller.stream;
+  }
+
+  /// Wait until the app can display the local data according to [policy]
+  /// (a sync done in this or a previous session by default).
+  ///
+  /// Completes with the status satisfying [policy], or with the current one
+  /// once closed or when [timeout] expires: it never hangs forever with a
+  /// [timeout] and never throws, the caller checks the returned status.
+  Future<SyncedDbSyncStatus> waitInitialSync({
+    SyncedDbInitialSyncPolicy policy = SyncedDbInitialSyncPolicy.any,
+    Duration? timeout,
+  }) {
+    var completer = Completer<SyncedDbSyncStatus>();
+    StreamSubscription<SyncedDbSyncStatus>? subscription;
+    Timer? timer;
+    void complete(SyncedDbSyncStatus status) {
+      if (!completer.isCompleted) {
+        timer?.cancel();
+        subscription?.cancel();
+        completer.complete(status);
+      }
+    }
+
+    subscription = onSyncStatus().listen((status) {
+      if (status.satisfies(policy) || status.isClosed) {
+        complete(status);
+      }
+    }, onDone: () => complete(_computeSyncStatus()));
+    if (timeout != null) {
+      timer = Timer(timeout, () => complete(_computeSyncStatus()));
+    }
+    return completer.future;
+  }
+
+  /// Start tracking the local sync state for [syncStatus], once (in [autoSync]
+  /// mode on creation, otherwise when the status is first requested).
+  @protected
+  void ensureSyncStatusTracking() {
+    if (_syncStatusTrackingStarted || _closed) {
+      return;
+    }
+    _syncStatusTrackingStarted = true;
+    startSyncStatusTracking();
+  }
+
+  /// Start listening to the local sync state (local meta info, dirty records)
+  /// and report it through [updateLocalSyncState], done by the
+  /// implementations.
+  @protected
+  void startSyncStatusTracking() {}
+
+  /// Read again the local sync state that is not tracked live (dirty records),
+  /// called after each synchronization once the tracking is started.
+  @protected
+  Future<void> refreshLocalSyncState() async {}
+
+  /// Report the local sync state: [synced] when the local database was
+  /// synchronized once (in this or a previous session), [hasLocalChanges] when
+  /// local changes are not pushed yet.
+  @protected
+  void updateLocalSyncState({bool? synced, bool? hasLocalChanges}) {
+    if (_closed) {
+      return;
+    }
+    if (synced != null) {
+      _localSynced = synced;
+    }
+    if (hasLocalChanges != null) {
+      _hasLocalChanges = hasLocalChanges;
+    }
+    _notifySyncStatus();
+  }
+
+  SyncedDbInitialSync get _initialSync {
+    if (_syncedDownThisSession) {
+      return SyncedDbInitialSync.thisSession;
+    }
+    switch (_localSynced) {
+      case null:
+        return SyncedDbInitialSync.unknown;
+      case true:
+        return SyncedDbInitialSync.previousSession;
+      case false:
+        return SyncedDbInitialSync.never;
+    }
+  }
+
+  SyncedDbSyncActivity get _activity {
+    if (_closed) {
+      return SyncedDbSyncActivity.closed;
+    }
+    if (_syncing) {
+      return SyncedDbSyncActivity.syncing;
+    }
+    if (_lastError == null) {
+      return SyncedDbSyncActivity.idle;
+    }
+    if (!_lastErrorPermanent && _nextRetryTime != null) {
+      return SyncedDbSyncActivity.retryScheduled;
+    }
+    return SyncedDbSyncActivity.failed;
+  }
+
+  SyncedDbSyncStatus _computeSyncStatus() => SyncedDbSyncStatus(
+    initialSync: _initialSync,
+    activity: _activity,
+    readOnly: isReadOnly,
+    hasLocalChanges: !isReadOnly && _hasLocalChanges,
+    lastSyncTime: _lastSyncTime,
+    lastError: _lastError,
+    failureCount: _consecutiveSyncFailureCount,
+    retryingSince: _firstSyncFailureTimestamp,
+    nextRetryTime: _nextRetryTime,
+  );
+
+  void _notifySyncStatus() {
+    if (_syncStatusController.isClosed) {
+      return;
+    }
+    var status = _computeSyncStatus();
+    if (status == _lastNotifiedSyncStatus) {
+      return;
+    }
+    _lastNotifiedSyncStatus = status;
+    if (debugSyncedSync) {
+      // ignore: avoid_print
+      print('sync status: $status');
+    }
+    _syncStatusController.add(status);
+  }
+
+  /// Trigger a synchronization now without waiting for it, cancelling a
+  /// scheduled retry: for a retry button, or when the app knows the network is
+  /// back. Its outcome shows in [onSyncStatus] and [onSyncError], errors are
+  /// not thrown.
+  void requestSync() {
+    if (_closed) {
+      return;
+    }
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    triggerAutoSync();
+  }
 
   /// True once [closeCommon] was called (closing or closed).
   bool get closed => _closed;
@@ -344,6 +543,9 @@ abstract class SyncedDbSynchronizerCommon {
   void _handleSyncSuccess() {
     _consecutiveSyncFailureCount = 0;
     _firstSyncFailureTimestamp = null;
+    _lastError = null;
+    _lastErrorPermanent = false;
+    _nextRetryTime = null;
     _retryTimer?.cancel();
     _retryTimer = null;
     _firstSyncTimer?.cancel();
@@ -353,28 +555,39 @@ abstract class SyncedDbSynchronizerCommon {
   void _handleSyncFailure(Object error) {
     _consecutiveSyncFailureCount++;
     _firstSyncFailureTimestamp ??= DateTime.timestamp();
+    _lastError = error;
+    _lastErrorPermanent = isSyncedSourcePermanentError(error);
     if (!_onSyncErrorSubject.isClosed) {
       _onSyncErrorSubject.add(error);
     }
     _scheduleSyncRetry();
+    _notifySyncStatus();
   }
 
   /// Schedule a new synchronization after a failed one, the delay growing
-  /// with the number of consecutive failures once the first sync is done.
+  /// with the number of consecutive failures once the first sync is done, a
+  /// long one after a permanent error.
   void _scheduleSyncRetry() {
     if (!autoSync || !retryOptions.enabled || _closed) {
+      _nextRetryTime = null;
       return;
     }
-    var delay = retryOptions.delayForFailure(
-      failureCount: _consecutiveSyncFailureCount,
-      retryingFor: retryingFor,
-      firstSyncDone: isFirstSyncDone,
-    );
+    var delay = _lastErrorPermanent
+        ? retryOptions.permanentErrorDelay
+        : retryOptions.delayForFailure(
+            failureCount: _consecutiveSyncFailureCount,
+            retryingFor: retryingFor,
+            firstSyncDone: isFirstSyncDone,
+          );
     if (debugSyncedSync) {
       // ignore: avoid_print
-      print('sync retry #$_consecutiveSyncFailureCount in $delay');
+      print(
+        'sync retry #$_consecutiveSyncFailureCount in $delay'
+        '${_lastErrorPermanent ? ' (permanent error)' : ''}',
+      );
     }
     _retryTimer?.cancel();
+    _nextRetryTime = DateTime.timestamp().add(delay);
     _retryTimer = Timer(delay, () {
       _retryTimer = null;
       triggerAutoSync();
@@ -388,8 +601,13 @@ abstract class SyncedDbSynchronizerCommon {
     _closed = true;
     _retryTimer?.cancel();
     _retryTimer = null;
+    _nextRetryTime = null;
     _firstSyncTimer?.cancel();
     _firstSyncTimer = null;
+    _notifySyncStatus();
+    if (!_syncStatusController.isClosed) {
+      unawaited(_syncStatusController.close());
+    }
   }
 
   /// Sync down
@@ -412,13 +630,35 @@ abstract class SyncedDbSynchronizerCommon {
     });
   }
 
-  /// Sync up and down
+  /// Sync up and down.
+  ///
+  /// When the push fails with a permanent error (see
+  /// [isSyncedSourcePermanentError], a record rejected by the source rules...)
+  /// the pull is still done, so that the data keeps coming, before the push
+  /// error is thrown. The records stay dirty.
   Future<SyncedSyncStat> doSync() async {
     var stat = SyncedSyncStat();
-    var upStat = await doSyncUp();
-    stat.add(upStat);
+    Object? pushError;
+    StackTrace? pushStackTrace;
+    try {
+      var upStat = await doSyncUp();
+      stat.add(upStat);
+    } catch (e, st) {
+      if (!isSyncedSourcePermanentError(e)) {
+        rethrow;
+      }
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('sync up permanent error $e, syncing down anyway');
+      }
+      pushError = e;
+      pushStackTrace = st;
+    }
     var downStat = await doSyncDown();
     stat.add(downStat);
+    if (pushError != null) {
+      Error.throwWithStackTrace(pushError, pushStackTrace!);
+    }
     if (debugSyncedSync) {
       // ignore: avoid_print
       print('_end sync $stat');
@@ -429,6 +669,8 @@ abstract class SyncedDbSynchronizerCommon {
 
   late final _singleFlight = SingleFlight<SyncedSyncStat>(() async {
     return await syncLock.synchronized(() async {
+      _syncing = true;
+      _notifySyncStatus();
       try {
         var stat = await doSync();
         _handleSyncSuccess();
@@ -440,6 +682,19 @@ abstract class SyncedDbSynchronizerCommon {
         }
         _handleSyncFailure(e);
         rethrow;
+      } finally {
+        if (_syncStatusTrackingStarted && !_closed) {
+          try {
+            await refreshLocalSyncState();
+          } catch (e) {
+            if (debugSyncedSync) {
+              // ignore: avoid_print
+              print('refreshLocalSyncState error $e');
+            }
+          }
+        }
+        _syncing = false;
+        _notifySyncStatus();
       }
     });
   });

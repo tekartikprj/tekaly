@@ -81,6 +81,10 @@ class SyncedDbSynchronizer
       db.txnGetDirtySyncRecords(txn);
 
   @override
+  Future<bool> localHasDirtySyncRecords() async =>
+      (await db.txnGetDirtySyncRecords(await db.database)).isNotEmpty;
+
+  @override
   Future<List<DbSyncRecord>> localGetSyncRecords() => db.getSyncRecords();
 
   @override

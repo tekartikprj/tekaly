@@ -34,6 +34,10 @@ abstract class SyncedDbSynchronizerBase<
   StreamSubscription? _autoSyncSourceSubscription;
   StreamSubscription? _autoSyncDbSubscription;
 
+  // Sync status subscriptions
+  StreamSubscription? _statusMetaInfoSubscription;
+  StreamSubscription? _statusDirtySubscription;
+
   /// Constructor, see [SyncedDbSynchronizerCommon].
   ///
   /// In [autoSync] mode, a synchronization is triggered when the source and
@@ -77,6 +81,7 @@ abstract class SyncedDbSynchronizerBase<
       // reported its meta info, which never happens while the source is
       // unreachable: make sure a first synchronization is attempted anyway.
       startFirstSyncWatchdog();
+      ensureSyncStatusTracking();
     }
   }
 
@@ -89,6 +94,39 @@ abstract class SyncedDbSynchronizerBase<
   void cancelAutoSync() {
     _autoSyncSourceSubscription?.cancel().unawait();
     _autoSyncDbSubscription?.cancel().unawait();
+    _statusMetaInfoSubscription?.cancel().unawait();
+    _statusDirtySubscription?.cancel().unawait();
+  }
+
+  @override
+  void startSyncStatusTracking() {
+    void onError(Object error) {
+      if (debugSyncedSync) {
+        // ignore: avoid_print
+        print('sync status tracking error: $error');
+      }
+    }
+
+    _statusMetaInfoSubscription = localOnSyncMetaInfo().listen(
+      (metaInfo) =>
+          updateLocalSyncState(synced: metaInfo?.lastChangeId.v != null),
+      onError: onError,
+    );
+    if (!isReadOnly) {
+      _statusDirtySubscription = localOnDirty().listen(
+        (dirty) => updateLocalSyncState(hasLocalChanges: dirty),
+        onError: onError,
+      );
+      refreshLocalSyncState().catchError(onError).unawait();
+    }
+  }
+
+  @override
+  Future<void> refreshLocalSyncState() async {
+    if (isReadOnly) {
+      return;
+    }
+    updateLocalSyncState(hasLocalChanges: await localHasDirtySyncRecords());
   }
 
   /// Run [action] in a local transaction, change tracking disabled (the
@@ -99,6 +137,10 @@ abstract class SyncedDbSynchronizerBase<
   /// The locally dirty sync records.
   @protected
   Future<List<TSyncRecord>> localGetDirtySyncRecords(TClient txn);
+
+  /// True when some local sync records are dirty (outside a transaction).
+  @protected
+  Future<bool> localHasDirtySyncRecords();
 
   /// All the local sync records.
   @protected
@@ -708,6 +750,9 @@ abstract class SyncedDbSynchronizerBase<
       }
     });
 
+    // The data is synchronized down, even if pushing the conflicts fails.
+    markFirstSyncDone();
+
     /// Push up the locally dirty records for which local wins (they stay
     /// dirty for a read-only synchronizer).
     if (conflictSyncRecordIds.isNotEmpty && !isReadOnly) {
@@ -716,8 +761,6 @@ abstract class SyncedDbSynchronizerBase<
       );
       await _pushLocalDirtySourceRecords(conflictDirtySourceRecords, stat);
     }
-
-    markFirstSyncDone();
     if (debugSyncedSync) {
       // ignore: avoid_print
       print('syncDown: $stat');
