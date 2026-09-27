@@ -46,6 +46,9 @@ an export made by one can be imported by any other.
   that is not public. Readers use `SyncedSdbSynchronizerFromTekalyExport(db,
   fetchExport: context.fetchExport, fetchExportMeta:
   context.fetchExportMeta)` or their own http fetchers on the same files.
+  Old export files stay until `context.pruneExports()` (after a publish or
+  from a cron): it keeps the 2 (`keep:`, at least 2) highest change ids and
+  the one the meta points to, and returns the deleted change ids.
 * Values are json encoded as `{"$timestamp": iso8601}` and
   `{"$blob": base64}` (`sdbValueToJsonEncodable`), map keys are sorted so the
   files are stable in git.
@@ -108,6 +111,9 @@ Future<void> publishAndRead(
     exportContext: exportContext,
   );
   print('published ${result.changeId}, written: ${result.written}');
+  if (result.written) {
+    print('deleted ${await exportContext.pruneExports()}');
+  }
 
   await SyncedSdbSynchronizerFromTekalyExport(
     audience,

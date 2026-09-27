@@ -83,6 +83,53 @@ class SyncedSdbStorageExportContext {
   Future<String> fetchExport(int changeId) =>
       exportFile(changeId).readAsString();
 
+  /// The change ids of the export files in [rootPath] (not in its sub
+  /// folders), in ascending order.
+  Future<List<int>> listExportChangeIds() async {
+    var dir = url.dirname(exportFile(0).name);
+    var changeIds = <int>[];
+    GetFilesOptions? query = GetFilesOptions(
+      // The whole bucket when at its root.
+      prefix: dir == '.' ? null : '$dir/',
+      autoPaginate: false,
+    );
+    while (query != null) {
+      var response = await bucket.getFiles(query);
+      for (var file in response.files) {
+        var changeId = syncedDbExportFileNameChangeId(url.basename(file.name));
+        if (changeId != null && exportFile(changeId).name == file.name) {
+          changeIds.add(changeId);
+        }
+      }
+      query = response.nextQuery;
+    }
+    return changeIds..sort();
+  }
+
+  /// Deletes the old export files: the [keep] most recent ones (highest
+  /// change ids) and the one the meta points to are kept.
+  ///
+  /// [keep] is at least 2 (the default), so that a reader that read the
+  /// previous meta just before a publish can still fetch its file.
+  ///
+  /// Returns the change ids of the deleted files, in ascending order.
+  Future<List<int>> pruneExports({int keep = 2}) async {
+    if (keep < 2) {
+      throw ArgumentError.value(keep, 'keep', 'must be at least 2');
+    }
+    var changeIds = await listExportChangeIds();
+    var metaChangeId = (await readExportMeta())?.lastChangeId.v;
+    var kept = {...changeIds.reversed.take(keep), ?metaChangeId};
+    var deleted = [
+      for (var changeId in changeIds)
+        if (!kept.contains(changeId)) changeId,
+    ];
+    for (var changeId in deleted) {
+      await exportFile(changeId).delete();
+    }
+    return deleted;
+  }
+
   @override
   String toString() =>
       'SyncedSdbStorageExportContext(${bucketName ?? '<default>'}/$rootPath)';

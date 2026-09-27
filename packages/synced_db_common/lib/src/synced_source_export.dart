@@ -32,3 +32,17 @@ String syncedDbExportFileName(int changeId) => 'export_$changeId.jsonl';
 /// pointing to the current export file.
 String syncedDbExportMetaFileName({String? suffix}) =>
     'export_meta${suffix ?? ''}.json';
+
+final _exportFileNameRegExp = RegExp(r'^export_(\d+)\.jsonl$');
+
+/// The change id of an export file name (`export_<changeId>.jsonl`, see
+/// [syncedDbExportFileName]), null for any other name.
+int? syncedDbExportFileNameChangeId(String fileName) {
+  var match = _exportFileNameRegExp.firstMatch(fileName);
+  if (match == null) {
+    return null;
+  }
+  var changeId = int.parse(match.group(1)!);
+  // Only the canonical name (no leading zero).
+  return syncedDbExportFileName(changeId) == fileName ? changeId : null;
+}

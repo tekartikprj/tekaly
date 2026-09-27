@@ -192,5 +192,104 @@ void main() {
         'lastTimestamp': isNotNull,
       });
     });
+
+    group('pruneExports', () {
+      /// Writes a file with no meaning at [path].
+      Future<void> writeFile(String path) =>
+          exportContext.bucket.file(path).writeAsString('-');
+
+      /// Points the meta to [changeId], as a publish would.
+      Future<void> writeMeta(int changeId) => exportContext.metaFile
+          .writeAsString(jsonEncode({'lastChangeId': changeId}));
+
+      test('after publishes', () async {
+        var db = await server.database;
+        var changeIds = <int>[];
+        for (var i = 0; i < 4; i++) {
+          await _itemStoreRef.record('r$i').put(db, {'i': i});
+          await serverSynchronizer.sync();
+          var result = await server.exportDatabaseToStorage(
+            exportContext: exportContext,
+          );
+          changeIds.add(result.changeId);
+        }
+        expect(changeIds, [1, 2, 3, 4]);
+        // Not export files of this folder: never touched.
+        var others = [
+          'published/project_1/notes.txt',
+          'published/project_1/export_2.json',
+          'published/project_1/sub/export_1.jsonl',
+          'published/project_10/export_1.jsonl',
+        ];
+        for (var path in others) {
+          await writeFile(path);
+        }
+        expect(await exportContext.listExportChangeIds(), [1, 2, 3, 4]);
+
+        expect(await exportContext.pruneExports(), [1, 2]);
+        expect(
+          await publishedFileNames(),
+          [
+            ...others,
+            'published/project_1/export_3.jsonl',
+            'published/project_1/export_4.jsonl',
+            'published/project_1/export_meta.json',
+          ]..sort(),
+        );
+        expect(await exportContext.pruneExports(), isEmpty);
+
+        // The audience still gets the current export.
+        var audience = SyncedSdb.newInMemory(options: _newOptions());
+        await SyncedSdbSynchronizerFromTekalyExport(
+          audience,
+          fetchExport: exportContext.fetchExport,
+          fetchExportMeta: exportContext.fetchExportMeta,
+        ).sync();
+        expect(
+          await _itemStoreRef.record('r3').getValue(await audience.database),
+          {'i': 3},
+        );
+        await audience.close();
+      });
+
+      test('numeric order, meta pointing to an old export', () async {
+        for (var changeId in [2, 9, 10, 11, 12]) {
+          await writeFile('published/project_1/export_$changeId.jsonl');
+        }
+        await writeFile('published/project_1/export_07.jsonl');
+        expect(await exportContext.listExportChangeIds(), [2, 9, 10, 11, 12]);
+
+        // 12 and 11 are the most recent (10 > 9 > 2 as numbers, not as
+        // strings); 2 is what the meta points to.
+        await writeMeta(2);
+        expect(await exportContext.pruneExports(), [9, 10]);
+        expect(await exportContext.listExportChangeIds(), [2, 11, 12]);
+
+        await writeMeta(12);
+        expect(await exportContext.pruneExports(keep: 3), isEmpty);
+        expect(await exportContext.pruneExports(), [2]);
+      });
+
+      test('no meta, bucket root', () async {
+        exportContext = SyncedSdbStorageExportContext(
+          storage: newStorageMemory(),
+          rootPath: '',
+        );
+        for (var changeId in [1, 2, 3]) {
+          await writeFile('export_$changeId.jsonl');
+        }
+        await writeFile('dir/export_4.jsonl');
+        expect(await exportContext.listExportChangeIds(), [1, 2, 3]);
+        expect(await exportContext.pruneExports(), [1]);
+        expect(await exportContext.listExportChangeIds(), [2, 3]);
+      });
+
+      test('keep at least 2', () async {
+        expect(
+          () => exportContext.pruneExports(keep: 1),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
   });
 }
