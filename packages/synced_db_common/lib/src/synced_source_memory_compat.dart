@@ -134,8 +134,12 @@ class SyncedSourceMemoryCompat
       var allLength = all.length;
       limit ??= allLength;
       afterChangeId ??= 0;
+      // Like firestore, the last change id read, a skipped deleted record
+      // included: a list of deleted records only still moves the cursor.
+      int? lastChangeId;
       for (var record in sorterSourceRecords) {
         if (record.syncChangeId.v! > afterChangeId!) {
+          lastChangeId = record.syncChangeId.v;
           var add = true;
           if (record.isDeleted) {
             if (!(includeDeleted ?? false)) {
@@ -150,8 +154,6 @@ class SyncedSourceMemoryCompat
           }
         }
       }
-      var lastChangeId = list.lastOrNull?.syncChangeId.v;
-
       return SyncedSourceRecordList(list, lastChangeId);
     });
   }
