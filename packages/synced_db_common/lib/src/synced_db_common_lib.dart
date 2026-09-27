@@ -3,6 +3,7 @@ export 'model/source_meta_info.dart';
 export 'model/source_record.dart';
 export 'synced_db_common_types.dart';
 export 'synced_db_export_info.dart';
+export 'synced_db_synchronizer_base.dart';
 export 'synced_db_synchronizer_common.dart';
 export 'synced_db_synchronizer_retry.dart';
 export 'synced_source.dart';

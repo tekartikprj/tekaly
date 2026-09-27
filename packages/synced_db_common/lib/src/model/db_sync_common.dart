@@ -1,6 +1,7 @@
 import 'package:cv/cv.dart';
 
 import '../synced_db_common_types.dart';
+import 'source_record.dart';
 
 /// Sync timestamp key.
 const syncTimestampKey = 'syncTimestamp';
@@ -31,6 +32,9 @@ const syncIdKey = 'syncId';
 
 /// Local sync record, common to the sembast and sdb implementations.
 abstract class DbSyncRecordCommon implements CvModel {
+  /// The synced key (store and key)
+  SyncedRecordKey get syncedKey;
+
   /// Local store
   CvField<String> get store;
 

@@ -76,6 +76,7 @@ class SdbSyncRecord extends ScvIntRecordBase implements DbSyncRecordCommon {
   final syncChangeId = CvField<int>(syncChangeIdKey);
 
   /// The synced key
+  @override
   SyncedRecordKey get syncedKey =>
       SyncedRecordKey(store: store.v!, key: key.v!);
 
