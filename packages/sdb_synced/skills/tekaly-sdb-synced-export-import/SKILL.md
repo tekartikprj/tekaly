@@ -35,20 +35,28 @@ an export made by one can be imported by any other.
   reads them.
 * On Storage (`synced_sdb_storage.dart`), to publish a database to many
   readers: `exportDatabaseToStorage(exportContext:
-  SyncedSdbStorageExportContext(storage:, rootPath:))` writes
-  `<rootPath>/export_<changeId>.jsonl` (public, immutable cache control) then
-  `<rootPath>/export_meta.json` (`no-cache`), so a reader never gets a meta
-  pointing to a missing file. It writes nothing when the published meta
-  already has the database change id (`result.written` is false). The change
-  id only moves on a sync: publish a synced mirror of the source, local
-  changes are not published before the next sync. Pass
-  `exportCacheControl: null` (and `metaCacheControl: null`) for an export
-  that is not public. Readers use `SyncedSdbSynchronizerFromTekalyExport(db,
-  fetchExport: context.fetchExport, fetchExportMeta:
-  context.fetchExportMeta)` or their own http fetchers on the same files.
-  Old export files stay until `context.pruneExports()` (after a publish or
-  from a cron): it keeps the 2 (`keep:`, at least 2) highest change ids and
-  the one the meta points to, and returns the deleted change ids.
+  SyncedSdbStorageExportContext(storage:, rootPath:))` writes the export file
+  (public, immutable cache control) then `<rootPath>/export_meta.json`
+  (`no-cache`), so a reader never gets a meta pointing to a missing file. The
+  export file is `export_<changeId>.jsonl`, or
+  `export_v<sourceVersion>_<changeId>.jsonl` when the source has a version
+  (`syncedDbExportFileName(changeId, sourceVersion:)`): change ids start again
+  after a source migration and a cached name must never get new content.
+  It writes nothing when the published meta already has the database change
+  id and source version (`result.written` is false). The change id only
+  moves on a sync: publish a synced mirror of the source, local changes are
+  not published before the next sync. Pass `exportCacheControl: null` (and
+  `metaCacheControl: null`) for an export that is not public.
+* Readers use `SyncedSdbSynchronizerFromTekalyExport(db, fetchExport:
+  context.fetchExport, fetchExportMeta: context.fetchExportMeta)`, or their
+  own http fetchers: read the meta, then the file named by
+  `syncedDbExportFileName(meta.lastChangeId.v!, sourceVersion:
+  meta.sourceVersion.v)`, never by the change id alone. The sembast storage
+  export keeps unversioned names: its readers cannot read a versioned folder.
+* Old export files stay until `context.pruneExports()` (after a publish or
+  from a cron): it keeps the 2 (`keep:`, at least 2) most recent files (by
+  source version, then change id) and the one the meta points to, and
+  returns the deleted ones (`SyncedDbExportFileId` records).
 * Values are json encoded as `{"$timestamp": iso8601}` and
   `{"$blob": base64}` (`sdbValueToJsonEncodable`), map keys are sorted so the
   files are stable in git.

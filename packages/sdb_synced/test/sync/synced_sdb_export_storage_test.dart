@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
+import 'package:tekaly_sdb_synced/synced_sdb_internals.dart'
+    show SdbSyncMetaInfo;
 import 'package:tekaly_sdb_synced/synced_sdb_storage.dart';
 import 'package:tekartik_firebase_storage_fs/storage_fs.dart';
 import 'package:test/test.dart';
@@ -193,6 +195,73 @@ void main() {
       });
     });
 
+    test('source version change', () async {
+      var db = await server.database;
+      await _itemStoreRef.record('a').put(db, {'name': 'A'});
+      await _itemStoreRef.record('b').put(db, {'name': 'B'});
+      await serverSynchronizer.sync();
+      var result = await server.exportDatabaseToStorage(
+        exportContext: exportContext,
+      );
+      expect(result.changeId, 2);
+      expect(result.sourceVersion, isNull);
+      var oldExport = exportContext.exportFile(2);
+      var oldExportContent = await oldExport.readAsString();
+
+      var audience = SyncedSdb.newInMemory(options: _newOptions());
+      var audienceDb = await audience.database;
+      var audienceSynchronizer = SyncedSdbSynchronizerFromTekalyExport(
+        audience,
+        fetchExport: exportContext.fetchExport,
+        fetchExportMeta: exportContext.fetchExportMeta,
+      );
+      await audienceSynchronizer.sync();
+      expect(await _itemStoreRef.record('a').getValue(audienceDb), {
+        'name': 'A',
+      });
+
+      /// A source migration: version 2, change ids start again (2 here too).
+      Future<void> setSourceMeta(int changeId) => server.setSyncMetaInfo(
+        db,
+        SdbSyncMetaInfo()
+          ..lastChangeId.v = changeId
+          ..sourceVersion.v = 2,
+      );
+      await _itemStoreRef.record('a').delete(db);
+      await setSourceMeta(2);
+      result = await server.exportDatabaseToStorage(
+        exportContext: exportContext,
+      );
+      expect(result.written, isTrue);
+      expect(result.changeId, 2);
+      expect(result.sourceVersion, 2);
+      // A new name: the old file, cached as immutable, is not rewritten.
+      expect(await publishedFileNames(), [
+        'published/project_1/export_2.jsonl',
+        'published/project_1/export_meta.json',
+        'published/project_1/export_v2_2.jsonl',
+      ]);
+      expect(await oldExport.readAsString(), oldExportContent);
+
+      // The audience reads the file of the new version.
+      await audienceSynchronizer.sync();
+      expect(await _itemStoreRef.record('a').getValue(audienceDb), isNull);
+      expect((await audience.getSyncMetaInfo())!.sourceVersion.v, 2);
+      await audience.close();
+
+      // The new version is the most recent, whatever the change ids.
+      await setSourceMeta(3);
+      await server.exportDatabaseToStorage(exportContext: exportContext);
+      expect(await exportContext.listExportFileIds(), [
+        (changeId: 2, sourceVersion: null),
+        (changeId: 2, sourceVersion: 2),
+        (changeId: 3, sourceVersion: 2),
+      ]);
+      expect(await exportContext.pruneExports(), [
+        (changeId: 2, sourceVersion: null),
+      ]);
+    });
+
     group('pruneExports', () {
       /// Writes a file with no meaning at [path].
       Future<void> writeFile(String path) =>
@@ -201,6 +270,15 @@ void main() {
       /// Points the meta to [changeId], as a publish would.
       Future<void> writeMeta(int changeId) => exportContext.metaFile
           .writeAsString(jsonEncode({'lastChangeId': changeId}));
+
+      /// The change ids of unversioned export files.
+      List<int> changeIdsOf(List<SyncedDbExportFileId> fileIds) => [
+        for (var fileId in fileIds) fileId.changeId,
+      ];
+
+      /// The change ids of the export files in Storage.
+      Future<List<int>> listedChangeIds() async =>
+          changeIdsOf(await exportContext.listExportFileIds());
 
       test('after publishes', () async {
         var db = await server.database;
@@ -224,9 +302,9 @@ void main() {
         for (var path in others) {
           await writeFile(path);
         }
-        expect(await exportContext.listExportChangeIds(), [1, 2, 3, 4]);
+        expect(await listedChangeIds(), [1, 2, 3, 4]);
 
-        expect(await exportContext.pruneExports(), [1, 2]);
+        expect(changeIdsOf(await exportContext.pruneExports()), [1, 2]);
         expect(
           await publishedFileNames(),
           [
@@ -236,7 +314,7 @@ void main() {
             'published/project_1/export_meta.json',
           ]..sort(),
         );
-        expect(await exportContext.pruneExports(), isEmpty);
+        expect(changeIdsOf(await exportContext.pruneExports()), isEmpty);
 
         // The audience still gets the current export.
         var audience = SyncedSdb.newInMemory(options: _newOptions());
@@ -257,17 +335,17 @@ void main() {
           await writeFile('published/project_1/export_$changeId.jsonl');
         }
         await writeFile('published/project_1/export_07.jsonl');
-        expect(await exportContext.listExportChangeIds(), [2, 9, 10, 11, 12]);
+        expect(await listedChangeIds(), [2, 9, 10, 11, 12]);
 
         // 12 and 11 are the most recent (10 > 9 > 2 as numbers, not as
         // strings); 2 is what the meta points to.
         await writeMeta(2);
-        expect(await exportContext.pruneExports(), [9, 10]);
-        expect(await exportContext.listExportChangeIds(), [2, 11, 12]);
+        expect(changeIdsOf(await exportContext.pruneExports()), [9, 10]);
+        expect(await listedChangeIds(), [2, 11, 12]);
 
         await writeMeta(12);
-        expect(await exportContext.pruneExports(keep: 3), isEmpty);
-        expect(await exportContext.pruneExports(), [2]);
+        expect(changeIdsOf(await exportContext.pruneExports(keep: 3)), isEmpty);
+        expect(changeIdsOf(await exportContext.pruneExports()), [2]);
       });
 
       test('no meta, bucket root', () async {
@@ -279,9 +357,9 @@ void main() {
           await writeFile('export_$changeId.jsonl');
         }
         await writeFile('dir/export_4.jsonl');
-        expect(await exportContext.listExportChangeIds(), [1, 2, 3]);
-        expect(await exportContext.pruneExports(), [1]);
-        expect(await exportContext.listExportChangeIds(), [2, 3]);
+        expect(await listedChangeIds(), [1, 2, 3]);
+        expect(changeIdsOf(await exportContext.pruneExports()), [1]);
+        expect(await listedChangeIds(), [2, 3]);
       });
 
       test('keep at least 2', () async {

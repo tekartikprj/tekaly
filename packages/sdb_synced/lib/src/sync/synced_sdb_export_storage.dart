@@ -19,7 +19,9 @@ const syncedSdbStorageExportContentType = 'application/x-ndjson';
 /// Where a tekaly export lives in Storage:
 /// * `<rootPath>/export_meta<suffix>.json`, the meta pointing to the current
 ///   export;
-/// * `<rootPath>/export_<changeId>.jsonl`, one file per published change id.
+/// * `<rootPath>/export_<changeId>.jsonl`, one file per published change
+///   id (`export_v<sourceVersion>_<changeId>.jsonl` when the source has a
+///   version, see [syncedDbExportFileName]).
 class SyncedSdbStorageExportContext {
   /// Storage.
   final FirebaseStorage storage;
@@ -59,9 +61,17 @@ class SyncedSdbStorageExportContext {
     url.join(rootPath, syncedDbExportMetaFileName(suffix: metaBasenameSuffix)),
   );
 
-  /// The export file of [changeId].
-  File exportFile(int changeId) =>
-      bucket.file(url.join(rootPath, syncedDbExportFileName(changeId)));
+  /// The export file of [changeId] and [sourceVersion].
+  File exportFile(int changeId, {int? sourceVersion}) => bucket.file(
+    url.join(
+      rootPath,
+      syncedDbExportFileName(changeId, sourceVersion: sourceVersion),
+    ),
+  );
+
+  /// The export file a [meta] points to.
+  File exportFileOf(SyncedDbExportMeta meta) =>
+      exportFile(meta.lastChangeId.v ?? 0, sourceVersion: meta.sourceVersion.v);
 
   /// The published meta, null when nothing was published yet.
   Future<SyncedDbExportMeta?> readExportMeta() async {
@@ -72,22 +82,41 @@ class SyncedSdbStorageExportContext {
     return SyncedDbExportMeta()..fromMap(await fetchExportMeta());
   }
 
+  /// The meta read by the last [fetchExportMeta], whose source version
+  /// [fetchExport] needs.
+  SyncedDbExportMeta? _fetchedMeta;
+
   /// Reads the meta, a [SyncedDbSynchronizerFetchExportMeta] for
   /// `SyncedSdbSynchronizerFromTekalyExport`.
-  Future<Map<String, Object?>> fetchExportMeta() async =>
-      (jsonDecode(await metaFile.readAsString()) as Map)
-          .cast<String, Object?>();
+  Future<Map<String, Object?>> fetchExportMeta() async {
+    var map = (jsonDecode(await metaFile.readAsString()) as Map)
+        .cast<String, Object?>();
+    _fetchedMeta = SyncedDbExportMeta()..fromMap(map);
+    return map;
+  }
 
   /// Reads the export of [changeId], a [SyncedDbSynchronizerFetchExport] for
   /// `SyncedSdbSynchronizerFromTekalyExport`.
-  Future<String> fetchExport(int changeId) =>
-      exportFile(changeId).readAsString();
+  ///
+  /// The file name also holds the source version, taken from the meta of
+  /// [changeId] read by [fetchExportMeta] just before (the synchronizer
+  /// order), otherwise from the published meta.
+  Future<String> fetchExport(int changeId) async {
+    var meta = _fetchedMeta;
+    if (meta?.lastChangeId.v != changeId) {
+      meta = await readExportMeta();
+    }
+    return exportFile(
+      changeId,
+      sourceVersion: meta?.sourceVersion.v,
+    ).readAsString();
+  }
 
-  /// The change ids of the export files in [rootPath] (not in its sub
-  /// folders), in ascending order.
-  Future<List<int>> listExportChangeIds() async {
+  /// The export files in [rootPath] (not in its sub folders), oldest first:
+  /// by source version then change id.
+  Future<List<SyncedDbExportFileId>> listExportFileIds() async {
     var dir = url.dirname(exportFile(0).name);
-    var changeIds = <int>[];
+    var fileIds = <SyncedDbExportFileId>[];
     GetFilesOptions? query = GetFilesOptions(
       // The whole bucket when at its root.
       prefix: dir == '.' ? null : '$dir/',
@@ -96,36 +125,50 @@ class SyncedSdbStorageExportContext {
     while (query != null) {
       var response = await bucket.getFiles(query);
       for (var file in response.files) {
-        var changeId = syncedDbExportFileNameChangeId(url.basename(file.name));
-        if (changeId != null && exportFile(changeId).name == file.name) {
-          changeIds.add(changeId);
+        var fileId = syncedDbExportFileNameParse(url.basename(file.name));
+        if (fileId != null && _exportFileOfId(fileId).name == file.name) {
+          fileIds.add(fileId);
         }
       }
       query = response.nextQuery;
     }
-    return changeIds..sort();
+    return fileIds..sort(_compareFileIds);
   }
 
+  File _exportFileOfId(SyncedDbExportFileId fileId) =>
+      exportFile(fileId.changeId, sourceVersion: fileId.sourceVersion);
+
   /// Deletes the old export files: the [keep] most recent ones (highest
-  /// change ids) and the one the meta points to are kept.
+  /// source version, then highest change id) and the one the meta points to
+  /// are kept.
   ///
   /// [keep] is at least 2 (the default), so that a reader that read the
   /// previous meta just before a publish can still fetch its file.
   ///
-  /// Returns the change ids of the deleted files, in ascending order.
-  Future<List<int>> pruneExports({int keep = 2}) async {
+  /// Returns the deleted files, oldest first.
+  Future<List<SyncedDbExportFileId>> pruneExports({int keep = 2}) async {
     if (keep < 2) {
       throw ArgumentError.value(keep, 'keep', 'must be at least 2');
     }
-    var changeIds = await listExportChangeIds();
-    var metaChangeId = (await readExportMeta())?.lastChangeId.v;
-    var kept = {...changeIds.reversed.take(keep), ?metaChangeId};
+    var fileIds = await listExportFileIds();
+    var meta = await readExportMeta();
+    var kept = {
+      ...fileIds.reversed.take(keep),
+      if (meta != null)
+        (
+          changeId: meta.lastChangeId.v ?? 0,
+          // null and 0 give the same file name.
+          sourceVersion: (meta.sourceVersion.v ?? 0) == 0
+              ? null
+              : meta.sourceVersion.v,
+        ),
+    };
     var deleted = [
-      for (var changeId in changeIds)
-        if (!kept.contains(changeId)) changeId,
+      for (var fileId in fileIds)
+        if (!kept.contains(fileId)) fileId,
     ];
-    for (var changeId in deleted) {
-      await exportFile(changeId).delete();
+    for (var fileId in deleted) {
+      await _exportFileOfId(fileId).delete();
     }
     return deleted;
   }
@@ -140,6 +183,9 @@ class SyncedSdbStorageExportResult {
   /// The change id of the published export.
   final int changeId;
 
+  /// The source version of the published export.
+  final int? sourceVersion;
+
   /// False when Storage already had this export: nothing was written.
   final bool written;
 
@@ -149,6 +195,7 @@ class SyncedSdbStorageExportResult {
   /// Creates the export result.
   SyncedSdbStorageExportResult({
     required this.changeId,
+    this.sourceVersion,
     required this.written,
     this.exportSize,
   });
@@ -156,6 +203,7 @@ class SyncedSdbStorageExportResult {
   @override
   String toString() => {
     'changeId': changeId,
+    if (sourceVersion != null) 'sourceVersion': sourceVersion,
     'written': written,
     if (exportSize != null) 'exportSize': exportSize,
   }.toString();
@@ -166,8 +214,9 @@ extension SyncedSdbExportStorageExt on SyncedSdb {
   /// Publishes the database to Storage as a tekaly export (see
   /// [SyncedSdbStorageExportContext] for the files).
   ///
-  /// `export_<changeId>.jsonl` is written first, then the meta pointing to
-  /// it, so a reader never gets a meta pointing to a missing file.
+  /// The export file (see [syncedDbExportFileName]) is written first, then
+  /// the meta pointing to it, so a reader never gets a meta pointing to a
+  /// missing file.
   ///
   /// When the published meta already has the change id (and source version)
   /// of the database, nothing is written: an unchanged republish costs one
@@ -184,6 +233,7 @@ extension SyncedSdbExportStorageExt on SyncedSdb {
         published.sourceVersion.v == syncMeta?.sourceVersion.v) {
       return SyncedSdbStorageExportResult(
         changeId: published.lastChangeId.v!,
+        sourceVersion: published.sourceVersion.v,
         written: false,
       );
     }
@@ -193,7 +243,7 @@ extension SyncedSdbExportStorageExt on SyncedSdb {
     var changeId = exportMeta.lastChangeId.v!;
     var bytes = utf8.encode(sdbExportLinesToJsonlString(exportInfo.data));
     await exportContext
-        .exportFile(changeId)
+        .exportFileOf(exportMeta)
         .upload(
           bytes,
           options: StorageUploadFileOptions(
@@ -210,8 +260,14 @@ extension SyncedSdbExportStorageExt on SyncedSdb {
     );
     return SyncedSdbStorageExportResult(
       changeId: changeId,
+      sourceVersion: exportMeta.sourceVersion.v,
       written: true,
       exportSize: bytes.length,
     );
   }
+}
+
+int _compareFileIds(SyncedDbExportFileId a, SyncedDbExportFileId b) {
+  var result = (a.sourceVersion ?? 0).compareTo(b.sourceVersion ?? 0);
+  return result != 0 ? result : a.changeId.compareTo(b.changeId);
 }

@@ -4,8 +4,9 @@ library;
 
 export 'package:tekaly_synced_db_common/synced_db_common.dart'
     show
+        SyncedDbExportFileId,
         syncedDbExportFileName,
-        syncedDbExportFileNameChangeId,
+        syncedDbExportFileNameParse,
         syncedDbExportMetaFileName;
 
 export 'src/sync/synced_sdb_export_storage.dart'

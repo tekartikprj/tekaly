@@ -22,27 +22,46 @@ typedef SyncedDbSynchronizerFetchExportMeta =
 /// String but typically jsonl
 typedef SyncedDbSynchronizerFetchExport = Future<String> Function(int changeId);
 
-/// Name of the export file of [changeId] (`export_<changeId>.jsonl`).
+/// Name of the export file of [changeId]: `export_<changeId>.jsonl`, or
+/// `export_v<sourceVersion>_<changeId>.jsonl` for a [sourceVersion] other than
+/// null or 0 (the same for the synchronizers).
 ///
 /// A file never changes once written: a new change id gives a new file, so it
-/// can be cached forever.
-String syncedDbExportFileName(int changeId) => 'export_$changeId.jsonl';
+/// can be cached forever. Change ids can start again with a new source
+/// version, which is why the version is part of the name.
+String syncedDbExportFileName(int changeId, {int? sourceVersion}) =>
+    (sourceVersion ?? 0) == 0
+    ? 'export_$changeId.jsonl'
+    : 'export_v${sourceVersion}_$changeId.jsonl';
 
 /// Name of the export meta file (`export_meta<suffix>.json`), the small file
 /// pointing to the current export file.
 String syncedDbExportMetaFileName({String? suffix}) =>
     'export_meta${suffix ?? ''}.json';
 
-final _exportFileNameRegExp = RegExp(r'^export_(\d+)\.jsonl$');
+/// The change id and source version of an export file, see
+/// [syncedDbExportFileName].
+typedef SyncedDbExportFileId = ({int changeId, int? sourceVersion});
 
-/// The change id of an export file name (`export_<changeId>.jsonl`, see
+final _exportFileNameRegExp = RegExp(r'^export_(?:v(\d+)_)?(\d+)\.jsonl$');
+
+/// The change id and source version of an export file name (see
 /// [syncedDbExportFileName]), null for any other name.
-int? syncedDbExportFileNameChangeId(String fileName) {
+SyncedDbExportFileId? syncedDbExportFileNameParse(String fileName) {
   var match = _exportFileNameRegExp.firstMatch(fileName);
   if (match == null) {
     return null;
   }
-  var changeId = int.parse(match.group(1)!);
-  // Only the canonical name (no leading zero).
-  return syncedDbExportFileName(changeId) == fileName ? changeId : null;
+  var versionText = match.group(1);
+  var sourceVersion = versionText == null ? null : int.tryParse(versionText);
+  var changeId = int.tryParse(match.group(2)!);
+  if (changeId == null || (versionText != null && sourceVersion == null)) {
+    return null;
+  }
+  // Only the canonical name (no leading zero, no v0).
+  if (syncedDbExportFileName(changeId, sourceVersion: sourceVersion) !=
+      fileName) {
+    return null;
+  }
+  return (changeId: changeId, sourceVersion: sourceVersion);
 }
