@@ -18,8 +18,10 @@ an export made by one can be imported by any other.
 
 * Export after a `sync()` so `lastChangeId` is set; an import is applied only
   when the export `lastChangeId` is greater than the local one or the
-  `sourceVersion` differs. Records missing from the export are deleted
-  locally (an import is a snapshot).
+  `sourceVersion` differs. An import is a snapshot: records missing from the
+  export are deleted locally, and so are the records of a synced store the
+  export does not list (an export never lists a store without records).
+  `local_` and system stores are left alone.
 * `syncedSdb.exportInMemory()` returns a `SyncedDbExportInfo` (`metaInfo`,
   `data` lines); `exportToJsonlString()` / `importFromJsonlString(jsonl)` work
   with a single jsonl string. `importFromMemory(exportInfo:)` and
@@ -44,8 +46,6 @@ an export made by one can be imported by any other.
   that is not public. Readers use `SyncedSdbSynchronizerFromTekalyExport(db,
   fetchExport: context.fetchExport, fetchExportMeta:
   context.fetchExportMeta)` or their own http fetchers on the same files.
-* A store whose last record was deleted is left out of the export, so an
-  import keeps its old records: do not rely on emptying a store.
 * Values are json encoded as `{"$timestamp": iso8601}` and
   `{"$blob": base64}` (`sdbValueToJsonEncodable`), map keys are sorted so the
   files are stable in git.

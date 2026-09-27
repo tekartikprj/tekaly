@@ -111,4 +111,54 @@ void main() {
     expect(newJsonl, jsonl);
     await syncedSdb.close();
   });
+
+  test('import empties a store the export does not list', () async {
+    var localStoreRef = SdbStoreRef<String, SdbModel>('local_cache');
+    var schema = SdbDatabaseSchema(
+      stores: [
+        _myStoreRef.schema(),
+        _prefsStoreRef.schema(),
+        localStoreRef.schema(),
+        ...syncedSdbMetaSchema.stores,
+      ],
+    );
+    SyncedSdbOptions options() => SyncedSdbOptions(
+      openDatabaseOptions: SdbOpenDatabaseOptions(version: 1, schema: schema),
+    );
+    var server = SyncedSdb.newInMemory(options: options());
+    var serverDb = await server.database;
+    var synchronizer = SyncedSdbSynchronizer(
+      db: server,
+      source: newInMemorySyncedSourceMemory(),
+    );
+    await _myStoreRef.record('a').put(serverDb, {'test': 1});
+    await _prefsStoreRef.record('info').put(serverDb, {'name': 'demo'});
+    await synchronizer.sync();
+
+    var audience = SyncedSdb.newInMemory(options: options());
+    var audienceDb = await audience.database;
+    await audience.importFromMemory(exportInfo: await server.exportInMemory());
+    expect(await _myStoreRef.record('a').getValue(audienceDb), {'test': 1});
+    await localStoreRef.record('k').put(audienceDb, {'kept': true});
+
+    // The last record of my_store goes: the export no longer lists it.
+    await _myStoreRef.record('a').delete(serverDb);
+    await synchronizer.sync();
+    var exportInfo = await server.exportInMemory();
+    expect(exportInfo.data, isNot(contains({'store': 'my_store'})));
+
+    await audience.importFromMemory(exportInfo: exportInfo);
+    expect(await _myStoreRef.record('a').getValue(audienceDb), isNull);
+    expect(await _prefsStoreRef.record('info').getValue(audienceDb), {
+      'name': 'demo',
+    });
+    // Local stores are not part of an export, the import leaves them alone.
+    expect(await localStoreRef.record('k').getValue(audienceDb), {
+      'kept': true,
+    });
+
+    await synchronizer.close();
+    await server.close();
+    await audience.close();
+  });
 }

@@ -128,12 +128,24 @@ class SyncedSdbSynchronizerFromTekalyExport
       }
       var parsed = _parseTekalyExportLines(lines);
       var rawDb = await db.database;
-      var storeNames = [...parsed.stores.keys, sdbSyncMetaStoreRef.name];
+      // An export is a snapshot and never lists a store without records
+      // (whoever made it): a synced store it does not list is emptied.
+      var emptiedStoreNames = syncedSdbExportableStoreNames(
+        rawDb,
+      ).where((name) => !parsed.stores.containsKey(name)).toList();
+      var storeNames = [
+        ...parsed.stores.keys,
+        ...emptiedStoreNames,
+        sdbSyncMetaStoreRef.name,
+      ];
 
       await rawDb.inTransaction(
         storeNames: storeNames,
         mode: SdbTransactionMode.readWrite,
         run: (txn) async {
+          for (var storeName in emptiedStoreNames) {
+            await SdbStoreRef<String, SdbModel>(storeName).delete(txn);
+          }
           for (var entry in parsed.stores.entries) {
             var store = SdbStoreRef<String, SdbModel>(entry.key);
             var existing = await store.findRecords(txn);
