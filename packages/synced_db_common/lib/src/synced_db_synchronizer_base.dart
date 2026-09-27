@@ -80,6 +80,9 @@ abstract class SyncedDbSynchronizerBase<
     }
   }
 
+  @override
+  FutureOr<SyncedSyncStat> autoSyncAction() => lazySync();
+
   /// Stop listening to the source and local changes, called by the
   /// implementations `close`.
   @protected

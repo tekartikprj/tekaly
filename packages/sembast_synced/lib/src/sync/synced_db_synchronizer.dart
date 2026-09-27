@@ -44,11 +44,9 @@ class SyncedDbSynchronizer
     super.retryOptions,
   });
 
-  @override
-  FutureOr<SyncedSyncStat> autoSyncAction() => lazySync();
-
   /// Needed for autoSync.
   /// Wait for last sync to terminate.
+  @override
   Future<void> close() async {
     cancelAutoSync();
     await syncLock.synchronized(() {
@@ -65,6 +63,7 @@ class SyncedDbSynchronizer
   }
 
   /// Trigger a lazy sync
+  @override
   FutureOr<SyncedSyncStat> lazySync() {
     return sync();
   }

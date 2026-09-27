@@ -215,6 +215,7 @@ abstract class SyncedSdb implements SyncedDbCommon {
   Lock get syncTransactionLock;
 
   /// True when first synchronization is done (even without data, i.e. last ChangeId can be null but should be 0)
+  @override
   Future<void> initialSynchronizationDone();
 
   /// Good for in memory manipulation of incomping data and unit test !
@@ -260,6 +261,7 @@ abstract class SyncedSdb implements SyncedDbCommon {
   bool get trackChangesDisabled;
 
   /// Close database.
+  @override
   Future<void> close();
 }
 

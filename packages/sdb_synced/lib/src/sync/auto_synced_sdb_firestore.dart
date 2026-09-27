@@ -1,63 +1,49 @@
 import 'package:idb_shim/idb_sdb.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_firestore.dart';
-import 'package:tekartik_app_cv_firestore/app_cv_firestore_v2.dart';
+import 'package:tekaly_synced_db_common/synced_db_common_firestore.dart';
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
 import 'auto_synced_sdb.dart';
 
 /// Synced source firestore
 class AutoSynchronizedFirestoreSyncedSdbOptions
+    extends AutoSynchronizedFirestoreOptionsCommon
     implements AutoSynchronizedSyncedSdbOptions {
   /// Synced db options
   final SyncedSdbOptions syncedSdbOptions;
 
-  /// Firestore instance
-  final Firestore firestore;
-
   /// Sembast db factory
   final SdbFactory databaseFactory;
-
-  /// Root document path
-  final String rootDocumentPath;
 
   /// Sembast db name
   final String dbName;
 
-  /// Read-only: only sync down, local changes are never pushed to firestore
-  /// (a public source the user cannot write to).
-  final bool readOnly;
-
-  /// Retry strategy when a synchronization fails (the network is down...).
-  /// By default, while the first synchronization is pending, every 5s during
-  /// 1 minute then growing to reach 1 minute after 5 minutes of retrying;
-  /// once it is done, 15s doubled on each failure up to 1 minute.
-  final SyncedDbSynchronizerRetryOptions retryOptions;
-
   /// Firestore synced db options
   AutoSynchronizedFirestoreSyncedSdbOptions({
-    Firestore? firestore,
+    super.firestore,
     required this.syncedSdbOptions,
     required this.databaseFactory,
     required this.dbName,
-    this.readOnly = false,
-    SyncedDbSynchronizerRetryOptions? retryOptions,
+    super.readOnly = false,
+    super.retryOptions,
 
     /// Default ok for tests only
-    this.rootDocumentPath = 'test/local',
-  }) : firestore = firestore ?? Firestore.instance,
-       retryOptions = retryOptions ?? const SyncedDbSynchronizerRetryOptions();
+    super.rootDocumentPath = 'test/local',
+  });
 }
 
 /// Auto synchronized firestore synced db
 abstract class AutoSynchronizedFirestoreSyncedSdb
-    implements AutoSynchronizedSdb {
+    implements AutoSynchronizedSdb, AutoSynchronizedFirestoreSyncedDbCommon {
   /// Synchronizer
+  @override
   SyncedSdbSynchronizer get synchronizer;
 
   /// Synced db
   SyncedSdb get syncedSdb;
 
   /// Options
+  @override
   final AutoSynchronizedFirestoreSyncedSdbOptions options;
 
   /// Database, valid when ready
@@ -75,46 +61,16 @@ abstract class AutoSynchronizedFirestoreSyncedSdb
     return db;
   }
 
-  /// Wait for the first synchronization.
-  ///
-  /// A failed synchronization is retried (see
-  /// [AutoSynchronizedFirestoreSyncedSdbOptions.retryOptions]), so this
-  /// terminates once the source becomes reachable, it does not wait forever
-  /// when the network is down when the database is opened.
-  Future<void> initialSynchronizationDone();
-
-  /// Close the db
-  Future<void> close();
-
-  /// Synchronize
-  Future<SyncedSyncStat> synchronize();
-
-  /// Lazy synchronize if needed (timing undefined) - same as synchronize as of 2026/02/05
-  Future<SyncedSyncStat> lazySynchronize();
-
   /// Wait for current lazy synchronization to be done
   /// Future<void> waitSynchronized();
 }
 
 class _AutoSynchronizedFirestoreSyncedSdb
+    extends
+        AutoSynchronizedFirestoreSyncedDbBase<SyncedSdb, SyncedSdbSynchronizer>
     implements AutoSynchronizedFirestoreSyncedSdb {
   @override
-  late final SyncedSdb syncedSdb;
-  @override
-  late final SyncedSdbSynchronizer synchronizer;
-
-  /// Wait for the first synchronization, retried when it fails.
-  @override
-  Future<void> initialSynchronizationDone() async {
-    await ready;
-    await syncedSdb.initialSynchronizationDone();
-  }
-
-  @override
-  Future<void> close() async {
-    await synchronizer.close();
-    await syncedSdb.close();
-  }
+  SyncedSdb get syncedSdb => syncedDb;
 
   @override
   late SdbDatabase database;
@@ -123,41 +79,29 @@ class _AutoSynchronizedFirestoreSyncedSdb
 
   _AutoSynchronizedFirestoreSyncedSdb({required this.options});
 
-  late final ready = () async {
-    syncedSdb = SyncedSdb.openDatabase(
+  @override
+  Future<SyncedSdb> openSyncedDb() async {
+    var syncedSdb = SyncedSdb.openDatabase(
       options: options.syncedSdbOptions,
       databaseFactory: options.databaseFactory,
       name: options.dbName,
     );
     database = await syncedSdb.database;
-    var source = SyncedSourceFirestore(
-      firestore: options.firestore,
-      rootPath: options.rootDocumentPath,
-    );
-    synchronizer = options.readOnly
-        ? SyncedSdbSynchronizer(
-            db: syncedSdb,
-            readSource: source,
-            autoSync: true,
-            retryOptions: options.retryOptions,
-          )
-        : SyncedSdbSynchronizer(
-            db: syncedSdb,
-            source: source,
-            autoSync: true,
-            retryOptions: options.retryOptions,
-          );
-  }();
-
-  @override
-  Future<SyncedSyncStat> lazySynchronize() async {
-    await ready;
-    return await synchronizer.lazySync();
+    return syncedSdb;
   }
 
   @override
-  Future<SyncedSyncStat> synchronize() async {
-    await ready;
-    return await synchronizer.sync();
-  }
+  SyncedSdbSynchronizer newSynchronizer(
+    SyncedSdb syncedDb, {
+    SyncedSource? source,
+    SyncedSourceRead? readSource,
+    required bool autoSync,
+    required SyncedDbSynchronizerRetryOptions retryOptions,
+  }) => SyncedSdbSynchronizer(
+    db: syncedDb,
+    source: source,
+    readSource: readSource,
+    autoSync: autoSync,
+    retryOptions: retryOptions,
+  );
 }

@@ -33,9 +33,6 @@ class SyncedSdbSynchronizer
     super.retryOptions,
   });
 
-  @override
-  FutureOr<SyncedSyncStat> autoSyncAction() => lazySync();
-
   late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
     action: (count) async {
       if (debugSyncedSync) {
@@ -47,11 +44,13 @@ class SyncedSdbSynchronizer
   );
 
   /// Trigger a lazy sync
+  @override
   Future<SyncedSyncStat> lazySync() async {
     return (await _lazyLauncher.triggerAndWait());
   }
 
   /// Close synchronizer.
+  @override
   Future<void> close() async {
     cancelAutoSync();
     await syncLock.synchronized(() {

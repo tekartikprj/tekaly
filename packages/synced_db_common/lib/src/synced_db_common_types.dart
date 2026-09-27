@@ -14,4 +14,10 @@ abstract class SyncedDbCommonTransaction implements SyncedDbCommonClient {}
 abstract class SyncedDbCommonClient {}
 
 /// Common synced db (sembast or sdb based).
-abstract class SyncedDbCommon {}
+abstract class SyncedDbCommon {
+  /// Wait for the first synchronization (its local meta info being set).
+  Future<void> initialSynchronizationDone();
+
+  /// Close the database.
+  Future<void> close();
+}

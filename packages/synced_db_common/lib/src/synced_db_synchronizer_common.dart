@@ -449,6 +449,12 @@ abstract class SyncedDbSynchronizerCommon {
     return _singleFlight.run();
   }
 
+  /// Trigger a lazy sync, the one done in [autoSync] mode.
+  FutureOr<SyncedSyncStat> lazySync();
+
+  /// Close the synchronizer, waiting for the current sync to terminate.
+  Future<void> close();
+
   /// Wait for the current sync (if any) to terminate.
   @protected
   Future<void> waitSync() => _singleFlight.wait();
