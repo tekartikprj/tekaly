@@ -314,7 +314,6 @@ abstract class SyncedDbSynchronizerBase<
     }
 
     var sourceRecord = CvSyncedSourceRecord()
-      //..syncTimestamp.v = dirtySyncRecord.syncTimestamp.v
       ..syncId.v = dirtySyncRecord.syncId.v
       ..record.v = (CvSyncedSourceRecordData()
         ..store.v = dirtySyncRecord.store.v
@@ -433,8 +432,6 @@ abstract class SyncedDbSynchronizerBase<
                   ..store.v = responseRecord.record.v!.store.v
                   ..key.v = responseRecord.record.v!.key.v
                   ..syncId.v = responseRecord.syncId.v
-                  // id from the original syncRecord
-                  //..id = originalSyncRecord.id
                   ..syncTimestamp.v = responseRecord.syncTimestamp.v
                   ..syncChangeId.v = responseRecord.syncChangeId.v;
             localSetSyncRecordDeleted(

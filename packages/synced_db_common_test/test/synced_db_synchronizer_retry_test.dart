@@ -201,7 +201,15 @@ void main() {
           greaterThan(1),
           reason: 'the sync must have been retried several times',
         );
-        expect(context.synchronizer.hasPendingSyncRetry, isTrue);
+        // A retry is scheduled, unless the retried synchronization is running
+        // right now (the timer just fired).
+        expect(
+          context.synchronizer.hasPendingSyncRetry ||
+              context.synchronizer.syncStatus.activity ==
+                  SyncedDbSyncActivity.syncing,
+          isTrue,
+          reason: 'a retry must be scheduled or running',
+        );
         expect(context.synchronizer.retryingFor, greaterThan(Duration.zero));
 
         // The source is reachable again, a retry eventually succeeds.

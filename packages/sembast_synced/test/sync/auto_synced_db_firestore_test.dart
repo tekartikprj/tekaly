@@ -49,12 +49,18 @@ Future<void> main() async {
       var db = syncedDb.database;
       expect(db.path, 'synced.db');
       await syncedDb.initialSynchronizationDone();
+      // The local change triggers an automatic synchronization which might
+      // push the record before the explicit one below: count what all the
+      // synchronizations did.
+      var total = SyncedSyncStat();
+      var subscription = syncedDb.synchronizer.onSynced().listen(total.add);
       await record.add(db, {'test': 1});
+      await syncedDb.synchronize();
+      expect(total, SyncedSyncStat(remoteCreatedCount: 1));
       var stat = await syncedDb.synchronize();
-
-      expect(stat, SyncedSyncStat(remoteCreatedCount: 1));
-      stat = await syncedDb.synchronize();
       expect(stat, SyncedSyncStat());
+      expect(total, SyncedSyncStat(remoteCreatedCount: 1));
+      await subscription.cancel();
 
       await syncedDb.close();
       await databaseFactory.deleteDatabase(SyncedDb.nameDefault);

@@ -333,8 +333,6 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneFromRemote', () async {
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
@@ -455,8 +453,6 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       var db = await syncedSdb.database;
       await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = sdbEntityStoreRef.name
             ..key.v = 'dummy'
@@ -464,8 +460,6 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       ); // no value
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
@@ -528,8 +522,6 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncOneRawFromRemote', () async {
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
@@ -597,8 +589,6 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
     test('syncUpdateFromRemote', () async {
       await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'
@@ -612,8 +602,6 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       /// update
       await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = sdbEntityStoreRef.name
             ..key.v = 'a1'

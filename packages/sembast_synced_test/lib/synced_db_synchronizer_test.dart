@@ -329,8 +329,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('syncOneFromRemote', () async {
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'
@@ -401,8 +399,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('local excluded syncOneFromRemote', () async {
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbLocalEntityStoreRef.name
             ..key.v = 'a1'
@@ -453,8 +449,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       var db = await syncedDb.database;
       (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'dummy'
@@ -462,8 +456,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       )); // no value
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'
@@ -522,8 +514,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('syncOneRawFromRemote', () async {
       var sourceRecord = (await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'
@@ -590,8 +580,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
     test('syncUpdateFromRemote', () async {
       await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'
@@ -605,8 +593,6 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       /// update
       await source.putSourceRecord(
         CvSyncedSourceRecord()
-          //..syncId.v = sourceRecord.syncId.v
-          // ..syncTimestamp.v = sourceRecord.syncTimestamp.v
           ..record.v = (CvSyncedSourceRecordData()
             ..store.v = dbEntityStoreRef.name
             ..key.v = 'a1'

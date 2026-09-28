@@ -106,8 +106,6 @@ class _SyncedSourceSembast
 
       /// Copy fields
       record = dataCollection.record(sourceSyncId).cv()
-        // No longer set in the record
-        //..syncId.setValue(record.syncId.v)
         ..syncChangeId.setValue(record.syncChangeId.v)
         ..record.setValue(record.record.v);
     }
