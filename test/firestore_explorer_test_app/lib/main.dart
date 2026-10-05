@@ -6,7 +6,9 @@ import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 import 'package:tekartik_firebase_firestore_sembast/firestore_sembast.dart';
 import 'package:sembast_web/sembast_web.dart';
 import 'package:sembast/sembast_io.dart';
+
 import 'models.dart';
+
 import 'package:path/path.dart';
 import 'package:tekartik_firebase_local/firebase_local.dart';
 
@@ -30,9 +32,8 @@ Future<void> run() async {
             absolute('.local', 'tk_firestore_explorer_test_app'),
           ),
         );
-  firestore = newFirestoreServiceSembast(
-    databaseFactory: sembastFactory,
-  ).firestore(newFirebaseAppLocal());
+  firestore = newFirestoreServiceSembast(databaseFactory: sembastFactory)
+      .firestore(newFirebaseAppLocal());
   //.debugQuickLoggerWrapper();
   var app1 = apps.doc('app1').cv()..name.v = 'test';
   await firestore.cvSet(app1);
