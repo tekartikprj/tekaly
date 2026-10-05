@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekartik_firebase_ui_firestore/firebase_ui_firestore.dart';
 
 import 'document_edit.dart';

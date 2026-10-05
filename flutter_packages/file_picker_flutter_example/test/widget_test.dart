@@ -3,8 +3,8 @@
 // This is the whole point of `tekaly_file_picker`: the exact same screen code
 // runs against a mock, no dialog, no plugin, no platform channel.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_file_picker_flutter_example/src/playground_screen.dart';
 
 void main() {

@@ -8,8 +8,8 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  collection: ">=1.19.0"
-  cv: ">=1.1.10"
+  collection: ">=1.19.1"
+  cv: ">=1.1.11"
   meta: ">=1.18.0"
   path: ">=1.9.1"
   # Only for the value types (Timestamp, Blob) and the json encodable codec,

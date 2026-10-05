@@ -1,5 +1,5 @@
 import 'package:cv/utils/value_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_firestore_explorer/src/document_clipboard_controller.dart';
 import 'package:tekaly_firestore_explorer/src/mapping.dart';
 import 'package:tekaly_firestore_explorer/src/utils.dart';

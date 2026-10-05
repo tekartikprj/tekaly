@@ -1,6 +1,6 @@
 import 'package:cv/utils/value_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_firestore_explorer/src/import_common.dart';
 import 'package:tekaly_firestore_explorer/src/utils.dart';
 import 'package:tekartik_app_flutter_widget/mini_ui.dart';
@@ -174,9 +174,8 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
                 subtitle: subtitle != null ? Text(subtitle) : null,
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: subtitle ?? ''));
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Copied')));
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(const SnackBar(content: Text('Copied')));
                 },
               ),
               if (field is CvListField)

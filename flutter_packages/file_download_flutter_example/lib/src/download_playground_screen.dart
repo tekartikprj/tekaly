@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_file_download/download_file.dart';
 import 'package:tekaly_file_download/download_image.dart';
 import 'package:tekaly_file_picker/file_picker.dart';
