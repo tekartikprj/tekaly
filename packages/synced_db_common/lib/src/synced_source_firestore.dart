@@ -197,9 +197,12 @@ class SyncedSourceFirestore
       // increment change id
       var lastChangeId = (meta?.lastChangeId.v ?? 0) + 1;
 
-      // Set in map and update meta info
+      // Set in map and update meta info. The whole document is replaced (the
+      // record, its change id and timestamp): a merge would keep the fields
+      // the record no longer has, and the next sync down would bring them
+      // back.
       map[syncChangeIdKey] = lastChangeId;
-      txn.set(dataCollection.doc(ref.syncId!), map, fb.SetOptions(merge: true));
+      txn.set(dataCollection.doc(ref.syncId!), map);
       txn.set(metaInfoReference, {
         metaLastChangeIdKey: lastChangeId,
       }, fb.SetOptions(merge: true));

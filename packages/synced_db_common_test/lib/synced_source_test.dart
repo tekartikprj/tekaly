@@ -138,6 +138,39 @@ void runSyncedSourceTest(
       'record': {'store': 'test2', 'key': '2', 'deleted': false},
     });
   });
+  test('an update drops the fields no longer in the value', () async {
+    var record = await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '1'
+          ..value.v = {
+            'name': 'Inès',
+            'email': 'ines@example.test',
+            'nested': {'a': 1, 'b': 2},
+          }),
+    );
+    var syncId = record.syncId.v;
+    await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'test'
+          ..key.v = '1'
+          ..value.v = {
+            'name': 'Inès',
+            'nested': {'a': 1},
+          })
+        ..syncId.v = syncId,
+    );
+    var read = await source.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: '1', syncId: syncId),
+    );
+    expect(read!.record.v!.value.v, {
+      'name': 'Inès',
+      'nested': {'a': 1},
+    });
+  });
+
   test('put/getRecord data', () async {
     var record = (await source.putSourceRecord(
       CvSyncedSourceRecord()
