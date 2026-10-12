@@ -49,6 +49,16 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
   final _syncMetaInfoSubject = BehaviorSubject<SdbSyncMetaInfo?>();
   final _syncDirtySubject = PublishSubject<bool>();
 
+  /// True once [close] was called: the subjects are closed, a read still
+  /// running gets aborted.
+  bool get _closing => _syncMetaInfoSubject.isClosed;
+
+  void _addSyncMetaInfo(SdbSyncMetaInfo? metaInfo) {
+    if (!_closing) {
+      _syncMetaInfoSubject.add(metaInfo);
+    }
+  }
+
   /// Options for synced sdb.
   final SyncedSdbOptions options;
 
@@ -135,7 +145,9 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
         }
       }
     }
-    _syncDirtySubject.add(true);
+    if (!_syncDirtySubject.isClosed) {
+      _syncDirtySubject.add(true);
+    }
   }
 
   late final Set<String> _syncedStoreNames;
@@ -389,7 +401,7 @@ extension SyncedSdbExtension on SyncedSdb {
   Future<SdbSyncMetaInfo?> getSyncMetaInfo({SdbClient? client}) async {
     client ??= await database;
     var localMetaSyncInfo = await scvSyncMetaInfoRef.get(client);
-    _impl._syncMetaInfoSubject.add(localMetaSyncInfo);
+    _impl._addSyncMetaInfo(localMetaSyncInfo);
     return localMetaSyncInfo;
   }
 
@@ -405,10 +417,19 @@ extension SyncedSdbExtension on SyncedSdb {
 
     var subject = _impl._syncMetaInfoSubject;
     if (subject.valueOrNull == null) {
-      database.then((db) async {
-        /// getSyncMetaInfo will update the subject
-        await getSyncMetaInfo(client: db);
-      }).unawait();
+      database
+          .then((db) async {
+            /// getSyncMetaInfo will update the subject
+            await getSyncMetaInfo(client: db);
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            // Closed while reading: the read is aborted, nobody listens
+            // anymore.
+            if (!_impl._closing) {
+              Error.throwWithStackTrace(error, stackTrace);
+            }
+          })
+          .unawait();
     }
     yield* _impl._syncMetaInfoSubject.stream;
   }
@@ -441,7 +462,7 @@ extension SyncedSdbExtension on SyncedSdb {
         print('Setting meta Info $dbSyncMetaInfo');
       }
       await dbSyncMetaInfo.put(client);
-      _impl._syncMetaInfoSubject.add(dbSyncMetaInfo);
+      _impl._addSyncMetaInfo(dbSyncMetaInfo);
     }
   }
 
