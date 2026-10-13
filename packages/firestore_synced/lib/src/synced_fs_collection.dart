@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:tekaly_firestore_synced/src/synced_fs_change.dart';
 import 'package:tekaly_firestore_synced/src/synced_fs_document.dart';
 import 'package:tekaly_firestore_synced/src/synced_fs_meta.dart';
@@ -12,7 +14,8 @@ class SyncedFsCollectionOptions {
   /// transaction as the document itself.
   ///
   /// Set it to false when the change log is fed by a cloud function trigger
-  /// only (see `SyncedFsCollectionTrigger`).
+  /// only (see `SyncedFsCollectionTrigger`). Ignored when [collectionChanges]
+  /// is true (no change log at all).
   final bool writeChangeLog;
 
   /// When true (default), the change log entries embed the document content so
@@ -22,41 +25,190 @@ class SyncedFsCollectionOptions {
   /// documents with `SyncedFsSource.getSnapshot`.
   final bool changeLogIncludesData;
 
+  /// When true, no change log is written (2 writes per change: the document
+  /// and the meta) and the changes are read from the collection itself,
+  /// ordered by `synced.changeId` (tombstones included), see
+  /// [SyncedFsFirestoreSource.collectionChanges].
+  ///
+  /// Only valid when every write goes through the helper (or the trigger):
+  /// the collection then holds the current modification number of each
+  /// document, which is all a consumer asking for "everything newer than X"
+  /// needs. A single field index on `synced.changeId` is enough.
+  final bool collectionChanges;
+
+  /// When false (default), a tombstone only keeps the `synced` information:
+  /// the document content is dropped on deletion. When true, the content of
+  /// the deleted document is kept next to it.
+  final bool tombstoneKeepsData;
+
   /// Options.
   const SyncedFsCollectionOptions({
     this.writeChangeLog = true,
     this.changeLogIncludesData = true,
+    this.collectionChanges = false,
+    this.tombstoneKeepsData = false,
   });
+
+  /// True when the writes append to the change log.
+  bool get writesChangeLog => writeChangeLog && !collectionChanges;
 }
 
-/// Meta information and change log update inside a transaction.
+/// A document read in a [SyncedFsTransaction].
+class SyncedFsTransactionDoc<T extends CvFirestoreDocument> {
+  /// The document, without its `synced` information; `exists` is false when
+  /// the document does not exist in firestore (a tombstone exists).
+  final T doc;
+
+  /// The `synced` information, null when the document does not exist or was
+  /// written around the synced helpers.
+  final CvSyncedFsDocumentSyncedInfo? syncedInfo;
+
+  /// A document read in a transaction.
+  SyncedFsTransactionDoc({required this.doc, required this.syncedInfo});
+
+  /// True when the document exists in firestore (a tombstone included).
+  bool get exists => doc.exists;
+
+  /// True for a tombstone (soft deleted).
+  bool get isDeleted => syncedInfo?.deleted.v == true;
+
+  /// True when the document exists and is not a tombstone.
+  bool get isAlive => exists && !isDeleted;
+
+  /// Its modification number, null if never stamped.
+  int? get changeId => syncedInfo?.changeId.v;
+
+  @override
+  String toString() =>
+      'SyncedFsTransactionDoc(${doc.path}, '
+      '${isAlive ? 'alive' : (isDeleted ? 'deleted' : 'missing')}, '
+      'changeId: $changeId)';
+}
+
+/// A transaction on a [SyncedFsCollection], see
+/// [SyncedFsCollection.runTransaction].
 ///
-/// Firestore requires every read to happen before any write in a transaction,
-/// so [txnInit] must be called before anything is written.
-class _TxnInfo<T extends CvFirestoreDocument> {
-  final CvFirestoreTransaction txn;
+/// Firestore requires every read to happen before any write in a
+/// transaction: [getDoc] (and reads of other documents through
+/// [transaction]) must come before [setDoc] and [deleteDoc]. Each write
+/// allocates the next modification number from [meta], stamps the document
+/// and, unless the collection is configured otherwise, appends its change
+/// log entry. The meta is written once, when the action completes, only
+/// when something was allocated.
+class SyncedFsTransaction<T extends CvFirestoreDocument> {
+  /// The collection.
   final SyncedFsCollection<T> collection;
+
+  /// The underlying transaction, to read and write other documents.
+  final CvFirestoreTransaction transaction;
+
+  /// The meta information, read when the transaction starts.
   late final SyncedFsMetaInfoRecord meta;
-  late int lastChangeId;
 
-  _TxnInfo(this.txn, this.collection);
+  late int _lastChangeId;
+  late final int _initialChangeId;
+  var _written = false;
+  final _readMaps = <String, Model?>{};
 
-  Future<void> txnInit() async {
-    meta = await txn.refGet(collection.refs.metaInfoDocRef);
-    lastChangeId = meta.lastChangeId.v ?? 0;
+  SyncedFsTransaction._(this.collection, this.transaction);
+
+  Firestore get _firestore => collection.firestore;
+
+  SyncedFsCollectionOptions get _options => collection.options;
+
+  /// The last modification number allocated so far (the one of the meta
+  /// when nothing was written yet).
+  int get lastChangeId => _lastChangeId;
+
+  Future<void> _init() async {
+    meta = await transaction.refGet(collection.refs.metaInfoDocRef);
+    _lastChangeId = _initialChangeId = meta.lastChangeId.v ?? 0;
   }
 
-  /// Allocate the next modification number.
-  int txnAllocateChangeId() => ++lastChangeId;
+  void _checkCanRead() {
+    if (_written) {
+      throw StateError('read after a write in ${collection.refs.path}');
+    }
+  }
 
-  /// Append the change log entry for [changeId] if enabled.
-  void txnAddChange({
+  /// Read the document [id] (before any write).
+  Future<SyncedFsTransactionDoc<T>> getDoc(String id) async {
+    _checkCanRead();
+    var ref = collection._collection.doc(id);
+    var snapshot = await transaction.get(ref.raw(_firestore));
+    var map = snapshot.exists ? snapshot.data : null;
+    _readMaps[id] = map;
+    var doc = snapshot.cv<T>();
+    if (doc is Map) {
+      // A map document holds every key: strip the bookkeeping.
+      (doc as Map).remove(syncedFieldKey);
+    }
+    return SyncedFsTransactionDoc(doc: doc, syncedInfo: map?.syncedInfoOrNull);
+  }
+
+  /// A new unique document id in the collection (a read: before any write).
+  Future<String> newDocId() async {
+    _checkCanRead();
+    return await collection._collection
+        .raw(_firestore)
+        .txnGenerateUniqueId(transaction);
+  }
+
+  int _allocate() {
+    _written = true;
+    return ++_lastChangeId;
+  }
+
+  /// Write [doc] as the document [id], returns its modification number.
+  int setDoc(String id, T doc) => setMap(id, doc.toMap());
+
+  /// Write [map] as the document [id], returns its modification number.
+  int setMap(String id, Model map) {
+    var changeId = _allocate();
+    var ref = collection._collection.doc(id);
+    var content = Model.of(map)..remove(syncedFieldKey);
+    transaction.refSetMap(
+      ref,
+      Model.of(content)..[syncedFieldKey] = _syncedMap(changeId),
+    );
+    _addChange(changeId: changeId, docId: id, deleted: false, data: content);
+    return changeId;
+  }
+
+  /// Soft delete the document [id]: a tombstone, returns its modification
+  /// number.
+  ///
+  /// The tombstone only holds the `synced` information, unless the
+  /// collection keeps the data of tombstones
+  /// ([SyncedFsCollectionOptions.tombstoneKeepsData]) and the document was
+  /// read in this transaction ([getDoc]).
+  int deleteDoc(String id) {
+    var changeId = _allocate();
+    var ref = collection._collection.doc(id);
+    var content = _options.tombstoneKeepsData
+        ? (_readMaps[id]?.withoutSyncedInfo ?? <String, Object?>{})
+        : <String, Object?>{};
+    transaction.refSetMap(
+      ref,
+      Model.of(content)..[syncedFieldKey] = _syncedMap(changeId, deleted: true),
+    );
+    _addChange(changeId: changeId, docId: id, deleted: true);
+    return changeId;
+  }
+
+  Model _syncedMap(int changeId, {bool deleted = false}) =>
+      (CvSyncedFsDocumentSyncedInfo()
+            ..deleted.v = deleted
+            ..changeId.v = changeId)
+          .toMapWithServerTimestamp();
+
+  void _addChange({
     required int changeId,
     required String docId,
     required bool deleted,
     Model? data,
   }) {
-    if (!collection.options.writeChangeLog) {
+    if (!_options.writesChangeLog) {
       return;
     }
     var change = CvSyncedFsChangeRecord()
@@ -64,17 +216,21 @@ class _TxnInfo<T extends CvFirestoreDocument> {
       ..docId.v = docId
       ..deleted.v = deleted
       ..origin.v = SyncedFsChangeOrigin.write;
-    if (!deleted && collection.options.changeLogIncludesData) {
+    if (!deleted && _options.changeLogIncludesData) {
       change.data.v = data;
     }
     var map = change.toMap()..withServerTimestamp(change.timestamp);
-    txn.refSetMap(collection.refs.changeDocRef(changeId), map);
+    transaction.refSetMap(collection.refs.changeDocRef(changeId), map);
   }
 
-  void txnEnd() {
-    if (meta.lastChangeId.v != lastChangeId) {
-      meta.lastChangeId.v = lastChangeId;
-      txn.refSet(collection.refs.metaInfoDocRef, meta, SetOptions(merge: true));
+  void _end() {
+    if (_lastChangeId != _initialChangeId) {
+      meta.lastChangeId.v = _lastChangeId;
+      transaction.refSet(
+        collection.refs.metaInfoDocRef,
+        meta,
+        SetOptions(merge: true),
+      );
     }
   }
 }
@@ -84,8 +240,12 @@ class _TxnInfo<T extends CvFirestoreDocument> {
 /// Every write allocates a modification number (`synced.changeId`), stamps the
 /// document with it and, unless disabled, appends the matching immutable entry
 /// in the change log, all in the same transaction. Deletions are soft: the
-/// document stays as a tombstone (`synced.deleted`) so that consumers can pick
+/// document stays as a tombstone (`synced.deleted`, content dropped unless
+/// [SyncedFsCollectionOptions.tombstoneKeepsData]) so that consumers can pick
 /// the deletion up.
+///
+/// [runTransaction] combines reads, application logic and several writes in
+/// one transaction.
 class SyncedFsCollection<T extends CvFirestoreDocument> {
   /// Firestore instance
   final Firestore firestore;
@@ -101,10 +261,13 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
     path: _collection.path,
   );
 
-  /// Read only view of the collection, what a consumer synchronizes from.
+  /// Read only view of the collection, what a consumer synchronizes from
+  /// (its changes read from the collection itself when
+  /// [SyncedFsCollectionOptions.collectionChanges]).
   late final SyncedFsFirestoreSource source = SyncedFsFirestoreSource.fromRefs(
     firestore: firestore,
     refs: refs,
+    collectionChanges: options.collectionChanges,
   );
 
   /// Creates a [SyncedFsCollection] with [firestore] instance and target [_collection] reference.
@@ -167,40 +330,33 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
     return null;
   }
 
-  void _mapUpdate(Model map, int lastChangeId, {bool deleted = false}) {
-    map[syncedFieldKey] =
-        (CvSyncedFsDocumentSyncedInfo()
-              ..deleted.v = deleted
-              ..changeId.v = lastChangeId)
-            .toMapWithServerTimestamp();
+  /// Run [action] in a transaction of the collection: read documents
+  /// ([SyncedFsTransaction.getDoc], other ones through
+  /// [SyncedFsTransaction.transaction]), then write them, each write
+  /// allocating its modification number, the meta written once at the end.
+  ///
+  /// The action may run more than once (firestore retries a transaction on
+  /// contention, the meta being read by every write, concurrent writes do
+  /// contend).
+  Future<R> runTransaction<R>(
+    FutureOr<R> Function(SyncedFsTransaction<T> txn) action,
+  ) {
+    return firestore.cvRunTransaction((transaction) async {
+      var txn = SyncedFsTransaction<T>._(this, transaction);
+      await txn._init();
+      var result = await action(txn);
+      txn._end();
+      return result;
+    });
   }
 
-  Model _fullRecordModelFromMap(
-    Model map,
-    int lastChangeId, {
-    bool deleted = false,
-  }) {
-    map = Model.of(map);
-    _mapUpdate(map, lastChangeId, deleted: deleted);
-    return map;
-  }
-
-  /// Delete a doc
+  /// Delete a doc: a tombstone (see [SyncedFsTransaction.deleteDoc]), only
+  /// if it exists and is not deleted already.
   Future<void> deleteDoc(String id) async {
-    return await firestore.cvRunTransaction((txn) async {
-      var txnInfo = _TxnInfo<T>(txn, this);
-      await txnInfo.txnInit();
-
-      var ref = _collection.doc(id);
-      var existingSnapshot = await txn.get(ref.raw(firestore));
-      if (existingSnapshot.exists) {
-        var lastChangeId = txnInfo.txnAllocateChangeId();
-        var newMap = Model.of(existingSnapshot.data);
-        _mapUpdate(newMap, lastChangeId, deleted: true);
-        txn.refSetMap(ref, newMap);
-        txnInfo.txnAddChange(changeId: lastChangeId, docId: id, deleted: true);
-
-        txnInfo.txnEnd();
+    await runTransaction((txn) async {
+      var existing = await txn.getDoc(id);
+      if (existing.isAlive) {
+        txn.deleteDoc(id);
       }
     });
   }
@@ -212,46 +368,17 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
 
   /// Add a Map, returns its id
   Future<String> addMap(Model map) async {
-    return await firestore.cvRunTransaction((txn) async {
-      var txnInfo = _TxnInfo<T>(txn, this);
-      await txnInfo.txnInit();
-
-      var uniqueId = await _collection.raw(firestore).txnGenerateUniqueId(txn);
-
-      var lastChangeId = txnInfo.txnAllocateChangeId();
-
-      var ref = _collection.doc(uniqueId);
-      txn.refSetMap(ref, _fullRecordModelFromMap(map, lastChangeId));
-      txnInfo.txnAddChange(
-        changeId: lastChangeId,
-        docId: uniqueId,
-        deleted: false,
-        data: map,
-      );
-
-      txnInfo.txnEnd();
-      return uniqueId;
+    return await runTransaction((txn) async {
+      var id = await txn.newDocId();
+      txn.setMap(id, map);
+      return id;
     });
   }
 
   /// Set a Map
   Future<void> setMap(String id, Model map) async {
-    return await firestore.cvRunTransaction((txn) async {
-      var txnInfo = _TxnInfo<T>(txn, this);
-      await txnInfo.txnInit();
-
-      var lastChangeId = txnInfo.txnAllocateChangeId();
-
-      var ref = _collection.doc(id);
-      txn.refSetMap(ref, _fullRecordModelFromMap(map, lastChangeId));
-      txnInfo.txnAddChange(
-        changeId: lastChangeId,
-        docId: id,
-        deleted: false,
-        data: map,
-      );
-
-      txnInfo.txnEnd();
+    await runTransaction((txn) {
+      txn.setMap(id, map);
     });
   }
 

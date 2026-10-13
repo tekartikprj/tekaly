@@ -23,6 +23,12 @@ description: >-
   source, behind a truncated log or when the source version was bumped.
   Check `SyncedFsSdbSyncResult` (`fullSync`, `appliedCount`, `deletedCount`,
   `isEmpty`).
+* A full resynchronization replays the change list from scratch page by page
+  (store cleared first) when `source.supportsFullChangeList` (a
+  `collectionChanges` source), one `getSnapshot()` of everything otherwise;
+  the local meta is written once it completes.
+* Any `SyncedFsSource` works (an api backed one included): extend it or mix
+  `SyncedFsSourceDefaultMixin` for the defaults of later members.
 * Documents land in the store keyed by their firestore document id with the
   `synced` map stripped; applying a change is an idempotent put or delete.
 * A change that cannot be applied goes to the dead letter queue instead of

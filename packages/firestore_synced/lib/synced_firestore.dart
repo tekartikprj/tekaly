@@ -24,7 +24,11 @@ export 'src/synced_fs_change.dart'
         syncedFsChangeDocId,
         syncedFsChangeDocIdToChangeId;
 export 'src/synced_fs_collection.dart'
-    show SyncedFsCollection, SyncedFsCollectionOptions;
+    show
+        SyncedFsCollection,
+        SyncedFsCollectionOptions,
+        SyncedFsTransaction,
+        SyncedFsTransactionDoc;
 export 'src/synced_fs_document.dart'
     show
         CvSyncedFsDocumentMapExt,
@@ -56,5 +60,6 @@ export 'src/synced_fs_source.dart'
         SyncedFsFirestoreSource,
         SyncedFsSnapshot,
         SyncedFsSource,
+        SyncedFsSourceDefaultMixin,
         SyncedFsSourceExt,
         syncedFsDefaultStepLimit;

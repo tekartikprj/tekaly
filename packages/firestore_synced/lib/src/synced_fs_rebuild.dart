@@ -307,6 +307,79 @@ class SyncedFsChangeLogRebuilder {
     return deleted;
   }
 
+  /// Hard delete the tombstones whose `synced.timestamp` is before [before]
+  /// (at most [limit] of them when set), in transactions, raising
+  /// `minIncrementalChangeId` of the meta to the highest purged modification
+  /// number: a consumer synchronized below it does a full resynchronization
+  /// (it may have missed a deletion that is gone).
+  ///
+  /// Meant for a collection whose changes are read from the collection
+  /// itself (`SyncedFsCollectionOptions.collectionChanges`), where tombstones
+  /// pile up otherwise. Single field queries only (`synced.deleted == true`,
+  /// paged by document id, the timestamp filtered in code): no composite
+  /// index needed. Returns the number of purged tombstones.
+  Future<int> purgeTombstones({required DateTime before, int? limit}) async {
+    var purged = 0;
+    String? lastDocId;
+    while (limit == null || purged < limit) {
+      var query = firestore
+          .collection(refs.path)
+          .where(syncedDeletedFieldPath, isEqualTo: true)
+          .orderBy(firestoreNameFieldPath)
+          .limit(syncedFsDefaultStepLimit);
+      if (lastDocId != null) {
+        query = query.startAfter(values: [lastDocId]);
+      }
+      var snapshots = (await query.get()).docs;
+      if (snapshots.isEmpty) {
+        break;
+      }
+      lastDocId = snapshots.last.ref.id;
+      var candidates = snapshots.where((snapshot) {
+        var timestamp = snapshot.data.syncedInfoOrNull?.timestamp.v;
+        return timestamp != null && timestamp.toDateTime().isBefore(before);
+      });
+      if (limit != null) {
+        candidates = candidates.take(limit - purged);
+      }
+      var candidateList = candidates.toList();
+      if (candidateList.isNotEmpty) {
+        purged += await firestore.cvRunTransaction((txn) async {
+          var meta = await txn.refGet(refs.metaInfoDocRef);
+          var toDelete = <DocumentSnapshot>[];
+          for (var candidate in candidateList) {
+            /// Still the same tombstone (not written again meanwhile).
+            var current = await txn.get(candidate.ref);
+            if (current.exists &&
+                current.data.syncedIsDeleted &&
+                current.data.syncedChangeIdOrNull ==
+                    candidate.data.syncedChangeIdOrNull) {
+              toDelete.add(current);
+            }
+          }
+          if (toDelete.isEmpty) {
+            return 0;
+          }
+          var minIncrementalChangeId = meta.minIncrementalChangeId.v ?? 0;
+          for (var snapshot in toDelete) {
+            txn.delete(snapshot.ref);
+            var changeId = snapshot.data.syncedChangeIdOrNull ?? 0;
+            if (changeId > minIncrementalChangeId) {
+              minIncrementalChangeId = changeId;
+            }
+          }
+          meta.minIncrementalChangeId.v = minIncrementalChangeId;
+          txn.refSet(refs.metaInfoDocRef, meta, SetOptions(merge: true));
+          return toDelete.length;
+        });
+      }
+      if (snapshots.length < syncedFsDefaultStepLimit) {
+        break;
+      }
+    }
+    return purged;
+  }
+
   /// Force every consumer to do a full resynchronization by bumping the source
   /// version. Returns the new version.
   Future<int> bumpVersion() async {

@@ -145,6 +145,12 @@ class SyncedFsSdbSynchronizer {
   /// another source, left behind a change log truncation, or when the source
   /// version was bumped. Otherwise replays the change log from the last
   /// applied modification number.
+  ///
+  /// A full resynchronization clears the local store and replays the change
+  /// list from scratch, page by page, when the source supports it
+  /// ([SyncedFsSource.supportsFullChangeList]); otherwise it applies one
+  /// snapshot of the whole collection. The local meta is only written once
+  /// it completes: an interrupted full resynchronization starts again.
   Future<SyncedFsSdbSyncResult> sync() async {
     var remoteMeta = await source.getMetaInfo();
     var remoteVersion = remoteMeta?.version.v ?? 1;
@@ -163,12 +169,20 @@ class SyncedFsSdbSynchronizer {
     var lastChangeId = fullSync ? null : localChangeId;
 
     if (fullSync) {
-      var snapshot = await source.getSnapshot();
-      var result = await _applySnapshot(snapshot, version: remoteVersion);
-      appliedCount += result.appliedCount;
-      deletedCount += result.deletedCount;
-      failedCount += result.failedCount;
-      lastChangeId = snapshot.lastChangeId ?? 0;
+      if (source.supportsFullChangeList) {
+        var result = await _replayFullChangeList();
+        appliedCount += result.appliedCount;
+        deletedCount += result.deletedCount;
+        failedCount += result.failedCount;
+        lastChangeId = result.lastChangeId ?? 0;
+      } else {
+        var snapshot = await source.getSnapshot();
+        var result = await _applySnapshot(snapshot, version: remoteVersion);
+        appliedCount += result.appliedCount;
+        deletedCount += result.deletedCount;
+        failedCount += result.failedCount;
+        lastChangeId = snapshot.lastChangeId ?? 0;
+      }
     }
 
     while (true) {
@@ -341,11 +355,9 @@ class SyncedFsSdbSynchronizer {
     );
   }
 
-  Future<SyncedFsSdbSyncResult> _applyChanges(
-    SyncedFsChangeList list, {
-    required int version,
-  }) async {
-    /// Entries written without their content, fetch the documents.
+  /// The changes of [list] ready to apply, the entries written without their
+  /// content fetched.
+  Future<List<_PreparedChange>> _prepareList(SyncedFsChangeList list) async {
     var toFetch = list.list
         .where((change) => change.needsSnapshot)
         .map((change) => change.docId.v!)
@@ -354,11 +366,72 @@ class SyncedFsSdbSynchronizer {
     var fetched = toFetch.isEmpty
         ? null
         : await source.getSnapshot(docIds: toFetch);
-
-    var prepared = <_PreparedChange>[
+    return <_PreparedChange>[
       for (var change in list.list)
         _prepareChange(change, fetched: fetched?.docs),
     ];
+  }
+
+  /// A full resynchronization from the change list of a source replaying
+  /// the whole collection: the store cleared with the first page, then each
+  /// page applied in its own transaction (a tombstone is a delete, harmless
+  /// on the cleared store, not counted). The meta is written by [sync] once
+  /// done.
+  Future<SyncedFsSdbSyncResult> _replayFullChangeList() async {
+    var appliedCount = 0;
+    var failedCount = 0;
+    int? lastChangeId;
+    var first = true;
+    while (true) {
+      var list = await source.getChangeList(
+        afterChangeId: lastChangeId,
+        limit: stepLimit,
+      );
+      var prepared = await _prepareList(list);
+      var clear = first;
+      first = false;
+      if (list.isEmpty && !clear) {
+        break;
+      }
+      await database.inTransaction(
+        storeNames: _storeNames,
+        mode: SdbTransactionMode.readWrite,
+        run: (txn) async {
+          if (clear) {
+            await store.delete(txn);
+          }
+          for (var change in prepared) {
+            if (change.isFailed) {
+              await _txnAddDeadLetter(txn, change);
+              failedCount++;
+            } else if (change.deleted) {
+              await store.record(change.docId).delete(txn);
+            } else {
+              await store.record(change.docId).put(txn, change.value!);
+              appliedCount++;
+            }
+          }
+        },
+      );
+      if (list.isEmpty) {
+        break;
+      }
+      lastChangeId = list.lastChangeId ?? lastChangeId;
+    }
+    return SyncedFsSdbSyncResult(
+      fullSync: true,
+      appliedCount: appliedCount,
+      deletedCount: 0,
+      failedCount: failedCount,
+      lastChangeId: lastChangeId,
+    );
+  }
+
+  Future<SyncedFsSdbSyncResult> _applyChanges(
+    SyncedFsChangeList list, {
+    required int version,
+  }) async {
+    var prepared = await _prepareList(list);
 
     var appliedCount = 0;
     var deletedCount = 0;

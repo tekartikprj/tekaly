@@ -40,6 +40,10 @@ class SyncedFsSnapshot {
 
 /// Read only view of a synced firestore collection, everything a consumer
 /// (a local sdb mirror, another backend, ...) needs to stay in sync.
+///
+/// An implementation outside this package (a source served by an api, say)
+/// extends it, or mixes in [SyncedFsSourceDefaultMixin], to get the default
+/// of the members added over time ([supportsFullChangeList]).
 abstract class SyncedFsSource {
   /// Identifies the source, typically the collection path. Stored locally to
   /// detect that a local mirror is bound to another source.
@@ -57,8 +61,24 @@ abstract class SyncedFsSource {
   /// collection when [docIds] is null.
   Future<SyncedFsSnapshot> getSnapshot({List<String>? docIds});
 
+  /// True when [getChangeList] from scratch (no `afterChangeId`) replays the
+  /// whole collection: every existing document, tombstones included, at its
+  /// current modification number. A consumer can then do a full
+  /// synchronization page by page instead of one [getSnapshot] of
+  /// everything.
+  ///
+  /// False by default: a change log can be truncated or compacted.
+  bool get supportsFullChangeList => false;
+
   /// Close the source.
   Future<void> close();
+}
+
+/// Defaults of the [SyncedFsSource] members added over time, for an
+/// implementation that `implements` it.
+mixin SyncedFsSourceDefaultMixin implements SyncedFsSource {
+  @override
+  bool get supportsFullChangeList => false;
 }
 
 /// Read all the changes after [afterChangeId], in [stepLimit] steps.
@@ -96,20 +116,35 @@ class SyncedFsFirestoreSource implements SyncedFsSource {
   /// Collection references.
   final SyncedFsCollectionRefs refs;
 
+  /// When true, the changes are read from the collection itself, ordered by
+  /// `synced.changeId` (tombstones included, a single field index), instead
+  /// of the change log: the collection of a `SyncedFsCollection` with
+  /// `SyncedFsCollectionOptions.collectionChanges`.
+  final bool collectionChanges;
+
   /// Source on the collection at [path].
-  SyncedFsFirestoreSource({required this.firestore, required String path})
-    : refs = SyncedFsCollectionRefs(path: path);
+  SyncedFsFirestoreSource({
+    required this.firestore,
+    required String path,
+    this.collectionChanges = false,
+  }) : refs = SyncedFsCollectionRefs(path: path);
 
   /// Source on existing [refs].
   SyncedFsFirestoreSource.fromRefs({
     required this.firestore,
     required this.refs,
+    this.collectionChanges = false,
   }) {
     cvInitSyncedFsBuilders();
   }
 
   @override
   String get sourceId => refs.path;
+
+  /// True when the changes are read from the collection
+  /// ([collectionChanges]): from scratch, they are the whole collection.
+  @override
+  bool get supportsFullChangeList => collectionChanges;
 
   @override
   Future<SyncedFsMetaInfoRecord?> getMetaInfo() async {
@@ -122,12 +157,53 @@ class SyncedFsFirestoreSource implements SyncedFsSource {
     int? afterChangeId,
     int? limit,
   }) async {
+    if (collectionChanges) {
+      return await _getCollectionChangeList(
+        afterChangeId: afterChangeId,
+        limit: limit,
+      );
+    }
     var query = refs.changesCollection.query().orderBy(changeChangeIdFieldKey);
     if (afterChangeId != null) {
       query = query.where(changeChangeIdFieldKey, isGreaterThan: afterChangeId);
     }
     query = query.limit(limit ?? syncedFsDefaultStepLimit);
     var list = await query.get(firestore);
+    return SyncedFsChangeList(list, list.lastOrNull?.changeId.v);
+  }
+
+  /// The changes read from the collection: each document at its current
+  /// modification number, a tombstone as a deletion.
+  Future<SyncedFsChangeList> _getCollectionChangeList({
+    int? afterChangeId,
+    int? limit,
+  }) async {
+    var query = firestore
+        .collection(refs.path)
+        .orderBy(syncedChangeIdFieldPath)
+        .limit(limit ?? syncedFsDefaultStepLimit);
+    if (afterChangeId != null) {
+      query = query.where(
+        syncedChangeIdFieldPath,
+        isGreaterThan: afterChangeId,
+      );
+    }
+    var snapshots = (await query.get()).docs;
+    var list = <CvSyncedFsChangeRecord>[];
+    for (var snapshot in snapshots) {
+      var map = snapshot.data;
+      var synced = map.syncedInfoOrNull;
+      var deleted = synced?.deleted.v == true;
+      list.add(
+        CvSyncedFsChangeRecord()
+          ..changeId.v = synced?.changeId.v
+          ..docId.v = snapshot.ref.id
+          ..deleted.v = deleted
+          ..timestamp.v = synced?.timestamp.v
+          ..updateTime.v = snapshot.updateTime
+          ..data.v = deleted ? null : map.withoutSyncedInfo,
+      );
+    }
     return SyncedFsChangeList(list, list.lastOrNull?.changeId.v);
   }
 

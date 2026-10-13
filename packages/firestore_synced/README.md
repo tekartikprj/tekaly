@@ -29,7 +29,12 @@ unique in the collection, allocated on every write from `lastChangeId` in
 consumer resumes from. `synced.timestamp` is the server update time, what the
 scheduled reconciliation walks. Deletions are *soft*: the document stays as a
 tombstone with `deleted: true`, so a consumer can pick the deletion up (a hard
-deletion leaves nothing to reconcile from).
+deletion leaves nothing to reconcile from). A tombstone only holds the `synced`
+map (`tombstoneKeepsData: true` keeps the content):
+
+```json
+{"synced": {"changeId": 43, "deleted": true, "timestamp": "2026-10-13T…"}}
+```
 
 ### An immutable change log
 
@@ -43,6 +48,19 @@ zero padded modification number, so:
 Entries embed the document content by default, so a consumer synchronizes with
 one read per page of changes and never touches the collection itself.
 
+### Or no change log: the changes read from the collection
+
+With `SyncedFsCollectionOptions(collectionChanges: true)`, no change log is
+written (2 writes per change: the document and the meta) and the source reads
+the changes from the collection itself, `where synced.changeId > X orderBy
+synced.changeId` (a single field index, tombstones included): each document at
+its current modification number. Valid when every write goes through the
+helper; the change list from scratch is then a complete snapshot
+(`SyncedFsSource.supportsFullChangeList`), so a mirror resynchronizes page by
+page. Tombstones pile up in the collection: purge the old ones with
+`SyncedFsChangeLogRebuilder.purgeTombstones(before:)`, which raises
+`minIncrementalChangeId` (a consumer below it resynchronizes).
+
 ### Primary path, then safety nets
 
 | Path | What it covers | Class |
@@ -52,6 +70,7 @@ one read per page of changes and never touches the collection itself.
 | On demand rebuild | trigger failures, backfills | `SyncedFsChangeLogRebuilder.rebuild` |
 | Scheduled reconciliation | trigger failures, cheaply | `SyncedFsChangeLogRebuilder.reconcile` |
 | Stamping pass | documents never stamped at all | `SyncedFsChangeLogRebuilder.stampMissingChangeIds` |
+| Tombstone purge | old tombstones (`collectionChanges`) | `SyncedFsChangeLogRebuilder.purgeTombstones` |
 
 All of them converge on the same immutable entry, so running several of them,
 or the same one twice, is harmless.
@@ -108,12 +127,27 @@ var item = await coll.getDoc('k1');
 Each write allocates the next modification number, stamps the document and
 appends the change log entry, all in one transaction.
 
+Read, decide and write in one transaction (reads first, the meta written once
+at the end):
+
+```dart
+var changeId = await coll.runTransaction((txn) async {
+  var current = await txn.getDoc('k1'); // isAlive, isDeleted, changeId, doc
+  if (current.isAlive && current.doc.title.v == 'hello') {
+    return txn.deleteDoc('k1');
+  }
+  return txn.setDoc('k1', DbItem()..title.v = 'hello');
+});
+```
+
 Options:
 
 ```dart
 SyncedFsCollectionOptions(
   writeChangeLog: false,       // the trigger feeds the change log instead
   changeLogIncludesData: false, // keep the log small, consumers fetch snapshots
+  collectionChanges: true,     // no change log, changes read from the collection
+  tombstoneKeepsData: true,    // keep the content of deleted documents
 )
 ```
 
@@ -152,6 +186,9 @@ await rebuilder.stampMissingChangeIds();
 // Housekeeping.
 await rebuilder.truncateChangeLog(beforeChangeId: 10_000); // consumers below resync
 await rebuilder.bumpVersion();                             // force a full resync
+await rebuilder.purgeTombstones(                           // collectionChanges
+  before: DateTime.now().subtract(const Duration(days: 30)),
+);
 ```
 
 Both `rebuild` and `reconcile` take a `limit` and report `complete: false` when
@@ -186,7 +223,13 @@ Documents land in `itemStoreRef` keyed by their firestore document id, with the
 `synced` bookkeeping stripped. `sync()` does a full resynchronization when the
 mirror is new, bound to another source, left behind a change log truncation, or
 when the source version was bumped; otherwise it replays the change log from the
-last applied modification number.
+last applied modification number. A full resynchronization replays the change
+list from scratch, page by page, when the source `supportsFullChangeList`, one
+snapshot of the whole collection otherwise; the local meta is written once it
+completes.
+
+Any `SyncedFsSource` can feed it, a source served by an api for instance
+(extend `SyncedFsSource`, or mix `SyncedFsSourceDefaultMixin` in).
 
 Failures are queued, not fatal:
 
@@ -207,8 +250,9 @@ and `local_fs_sync_dlq`.
   inline path (`writeChangeLog: false`, let the trigger allocate) and lean on
   `reconcile`, or shard the collection.
 - **Soft deletions keep tombstones around.** They are what makes deletions
-  syncable. Truncating the change log does not remove them; a version bump plus
-  a real cleanup does.
+  syncable. Truncating the change log does not remove them;
+  `purgeTombstones(before:)` does, consumers synchronized below the highest
+  purged modification number then resynchronize.
 - **Change log storage.** Entries embedding the document content double the
   storage of the collection over time. Use `changeLogIncludesData: false` and/or
   `truncateChangeLog` to keep it bounded.

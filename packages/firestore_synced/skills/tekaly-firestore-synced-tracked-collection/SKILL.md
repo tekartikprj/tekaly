@@ -25,6 +25,19 @@ per page. Deletions are soft (tombstones).
   (tombstone), `getDoc`. Each write allocates the next change id, stamps the
   document and appends the change log entry in one transaction. Register the
   cv document constructor (`cvAddConstructors([DbItem.new])`) first.
+* `runTransaction((txn) async { ... })` combines reads (`txn.getDoc(id)`:
+  `isAlive`, `isDeleted`, `changeId`, the doc without `synced`; other
+  documents through `txn.transaction`), application logic and several writes
+  (`txn.setDoc` / `setMap` / `deleteDoc`, each returning its change id,
+  `txn.newDocId()`); reads before writes, the meta written once at the end.
+* A tombstone only keeps the `synced` map (content dropped) unless
+  `SyncedFsCollectionOptions(tombstoneKeepsData: true)`.
+* `SyncedFsCollectionOptions(collectionChanges: true)`: no change log (2
+  writes per change), the changes are read from the collection ordered by
+  `synced.changeId` (single field index), the source
+  `supportsFullChangeList`; purge old tombstones with
+  `SyncedFsChangeLogRebuilder.purgeTombstones(before:)` (raises
+  `minIncrementalChangeId`, consumers below it resync).
 * Never hard delete a tracked document; a hard deletion is only healed by the
   trigger, which writes a tombstone entry.
 * Options: `SyncedFsCollectionOptions(writeChangeLog: false)` when the
