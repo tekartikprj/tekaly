@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:tekaly_firestore_synced/src/sdb/synced_fs_sdb_converter.dart';
 import 'package:tekaly_firestore_synced/src/sdb/synced_fs_sdb_model.dart';
 import 'package:tekaly_firestore_synced/src/synced_fs_change.dart';
@@ -174,7 +176,15 @@ class SyncedFsSdbSynchronizer {
         appliedCount += result.appliedCount;
         deletedCount += result.deletedCount;
         failedCount += result.failedCount;
-        lastChangeId = result.lastChangeId ?? 0;
+
+        /// The newest change can be a purged tombstone, gone from the
+        /// replay: resume from the meta read before the replay when higher
+        /// (everything up to it was replayed), otherwise the next
+        /// synchronization would be a full one again.
+        lastChangeId = max(
+          result.lastChangeId ?? 0,
+          remoteMeta?.lastChangeId.v ?? 0,
+        );
       } else {
         var snapshot = await source.getSnapshot();
         var result = await _applySnapshot(snapshot, version: remoteVersion);

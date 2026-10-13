@@ -7,6 +7,7 @@ import 'test_common.dart';
 
 void main() {
   cvAddConstructors([DbTest.new]);
+  cvAddBuilder<CvFirestoreMapDocument>((_) => CvFirestoreMapDocument());
   group('synced_fs_collection', () {
     late Firestore firestore;
     late SyncedFsCollection<DbTest> coll;
@@ -35,6 +36,32 @@ void main() {
       await coll.deleteDoc(addedDocId);
       readDoc = await coll.getDoc(addedDocId);
       expect(readDoc.exists, isFalse);
+    });
+
+    test('get a document written around the synced helpers', () async {
+      /// No synced information: alive, like in a transaction and a snapshot.
+      await firestore.doc('test/k1').set({'title': 't1'});
+      expect(await coll.getMap('k1'), {'title': 't1'});
+      var doc = await coll.getDoc('k1');
+      expect(doc.exists, isTrue);
+      expect(doc.title.v, 't1');
+      await coll.runTransaction((txn) async {
+        expect((await txn.getDoc('k1')).isAlive, isTrue);
+      });
+      expect((await coll.getSnapshot(docIds: ['k1'])).docs.keys, ['k1']);
+    });
+
+    test('get from a map collection, no synced information', () async {
+      var mapColl = SyncedFsCollection<CvFirestoreMapDocument>(
+        firestore: firestore,
+        collection: CvCollectionReference<CvFirestoreMapDocument>('test'),
+      );
+      await mapColl.setMap('k1', {'title': 't1'});
+      expect(await mapColl.getMap('k1'), {'title': 't1'});
+      expect((await mapColl.getDoc('k1')).toMap(), {'title': 't1'});
+      await mapColl.deleteDoc('k1');
+      expect(await mapColl.getMap('k1'), isNull);
+      expect((await mapColl.getDoc('k1')).exists, isFalse);
     });
 
     test('modification number', () async {

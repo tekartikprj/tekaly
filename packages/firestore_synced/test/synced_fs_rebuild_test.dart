@@ -52,8 +52,9 @@ void main() {
       /// The tombstone of k1 carries no data.
       expect(changes.list.last.data.v, isNull);
 
-      /// Idempotent, a second rebuild adds nothing.
-      result = await rebuilder.rebuild();
+      /// Idempotent, a second rebuild of everything adds nothing.
+      result = await rebuilder.rebuild(sinceChangeId: 0);
+      expect(result.scannedCount, 2);
       expect(result.addedCount, 0);
       expect((await coll.getChangeList()).length, 2);
     });
@@ -142,8 +143,33 @@ void main() {
       expect((await coll.getMetaInfo())!.lastReconcileTimestamp.v, isNotNull);
 
       /// Idempotent, everything is already there.
-      result = await rebuilder.reconcile(sinceTimestamp: null);
+      result = await rebuilder.reconcile(sinceTimestamp: Timestamp(0, 0));
+      expect(result.scannedCount, 2);
       expect(result.addedCount, 0);
+    });
+
+    test('reconcile documents sharing their timestamp', () async {
+      /// Several documents written in one transaction share their commit
+      /// time on firestore (sembast gives each write its own timestamp).
+      var timestamp = Timestamp(1000, 0);
+      for (var i = 1; i <= 3; i++) {
+        await firestore.doc('test/k$i').set({
+          'title': 't$i',
+          'synced': {'changeId': i, 'deleted': false, 'timestamp': timestamp},
+        });
+      }
+      var result = await rebuilder.reconcile(
+        sinceTimestamp: Timestamp(1, 0),
+        stepLimit: 2,
+      );
+      expect(result.scannedCount, 3);
+      expect(result.addedCount, 3);
+      expect(result.complete, isTrue);
+      expect((await coll.getChangeList()).list.map((e) => e.docId.v), [
+        'k1',
+        'k2',
+        'k3',
+      ]);
     });
 
     test('truncate and version bump', () async {

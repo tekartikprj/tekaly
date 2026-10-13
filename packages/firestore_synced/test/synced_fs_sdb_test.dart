@@ -96,8 +96,14 @@ void main() {
       await coll.setDoc('k1', DbTest()..title.v = 't1');
       await synchronizer.sync();
 
-      /// Force the replay of every change from the beginning.
-      await synchronizer.sync();
+      /// Force the replay of every change from the beginning: rewind the
+      /// local meta, the store is kept.
+      await syncedFsSdbMetaStoreRef
+          .record(itemStoreRef.name)
+          .put(db, (await synchronizer.getSyncMetaInfo())!..lastChangeId.v = 0);
+      var result = await synchronizer.sync();
+      expect(result.fullSync, isFalse);
+      expect(result.appliedCount, 1);
       var changes = await coll.getChangeList();
       expect(changes.length, 1);
       expect(await storeContent(db), {

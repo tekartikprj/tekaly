@@ -165,18 +165,26 @@ class SyncedFsChangeLogRebuilder {
     var addedCount = 0;
     var complete = true;
     int? lastChangeId;
-    var lastTimestamp = sinceTimestamp;
+    var pageLimit = stepLimit ?? syncedFsDefaultStepLimit;
+
+    /// Paged on (timestamp, document id): the timestamp is not unique, every
+    /// document written in one transaction gets the same commit time.
+    List<Object?>? lastValues;
 
     while (true) {
       var query = firestore
           .collection(refs.path)
           .orderBy(syncedTimestampFieldPath)
-          .limit(stepLimit ?? syncedFsDefaultStepLimit);
-      if (lastTimestamp != null) {
+          .orderBy(firestoreNameFieldPath)
+          .limit(pageLimit);
+      if (sinceTimestamp != null) {
         query = query.where(
           syncedTimestampFieldPath,
-          isGreaterThan: lastTimestamp,
+          isGreaterThan: sinceTimestamp,
         );
+      }
+      if (lastValues != null) {
+        query = query.startAfter(values: lastValues);
       }
       var snapshots = (await query.get()).docs;
       if (snapshots.isEmpty) {
@@ -197,14 +205,21 @@ class SyncedFsChangeLogRebuilder {
         }
         lastChangeId = snapshot.data.syncedChangeIdOrNull ?? lastChangeId;
       }
-      if (!complete) {
+      if (!complete || snapshots.length < pageLimit) {
         break;
       }
-      var next = snapshots.last.data.syncedInfoOrNull?.timestamp.v;
-      if (next == null || next == lastTimestamp) {
+      var last = snapshots.last;
+      var next = <Object?>[
+        last.data.syncedInfoOrNull?.timestamp.v,
+        last.ref.id,
+      ];
+      // No progress (should not happen), stop rather than loop.
+      if (lastValues != null &&
+          next[0] == lastValues[0] &&
+          next[1] == lastValues[1]) {
         break;
       }
-      lastTimestamp = next;
+      lastValues = next;
     }
 
     if (complete) {

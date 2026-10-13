@@ -291,5 +291,42 @@ void main() {
       expect(result.fullSync, isFalse);
       expect((await storeContent(staleDb)).keys, ['k1', 'k4', 'k6']);
     });
+
+    test('purged newest tombstone, one full sync only', () async {
+      var coll = newCollection();
+      await coll.setDoc('k1', DbTest()..title.v = 't1'); // 1
+      await coll.setDoc('k2', DbTest()..title.v = 't2'); // 2
+      await coll.deleteDoc('k2'); // 3, the newest change
+      var rebuilder = SyncedFsChangeLogRebuilder(
+        firestore: firestore,
+        path: 'test',
+      );
+      expect(
+        await rebuilder.purgeTombstones(
+          before: DateTime.now().add(const Duration(minutes: 1)),
+        ),
+        1,
+      );
+      expect((await coll.getMetaInfo())!.minIncrementalChangeId.v, 3);
+      var db = await newSdbFactoryMemory().openDatabase(
+        'purged.db',
+        options: SdbOpenDatabaseOptions(version: 1, schema: itemSchema),
+      );
+      addTearDown(db.close);
+      var mirror = SyncedFsSdbSynchronizer(
+        source: coll.source,
+        database: db,
+        store: itemStoreRef,
+      );
+      var result = await mirror.sync();
+      expect(result.fullSync, isTrue);
+      expect(result.lastChangeId, 3);
+      expect((await storeContent(db)).keys, ['k1']);
+      for (var i = 0; i < 2; i++) {
+        result = await mirror.sync();
+        expect(result.fullSync, isFalse);
+        expect(result.lastChangeId, 3);
+      }
+    });
   });
 }

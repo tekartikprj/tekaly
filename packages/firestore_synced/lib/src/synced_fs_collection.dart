@@ -138,12 +138,10 @@ class SyncedFsTransaction<T extends CvFirestoreDocument> {
     var snapshot = await transaction.get(ref.raw(_firestore));
     var map = snapshot.exists ? snapshot.data : null;
     _readMaps[id] = map;
-    var doc = snapshot.cv<T>();
-    if (doc is Map) {
-      // A map document holds every key: strip the bookkeeping.
-      (doc as Map).remove(syncedFieldKey);
-    }
-    return SyncedFsTransactionDoc(doc: doc, syncedInfo: map?.syncedInfoOrNull);
+    return SyncedFsTransactionDoc(
+      doc: _cvWithoutSyncedInfo<T>(snapshot),
+      syncedInfo: map?.syncedInfoOrNull,
+    );
   }
 
   /// A new unique document id in the collection (a read: before any write).
@@ -296,39 +294,22 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
   Future<SyncedFsSnapshot> getSnapshot({List<String>? docIds}) =>
       source.getSnapshot(docIds: docIds);
 
-  /// Get a document
+  /// Get a document, not existing when missing or a tombstone.
   Future<T> getDoc(String id) async {
     var ref = _collection.doc(id);
-    var map = (await ref.raw(firestore).get()).dataOrNull;
-    var doc = ref.cv();
-    if (map != null) {
-      var synced = map.syncedInfoOrNull;
-      var exists = synced?.deleted.v == false;
-
-      if (!exists) {
-        var docBase = doc as CvFirestoreDocumentBase;
-        // ignore: deprecated_member_use
-        docBase.exists = false;
-      } else {
-        doc.fromMap(map);
-      }
+    var snapshot = await ref.raw(firestore).get();
+    if (_aliveContentOrNull(snapshot.dataOrNull) == null) {
+      // Missing or a tombstone.
+      return ref.cv();
     }
-    return doc;
+    return _cvWithoutSyncedInfo<T>(snapshot);
   }
 
-  /// Get a document map if it exists
-  Future<Model?> getMap(String id) async {
-    var map = (await _collection.doc(id).raw(firestore).get()).dataOrNull;
-    if (map != null) {
-      var synced = map.syncedInfoOrNull;
-      var exists = synced?.deleted.v == false;
-      if (!exists) {
-        return null;
-      }
-      return map;
-    }
-    return null;
-  }
+  /// Get a document map (without its `synced` information) if it exists and
+  /// is not a tombstone.
+  Future<Model?> getMap(String id) async => _aliveContentOrNull(
+    (await _collection.doc(id).raw(firestore).get()).dataOrNull,
+  );
 
   /// Run [action] in a transaction of the collection: read documents
   /// ([SyncedFsTransaction.getDoc], other ones through
@@ -389,4 +370,27 @@ class SyncedFsCollection<T extends CvFirestoreDocument> {
 
   @override
   String toString() => 'SyncedFsCollection(${refs.path})';
+}
+
+/// The content of a document [map] as read by a consumer: null when missing
+/// or a tombstone, without its `synced` information otherwise. A document
+/// written around the synced helpers (no `synced` information) is alive, like
+/// in [SyncedFsTransactionDoc.isAlive] and [SyncedFsSource.getSnapshot].
+Model? _aliveContentOrNull(Model? map) {
+  if (map == null || map.syncedIsDeleted) {
+    return null;
+  }
+  return map.withoutSyncedInfo;
+}
+
+/// The document of [snapshot] (exists and path set), without the `synced`
+/// information: a map document holds every key, the bookkeeping is stripped.
+T _cvWithoutSyncedInfo<T extends CvFirestoreDocument>(
+  DocumentSnapshot snapshot,
+) {
+  var doc = snapshot.cv<T>();
+  if (doc is Map) {
+    (doc as Map).remove(syncedFieldKey);
+  }
+  return doc;
 }
