@@ -1,4 +1,5 @@
 import 'package:tekaly_sdb_synced/sdb_scv.dart';
+import 'package:tekaly_sdb_synced/src/sync/synced_sdb.dart';
 import 'package:tekaly_sdb_synced/src/sync/utils.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_synced_db_common/synced_db_common.dart';
@@ -178,6 +179,12 @@ class SyncedSdbSynchronizer
 
   @override
   Stream<bool> localOnDirty() => db.onDirty();
+
+  /// Only the synced stores of the local schema: the records of a store this
+  /// database does not know (newer schema) or of a local store are skipped.
+  @override
+  bool localShouldSyncStore(String store) =>
+      syncedSdbShouldSyncStore(db, store);
 
   @override
   SyncedSdbSyncSourceRecord newSyncSourceRecord() =>

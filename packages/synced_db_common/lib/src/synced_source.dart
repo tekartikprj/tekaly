@@ -55,6 +55,20 @@ Stream<CvMetaInfo?> syncedSourceReadPollMetaInfo(
 }) {
   checkDelay ??= const Duration(minutes: 60);
   late StreamController<CvMetaInfo?> controller;
+  // The pending wait between two reads, cancelled on cancel so that a
+  // cancelled poll does not keep the process alive until the next read.
+  Timer? delayTimer;
+  Completer<void>? delayCompleter;
+  void stopDelay() {
+    delayTimer?.cancel();
+    delayTimer = null;
+    var completer = delayCompleter;
+    delayCompleter = null;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
   controller = StreamController<CvMetaInfo?>(
     onListen: () async {
       while (true) {
@@ -75,13 +89,19 @@ Stream<CvMetaInfo?> syncedSourceReadPollMetaInfo(
           }
           controller.addError(e, st);
         }
-        await Future<void>.delayed(checkDelay!);
+        if (controller.isClosed) {
+          break;
+        }
+        var completer = delayCompleter = Completer<void>();
+        delayTimer = Timer(checkDelay!, stopDelay);
+        await completer.future;
         if (controller.isClosed) {
           break;
         }
       }
     },
     onCancel: () {
+      stopDelay();
       controller.close();
     },
   );
@@ -300,7 +320,12 @@ extension SyncedSourceExt on SyncedSourceRead {
         ...list.list,
         ...nextList.list,
       ], lastChangeId ?? list.lastChangeId);
-      if (nextList.isEmpty) {
+      // An empty page whose cursor moved is not the end: a source can apply
+      // the limit before dropping the deleted records (Firestore), a page of
+      // deleted records then comes back empty.
+      if (nextList.isEmpty &&
+          (lastChangeId == null ||
+              (afterChangeId != null && lastChangeId <= afterChangeId))) {
         break;
       }
       afterChangeId = lastChangeId;

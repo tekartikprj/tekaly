@@ -297,9 +297,6 @@ class _FsDocumentViewScreenState extends State<FsDocumentViewScreen> {
                   Navigator.of(context).pop();
                 }
               }
-              var doc = await controller.stream.first;
-              gDocumentClipboardController.addDoc(doc);
-              snack('Copied $doc');
             },
             icon: const Icon(Icons.delete),
           ),

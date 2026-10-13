@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:tekaly_file_download_web/file_download.dart'
-    show DownloadFileInfo;
+    show DownloadFileInfo, filenameMimeType;
 
 import 'download_file.dart';
 
@@ -12,13 +12,8 @@ class DownloadImageInfo {
 
   DownloadImageInfo({required this.filename, required this.data});
 
-  String get mimeType {
-    if (filename.toLowerCase().endsWith('png')) {
-      return 'image/png';
-    } else {
-      return 'image/jpg';
-    }
-  }
+  /// The mime type from the [filename] extension.
+  String get mimeType => filenameMimeType(filename);
 
   @override
   String toString() =>

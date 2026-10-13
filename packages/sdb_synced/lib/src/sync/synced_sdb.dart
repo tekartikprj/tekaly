@@ -156,8 +156,13 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
     sdbSyncRecordStoreRef.name,
     sdbSyncMetaStoreRef.name,
   ];
+
+  /// True once [database] was requested (it might still be opening).
+  var _databaseRequested = false;
+
   @override
   late final database = () async {
+    _databaseRequested = true;
     return _database ??= (await rawDatabase.then((db) {
       var syncedStoreNames = Set.of(db.storeNames);
       syncedStoreNames
@@ -198,10 +203,20 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
   Future<void> close() async {
     _syncMetaInfoSubject.close().unawait();
     _syncDirtySubject.close().unawait();
-    if (!_closed && _database != null) {
-      _closed = true;
-      await _database?.close();
+    if (_closed) {
+      return;
     }
+    _closed = true;
+    if (_database == null && _databaseRequested) {
+      // Still opening: close it once open
+      try {
+        await database;
+      } catch (_) {
+        // Open failed, nothing to close
+        return;
+      }
+    }
+    await _database?.close();
   }
 }
 
@@ -277,6 +292,11 @@ abstract class SyncedSdb implements SyncedDbCommon {
   Future<void> close();
 }
 
+/// True if the records of [store] are synchronized in [db] (not a system nor
+/// a local store, and part of its schema), once its database is opened.
+bool syncedSdbShouldSyncStore(SyncedSdb db, String store) =>
+    (db as SyncedSdbBase)._syncedStoreNames.contains(store);
+
 /// Private extension
 extension SyncedSdbPrvExtension on SyncedSdb {
   /// Computed on open, actual store names synced
@@ -286,7 +306,7 @@ extension SyncedSdbPrvExtension on SyncedSdb {
 
 /// Synced SDB extension.
 extension SyncedSdbExtension on SyncedSdb {
-  SyncedSdbBase get _impl => this as _SyncedSdbImpl;
+  SyncedSdbBase get _impl => this as SyncedSdbBase;
 
   /// Get dirty record
   Future<List<SdbSyncRecord>> txnGetDirtySyncRecords(SdbClient client) async {

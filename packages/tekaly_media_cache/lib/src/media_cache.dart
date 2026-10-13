@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:fs_shim/fs_shim.dart';
 import 'package:path/path.dart';
 import 'package:sembast/timestamp.dart';
@@ -336,9 +337,13 @@ class _TekalyMediaCache implements TekalyMediaCache {
         .asyncMap((dbMedia) => _fileReadMediaContent(key, dbMedia!));
   }
 
+  /// The file of a media, named from its key id: two keys never share a
+  /// file (whatever their media name), the name is safe on any file system.
+  File _mediaFile(String keyId) => mediaDirectory.file(_mediaFileName(keyId));
+
   Future<void> _deleteFile(DbMedia mediaInfo) async {
     try {
-      var file = mediaDirectory.file(mediaInfo.nameValue);
+      var file = _mediaFile(mediaInfo.id);
       if (await file.exists()) {
         await file.delete();
       }
@@ -369,23 +374,21 @@ class _TekalyMediaCache implements TekalyMediaCache {
                   .nonNulls
                   .where((path) => path.isNotEmpty)
             : <String>[];
-        var filenames = (await dbMediaStore.find(db))
-            .map((media) => media.name.v)
-            .nonNulls
-            .where((name) => name.isNotEmpty)
-            .toSet();
+        // File name by record key
+        var filenames = <String, String>{
+          for (var key in await dbMediaStore.rawRef.findKeys(db))
+            key: _mediaFileName(key),
+        };
+        var dbFilenames = filenames.values.toSet();
         var toDelete = List.of(foundFilenames)
-          ..removeWhere((name) => filenames.contains(name));
+          ..removeWhere((name) => dbFilenames.contains(name));
 
-        var dbToDelete = List.of(filenames)
-          ..removeWhere((name) => foundFilenames.contains(name));
+        var foundFilenameSet = foundFilenames.toSet();
+        var dbToDelete = filenames.keys
+            .where((key) => !foundFilenameSet.contains(filenames[key]))
+            .toList();
         if (dbToDelete.isNotEmpty) {
-          await dbMediaStore.delete(
-            db,
-            finder: Finder(
-              filter: Filter.inList(dbMediaModel.name.key, dbToDelete),
-            ),
-          );
+          await dbMediaStore.records(dbToDelete).delete(db);
         }
         for (var name in toDelete) {
           var file = mediaDirectory.file(name);
@@ -433,7 +436,7 @@ class _TekalyMediaCache implements TekalyMediaCache {
     TekalyMediaKey key,
     DbMedia dbMedia,
   ) async {
-    var file = mediaDirectory.file(dbMedia.nameValue);
+    var file = _mediaFile(key.id);
     var bytes = await file.readAsBytes();
     return TekalyMediaContent(
       info: dbMedia.mediaInfo(key: key),
@@ -502,7 +505,7 @@ class _TekalyMediaCache implements TekalyMediaCache {
         var bytes = content.bytes;
         var size = bytes.length;
         var db = await database;
-        var file = mediaDirectory.file(filename);
+        var file = _mediaFile(key.id);
         try {
           if (debugTekalyMediaCache) {
             _log('writing $size bytes file $file');
@@ -572,21 +575,34 @@ class _TekalyMediaCache implements TekalyMediaCache {
     return path;
   }
 
-  Future<void> _init() async {
+  void _init() {
     // print('open database $_dbPath');
-    database = () async {
-      return await databaseFactory.openDatabase(_dbPath);
-    }();
-    await database.then((_) {
-      scheduleAutoClean();
-    });
+    database = databaseFactory.openDatabase(_dbPath);
+    // An open failure is reported by every call that needs the database, it
+    // is not an uncaught error.
+    database
+        .then(
+          (_) {
+            scheduleAutoClean();
+          },
+          onError: (Object e) {
+            _log('error opening database $_dbPath: $e');
+          },
+        )
+        .unawait();
   }
+
+  /// True once closed, no more auto clean.
+  var _closed = false;
 
   var firstAutoCleanDone = false;
   static const _firstAutoCleanDuration = Duration(seconds: 5);
   static const _autoCleanDuration = Duration(seconds: 15);
 
   void scheduleAutoClean() {
+    if (_closed) {
+      return;
+    }
     var duration = firstAutoCleanDone
         ? (options.nextAutoCleanDuration ?? _autoCleanDuration)
         : (options.firstAutoCleanDuration ?? _firstAutoCleanDuration);
@@ -601,12 +617,19 @@ class _TekalyMediaCache implements TekalyMediaCache {
   /// No longer usable
   @override
   Future<void> close() async {
+    _closed = true;
     autoCleanTimer?.cancel();
     await _lock.synchronized(() async {
       _clearingOrClosing = true;
     });
 
-    var db = await database;
+    Database db;
+    try {
+      db = await database;
+    } catch (_) {
+      // Never opened
+      return;
+    }
     await db.close();
   }
 
@@ -633,7 +656,8 @@ class _TekalyMediaCache implements TekalyMediaCache {
         var oldMedias = await dbMediaStore
             .query(
               finder: Finder(
-                sortOrders: [SortOrder(dbMediaModel.cached.key, true)],
+                // Newest first, the oldest ones after keepCount are deleted
+                sortOrders: [SortOrder(dbMediaModel.cached.key, false)],
                 offset: keepCount ?? 100,
               ),
             )
@@ -666,4 +690,11 @@ extension TekalyMediaCachePrvExt on TekalyMediaCache {
 
   /// Internal use
   Future<Database> get database => _self.database;
+
+  /// Internal use, the cached file of a media
+  File mediaFile(TekalyMediaKey key) => _self._mediaFile(key.id);
 }
+
+/// File name of a media from its key id.
+String _mediaFileName(String keyId) =>
+    sha256.convert(utf8.encode(keyId)).toString();

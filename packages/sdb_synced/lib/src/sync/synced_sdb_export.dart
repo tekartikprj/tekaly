@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:tekaly_sdb_synced/src/sync/synced_sdb_codec.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
@@ -68,7 +67,10 @@ Future<List<Object>> sdbToTekalyExportDatabaseLines(
         }
         lines.add(<String, Object?>{storeExportKey: storeName});
         for (var record in records) {
-          lines.add([record.ref.key, sdbValueToJsonEncodable(record.value)]);
+          lines.add([
+            record.ref.key,
+            syncedDbValueToJsonEncodable(record.value),
+          ]);
         }
       }
     },

@@ -259,9 +259,9 @@ void runSyncedSourceTest(
       SyncedDataSourceRef(store: 'test', key: '1'),
     ))!;
     expect(record.syncId.v, newSyncId);
-    // Wrong syncId
+    // Wrong syncId, found by store and key
     record = (await source.getSourceRecord(
-      SyncedDataSourceRef(store: 'test', key: '1'),
+      SyncedDataSourceRef(store: 'test', key: '1', syncId: 'wrong_$newSyncId'),
     ))!;
     expect(record.syncId.v, newSyncId);
     // Wrong key (fail)
@@ -316,14 +316,22 @@ void runSyncedSourceTest(
       CvMetaInfo()..lastChangeId.v = ++lastChangedId,
     ))!;
     expect(info.lastChangeId.v, lastChangedId);
-    try {
-      await source.putMetaInfo(
-        CvMetaInfo()..lastChangeId.v = lastChangedId - 1,
-      );
-      fail('should fail');
-    } catch (e) {
-      print(e);
-    }
+
+    // minIncrementalChangeId cannot go back
+    info = (await source.putMetaInfo(
+      CvMetaInfo()..minIncrementalChangeId.v = lastChangedId,
+    ))!;
+    expect(info.minIncrementalChangeId.v, lastChangedId);
+    await expectLater(
+      source.putMetaInfo(
+        CvMetaInfo()..minIncrementalChangeId.v = lastChangedId - 1,
+      ),
+      throwsA(anything),
+    );
+    expect(
+      (await source.getMetaInfo())!.minIncrementalChangeId.v,
+      lastChangedId,
+    );
   });
   test('onMetaInfo simple', () async {
     var info = await source.getMetaInfo();

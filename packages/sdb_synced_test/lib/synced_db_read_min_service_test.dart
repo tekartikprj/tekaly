@@ -20,7 +20,7 @@ void syncedDbReadMinServiceTests(
 ) {
   cvAddConstructor(DbEntity.new);
 
-  group('min service', () async {
+  group('min service', () {
     late SyncedSdbSynchronizer sync;
 
     late SyncedSource source;

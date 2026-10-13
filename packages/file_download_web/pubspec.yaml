@@ -10,14 +10,8 @@ environment:
 dependencies:
   web: ">=1.1.1"
   path: ">=1.9.1"
-  pub_semver: ">=2.2.0"
-  test: ">=1.31.0"
-  tekartik_platform_browser:
-    git:
-      url: https://github.com/tekartik/platform.dart
-      path: platform_browser
-    version: '>=0.2.1'
 dev_dependencies:
+  test: ">=1.31.0"
   build_runner: ">=2.15.0"
   build_web_compilers: ">=4.7.0"
   lints: ">=6.1.0"

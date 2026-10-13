@@ -31,7 +31,7 @@ class StatEventListQuery {
   /// Optional name, otherwise get all events
   final String? name;
 
-  /// maxCount (default to 1000)
+  /// maxCount (default to 100)
   final int? maxCount;
 
   /// Creates a [StatEventListQuery] with optional filtering criteria and pagination [cursor].
@@ -118,13 +118,19 @@ mixin StatEventMixin implements StatEvent {
   @override
   String get id => idOrNull!;
   @override
-  int get hashCode => idOrNull?.hashCode ?? 0;
+  int get hashCode => idOrNull?.hashCode ?? identityHashCode(this);
+
+  /// Saved events are equal by id, an unsaved event is only equal to itself.
   @override
   bool operator ==(Object other) {
-    if (other is StatEvent) {
-      return other.idOrNull == idOrNull;
+    if (identical(this, other)) {
+      return true;
     }
-    return super == other;
+    var id = idOrNull;
+    if (id != null && other is StatEvent) {
+      return other.idOrNull == id;
+    }
+    return false;
   }
 
   @override

@@ -181,11 +181,7 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                         if (field.hasValue)
                           IconButton(
                             icon: const Icon(Icons.delete),
-                            onPressed: () {
-                              setState(() {
-                                field.clear();
-                              });
-                            },
+                            onPressed: deleteField,
                           ),
                         if (field.hasValue)
                           IconButton(
@@ -230,19 +226,6 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                       padding: const EdgeInsets.only(left: 16.0),
                       child: Column(
                         children: [
-                          for (var (index, item)
-                              in (field as CvListField).v!.indexed)
-                            ListTile(
-                              title: Text(item.toString()),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () {
-                                  setState(() {
-                                    (field as CvListField).v!.removeAt(index);
-                                  });
-                                },
-                              ),
-                            ),
                           ListTile(
                             onTap: () {
                               var field = this.field;
@@ -268,6 +251,10 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
                               //return Container();
 
                               return FsDocumentListFieldItemEdit(
+                                // The items shift on a delete: a state (and
+                                // its pending text edit) must not move to
+                                // another item.
+                                key: ValueKey('${listField.v!.length}/$index'),
                                 controller: fieldController.listFieldItem(
                                   index,
                                 ),
@@ -292,6 +279,18 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
     field.fromBasicTypeValue(value);
   }
 
+  /// Delete the field value.
+  void deleteField() {
+    setState(() {
+      field.clear();
+    });
+  }
+
+  /// Rebuild, after a change of a sub item.
+  void refreshEdit() {
+    setState(() {});
+  }
+
   void _edit() {
     if (field.isBasicType) {
       _editText();
@@ -314,9 +313,8 @@ mixin DocumentValueEditStateMixin<T extends StatefulWidget> on State<T> {
     } else {
       if (field.name == cvFieldNameNone &&
           (field.value?.runtimeType.isBasicType ?? false)) {
-        setState(() {
-          field.v = field.value;
-        });
+        // A basic list item, edited as text
+        _editText();
       } else {
         // ignore: avoid_print
         print('Unknown field $field');
@@ -468,4 +466,35 @@ class _FsDocumentListFieldItemEditState
   @override
   FsDocumentFieldEditController<CvFirestoreDocument> get fieldController =>
       widget.controller.shadowFieldController;
+
+  /// The item value in its list.
+  CvListField get _listField => widget.controller.listField as CvListField;
+
+  List get _list => _listField.v!;
+
+  int get _index => widget.controller.listIndex;
+
+  /// The edited value is written back to the list (the item field is a
+  /// shadow field, only model items share their instance with the list).
+  @override
+  void editSaveField(String? value) {
+    var itemValue = basicTypeCastType(_listField.itemType, value);
+    if (itemValue != null) {
+      field.v = itemValue;
+      _list[_index] = itemValue;
+    }
+  }
+
+  /// Deleting an item removes it from its list.
+  @override
+  void deleteField() {
+    _list.removeAt(_index);
+    var parentState = context
+        .findAncestorStateOfType<DocumentValueEditStateMixin>();
+    if (parentState != null) {
+      parentState.refreshEdit();
+    } else {
+      setState(() {});
+    }
+  }
 }

@@ -22,8 +22,9 @@ database, keyed by a `TekalyMediaKey`.
   folder). `close()` it when done.
 * Identify a media with `TekalyMediaKey.name('stable-id')` and describe where
   it comes from with `TekalyMediaSourceInfo.parse(key, url, name:, type:)`
-  (`name` is the local file name, defaults to the url last segment; `type`
-  the mime type).
+  (`name` is the media name, defaults to the url last segment; `type` the
+  mime type). The cached file is named from the key, so two keys never share
+  a file even with the same name.
 * `cacheMedia(src)` fetches (http by default) and stores the media, returning
   its `TekalyMediaContent` (`info` + `bytes`); `getMedia(key)` returns the
   cached content or null; `isMediaCached(key)` checks without reading;
@@ -35,7 +36,7 @@ database, keyed by a `TekalyMediaKey`.
 * Provide a `TekalyMediaFetcher` in `TekalyMediaCacheOptions(mediaFetcher:)`
   when downloads need authentication, an asset bundle or a custom client.
 * Cleaning: `deleteMedia(key)`, `deleteOldMedias(keepCount:)` (keeps the 100
-  most recently used by default), `clean()` (scheduled automatically after
+  most recently cached by default), `clean()` (scheduled automatically after
   `firstAutoCleanDuration` then every `nextAutoCleanDuration`), `clear()`
   wipes everything.
 * `initSession()` gives a `TekalyMediaCacheSession` to remember the source

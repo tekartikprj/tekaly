@@ -22,7 +22,8 @@ description: >-
   outside one.
 * `anchorSelectorSetDownloadFileInfo('#my-link', info)` configures an existing
   `<a>` element so a plain click downloads the content (web only, no-op
-  elsewhere).
+  elsewhere); calling it again on the same anchor releases the previous
+  content (its blob url).
 * Prefer `filenameMimeType` over hard coding mime types when the file name is
   known.
 

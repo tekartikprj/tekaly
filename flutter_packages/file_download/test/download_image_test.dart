@@ -16,6 +16,16 @@ void main() {
       'DownloadImageInfo(test.png, 3 bytes, image/png)',
     );
   });
+  test('mimeType', () {
+    String mimeType(String filename) =>
+        DownloadImageInfo(filename: filename, data: Uint8List(0)).mimeType;
+    expect(mimeType('test.png'), 'image/png');
+    expect(mimeType('test.PNG'), 'image/png');
+    expect(mimeType('test.jpg'), 'image/jpeg');
+    expect(mimeType('test.jpeg'), 'image/jpeg');
+    expect(mimeType('test.webp'), 'image/webp');
+    expect(mimeType('test.gif'), 'image/gif');
+  });
   test('downloadImage', () async {
     var filePicker = TekalyFilePickerMemory();
     tekalyFilePicker = filePicker;

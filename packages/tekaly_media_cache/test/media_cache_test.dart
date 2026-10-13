@@ -109,7 +109,7 @@ void main() {
       expect(readContent.info.name, 'test_name');
       await mediaCache.clean();
       expect(await mediaCache.isMediaCached(key), isTrue);
-      await mediaCache.mediaDirectory.file('test_name').delete();
+      await mediaCache.mediaFile(key).delete();
       expect(await mediaCache.isMediaCached(key), isTrue);
 
       expect(await mediaCache.getMedia(key), isNull);
@@ -136,7 +136,7 @@ void main() {
       expect(readContent.info.type, 'test_type');
       expect(readContent.info.name, 'test_name');
       await mediaCache.clean();
-      var file = mediaCache.mediaDirectory.file('test_name');
+      var file = mediaCache.mediaFile(key);
       expect(await mediaCache.isMediaCached(key), isTrue);
       expect(await file.exists(), isTrue);
       await dbMediaStore.delete(await mediaCache.database);

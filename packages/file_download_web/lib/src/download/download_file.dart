@@ -19,5 +19,5 @@ class DownloadFileInfo {
 
   @override
   String toString() =>
-      'DownloadImageInfo($filename, ${data.length} bytes, $mimeType)';
+      'DownloadFileInfo($filename, ${data.length} bytes, $mimeType)';
 }

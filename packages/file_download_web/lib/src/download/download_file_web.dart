@@ -1,10 +1,15 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:js_interop';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'package:web/web.dart';
 
 import 'download_file.dart';
+
+/// Delay before the blob url of a started download is revoked: the browser
+/// might still be reading it right after the click (not exported, changed by
+/// tests only).
+var downloadFileRevokeDelay = const Duration(seconds: 40);
 
 extension on DownloadFileInfo {
   Blob toBlob() {
@@ -14,23 +19,17 @@ extension on DownloadFileInfo {
   String toHref() => URL.createObjectURL(toBlob());
 
   void applyToAnchor(HTMLAnchorElement anchor) {
-    if (true) {
-      // if (platformContextBrowser.browser!.isSafari &&
-      //    platformContextBrowser.browser!.version < Version(13, 0, 0)) {
-
-      anchor.href = toHref();
-
-      // https://stackoverflow.com/questions/58019463/how-to-detect-device-name-in-safari-on-ios-13-while-it-doesnt-show-the-correct
-      //if (platformContextBrowser.browser.isSafari && platformContextBrowser.browser.version < Version(13,0,0)) {
-      // ignore: dead_code
-    } else {
-      var base64Context = base64.encode(data);
-
-      anchor.href =
-          'data:$mimeType;base64,$base64Context'; //Image Base64 Goes here
-    }
+    anchor.href = toHref();
     anchor.download = filename; //File name Here
     anchor.type = mimeType;
+  }
+}
+
+/// Revoke the blob url held by [anchor], if any.
+void _revokeAnchorHref(HTMLAnchorElement anchor) {
+  var href = anchor.href;
+  if (href.startsWith('blob:')) {
+    URL.revokeObjectURL(href);
   }
 }
 
@@ -38,6 +37,9 @@ Future<void> downloadFile(DownloadFileInfo fileInfo) async {
   var a = document.createElement('a') as HTMLAnchorElement; //Create <a>
   fileInfo.applyToAnchor(a);
   a.click(); //Downloaded file
+  // The download is started, release the blob once the browser had time to
+  // read it.
+  Timer(downloadFileRevokeDelay, () => _revokeAnchorHref(a));
 }
 
 void anchorSelectorSetDownloadFileInfo(
@@ -45,5 +47,8 @@ void anchorSelectorSetDownloadFileInfo(
   DownloadFileInfo fileInfo,
 ) {
   var anchor = document.querySelector(selector) as HTMLAnchorElement;
+  // The anchor can be clicked again and again: its blob url is kept until it
+  // is replaced.
+  _revokeAnchorHref(anchor);
   fileInfo.applyToAnchor(anchor);
 }

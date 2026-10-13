@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:tekaly_sdb_synced/src/sync/synced_sdb_codec.dart';
 import 'package:tekaly_sdb_synced/src/sync/synced_sdb_export.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_synced_db_common/synced_db_common.dart';
@@ -69,7 +68,7 @@ _ParsedTekalyExport _parseTekalyExportLines(List lines) {
         var key = line[0];
         var value = line[1];
         if (key != null) {
-          stores[currentStore]![key as String] = sdbValueFromJsonEncodable(
+          stores[currentStore]![key as String] = syncedDbValueFromJsonEncodable(
             value,
           );
         }
@@ -128,25 +127,35 @@ class SyncedSdbSynchronizerFromTekalyExport
       }
       var parsed = _parseTekalyExportLines(lines);
       var rawDb = await db.database;
+      // Only the synced stores of this database are imported: the stores of
+      // the export unknown to this database (newer schema) and its local or
+      // system stores are ignored.
+      var syncedStoreNames = syncedSdbExportableStoreNames(rawDb);
+      var importedStores = <String, Map<String, Object?>>{
+        for (var entry in parsed.stores.entries)
+          if (syncedStoreNames.contains(entry.key)) entry.key: entry.value,
+      };
       // An export is a snapshot and never lists a store without records
       // (whoever made it): a synced store it does not list is emptied.
-      var emptiedStoreNames = syncedSdbExportableStoreNames(
-        rawDb,
-      ).where((name) => !parsed.stores.containsKey(name)).toList();
+      var emptiedStoreNames = syncedStoreNames
+          .where((name) => !importedStores.containsKey(name))
+          .toList();
       var storeNames = [
-        ...parsed.stores.keys,
+        ...importedStores.keys,
         ...emptiedStoreNames,
         sdbSyncMetaStoreRef.name,
       ];
 
-      await rawDb.inTransaction(
+      // Changes are not tracked (no dirty sync record), the existing sync
+      // records are kept.
+      await db.syncTransaction(
         storeNames: storeNames,
         mode: SdbTransactionMode.readWrite,
         run: (txn) async {
           for (var storeName in emptiedStoreNames) {
             await SdbStoreRef<String, SdbModel>(storeName).delete(txn);
           }
-          for (var entry in parsed.stores.entries) {
+          for (var entry in importedStores.entries) {
             var store = SdbStoreRef<String, SdbModel>(entry.key);
             var existing = await store.findRecords(txn);
             var existingMap = <String, SdbModel>{
@@ -163,11 +172,12 @@ class SyncedSdbSynchronizerFromTekalyExport
             }
           }
 
-          var metaRecord = sdbSyncMetaStoreRef.record('info').cv()
+          var metaRecord = db.scvSyncMetaInfoRef.cv()
             ..lastChangeId.v = newMeta.lastChangeId.v
             ..lastTimestamp.v = SdbTimestamp.tryParse(newMeta.lastTimestamp.v)
             ..sourceVersion.v = newMeta.sourceVersion.v;
-          await metaRecord.put(txn);
+          // Also notifies onSyncMetaInfo
+          await db.setSyncMetaInfo(txn, metaRecord);
         },
       );
     }

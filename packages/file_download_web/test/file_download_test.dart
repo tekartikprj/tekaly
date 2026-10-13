@@ -19,4 +19,10 @@ void main() {
     expect(filenameMimeType('test.txt'), 'text/plain');
     expect(filenameMimeType('test2.gif'), 'image/gif');
   });
+  test('toString', () {
+    expect(
+      textFileInfo.toString(),
+      'DownloadFileInfo(test.txt, 11 bytes, text/plain)',
+    );
+  });
 }

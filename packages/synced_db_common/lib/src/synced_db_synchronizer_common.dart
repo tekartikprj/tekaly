@@ -167,10 +167,10 @@ abstract class SyncedDbSynchronizerCommon {
   /// True when no write source is set: local changes are never pushed.
   bool get isReadOnly => writeSource == null;
 
-  /// Default to 10 up
+  /// Records pushed per step up, null for the default (10).
   int? stepLimitUp;
 
-  /// Default to 100 down
+  /// Records read per page down, null for the source default limit.
   int? stepLimitDown;
 
   /// Sync lock

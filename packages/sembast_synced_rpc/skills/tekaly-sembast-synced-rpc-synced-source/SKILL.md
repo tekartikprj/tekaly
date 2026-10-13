@@ -21,8 +21,10 @@ itself a `SyncedSource`, so a `SyncedDbSynchronizer` (sembast) or a
   port:)` and share `server.uri`. Close it with `await server.close()`.
 * Client side: import `rpc_client.dart`, create
   `SyncedSourceRpcClient(uri:, webSocketChannelClientFactory:)`; it auto
-  connects and reconnects. Its `onMetaInfo()` is real time (long polling on
-  the server), so `autoSync: true` synchronizers react immediately.
+  connects and reconnects until `close()` (which also ends its `onMetaInfo()`
+  streams). Its `onMetaInfo()` is real time (long polling on the server), so
+  `autoSync: true` synchronizers react immediately; a failed first read is
+  reported as a stream error and retried.
 * Pick the channel factories per platform: `webSocketChannelFactoryMemory`
   (from `tekartik_rpc`/`tekartik_web_socket`) in tests, the io factories
   (`tekartik_web_socket_io`) on the server, the browser ones

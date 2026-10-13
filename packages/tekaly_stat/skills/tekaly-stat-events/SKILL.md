@@ -23,9 +23,10 @@ description: >-
 * Query with `getEventList(StatEventListQuery(name:, minTimestamp:,
   maxTimestamp:, descending:, maxCount:))`: `minTimestamp` is inclusive,
   `maxTimestamp` exclusive, results are ordered by timestamp (ascending by
-  default), `maxCount` defaults to 1000. Page with
+  default), `maxCount` defaults to 100. Page with
   `query.withCursor(result.nextCursor!)` while `nextCursor` is not null.
-* `getEvent(id)` reads one event; events compare by id.
+* `getEvent(id)` reads one event; saved events compare by id, an unsaved
+  event (no id yet) only equals itself.
 * In tests, use an in memory firestore (`newFirestoreServiceMemory()` from
   `tekartik_firebase_firestore_sembast`) and a local firebase app
   (`newFirebaseAppLocal()`).

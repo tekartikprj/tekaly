@@ -144,7 +144,12 @@ Future<void> main() async {
       await syncedSdb.initialSynchronizationDone();
       expect(await record.get(db), isNull);
       await record.add(db, DbEntity()..name.v = 'test');
-      await sleep(1000);
+      // Pushed up, nothing left dirty
+      await syncedSdb.synchronizer.sync();
+      var syncRecords = await syncedSdb.syncedSdb.getSyncRecords();
+      expect(syncRecords, hasLength(1));
+      expect(syncRecords.first.syncId.v, isNotNull);
+      expect(await syncedSdb.syncedSdb.txnGetDirtySyncRecords(db), isEmpty);
     });
   });
 }

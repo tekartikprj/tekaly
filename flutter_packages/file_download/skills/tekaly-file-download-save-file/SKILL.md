@@ -42,8 +42,8 @@ dialog asks the user where to put them (`tekaly_file_picker_flutter`).
   back; use `tekalyFilePicker.saveFile()` from `tekaly_file_picker_flutter`
   directly when the saved uri is needed off the web.
 * Images: `downloadImage(DownloadImageInfo(filename:, data:))` sets the mime
-  type from the extension (`image/png` when the filename ends with `png`,
-  `image/jpg` otherwise) and then runs the same code path;
+  type from the extension (`filenameMimeType`: `image/png`, `image/jpeg`,
+  `image/webp`, `image/gif`...) and then runs the same code path;
   `imageInfo.toDownloadFileInfo()` converts explicitly.
 * Off the web the save goes through the global `tekalyFilePicker` when the app
   has initialized it (`initTekalyFilePickerFlutter()` once at startup, see the
