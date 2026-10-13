@@ -29,10 +29,23 @@ void main() {
       ),
     );
     expect(mediaCache.cleanCount, 0);
-    await sleep(700);
-    expect(mediaCache.cleanCount, 1);
-    await sleep(1000);
-    expect(mediaCache.cleanCount, 2);
+    // The first auto clean is scheduled once the database is opened
+    await mediaCache.database;
+    expect(mediaCache.cleanCount, 0);
+    // Timers fire late on a slow runner (macOS CI), poll instead of sleeping
+    // a fixed amount.
+    Future<void> waitForCleanCount(int count) async {
+      var sw = Stopwatch()..start();
+      while (mediaCache.cleanCount < count) {
+        if (sw.elapsed > const Duration(seconds: 10)) {
+          fail('cleanCount ${mediaCache.cleanCount}, expected $count');
+        }
+        await sleep(20);
+      }
+    }
+
+    await waitForCleanCount(1);
+    await waitForCleanCount(2);
 
     await mediaCache.close();
   });
