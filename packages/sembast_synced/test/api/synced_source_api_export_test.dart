@@ -3,7 +3,7 @@ import 'package:tekaly_sembast_synced/src/api/secure_client.dart';
 import 'package:tekaly_sembast_synced/src/api/synced_source_api.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
 import 'package:tekaly_sembast_synced/src/firebase/firebase_sim.dart';
-import 'package:tekaly_sembast_synced/synced_db.dart';
+import 'package:tekaly_sembast_synced/synced_db_internals.dart';
 import 'package:tekaly_sembast_synced/synced_source.dart';
 import 'package:test/test.dart';
 
@@ -28,6 +28,34 @@ Future<SyncedSourceApi> newInMemorySyncedSourceApi({
 }
 
 void main() {
+  test('getSourceRecordList limit and paging', () async {
+    var source = await newInMemorySyncedSourceApi(target: 'limit-test');
+    for (var key in ['k1', 'k2', 'k3']) {
+      await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          ..record.v = (CvSyncedSourceRecordData()
+            ..store.v = 'my_store'
+            ..key.v = key
+            ..value.v = {'key': key}),
+      );
+    }
+    var keys = <String>[];
+    int? afterChangeId;
+    for (var i = 0; i < 5; i++) {
+      var page = await source.getSourceRecordList(
+        afterChangeId: afterChangeId,
+        limit: 2,
+      );
+      if (page.isEmpty) {
+        break;
+      }
+      expect(page.length, lessThanOrEqualTo(2));
+      keys.addAll(page.list.map((record) => record.record.v!.key.v!));
+      afterChangeId = page.lastChangeId;
+    }
+    expect(keys, ['k1', 'k2', 'k3']);
+  });
+
   Future<SyncedDb> setupBasicDb(SyncedSourceApi source) async {
     var syncedDb = SyncedDb.newInMemory();
     var db = await syncedDb.database;

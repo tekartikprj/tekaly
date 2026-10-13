@@ -24,6 +24,9 @@ const syncedSourceRpcServiceName = 'synced_source';
 /// Put a source record
 const requestPutSourceRecordCommand = 'put_source_record';
 
+/// Put a raw source record (test only, no change id or meta update)
+const requestPutRawRecordCommand = 'put_raw_record';
+
 /// Get a source record
 const requestGetSourceRecordCommand = 'get_source_record';
 

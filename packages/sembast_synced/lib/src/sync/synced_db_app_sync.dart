@@ -1,6 +1,5 @@
 import 'package:cv/cv.dart';
 import 'package:sembast/sembast_memory.dart';
-import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_export.dart';
@@ -9,6 +8,7 @@ import 'package:tekaly_synced_db_common/synced_db_common_firestore.dart';
 import 'package:tekartik_app_http/app_http.dart';
 
 import 'import_common.dart';
+import 'synced_db_import_merge.dart';
 
 /// Sync either from an export or from firestore
 abstract class SyncedDbAppSync {
@@ -140,8 +140,15 @@ class SyncedDbAppSyncExport
         newDatabaseFactoryMemory(),
         'export',
       );
-      await databaseMerge(await db.database, sourceDatabase: sourceDb);
-      await sourceDb.close();
+      try {
+        await syncedDbImportSourceDatabase(
+          db,
+          sourceDatabase: sourceDb,
+          exportMeta: newMeta,
+        );
+      } finally {
+        await sourceDb.close();
+      }
     }
   }
 }

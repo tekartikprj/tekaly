@@ -1,33 +1,8 @@
-import 'package:sembast/sembast_memory.dart';
-import 'package:tekaly_sembast_synced/src/api/secure_client.dart';
-import 'package:tekaly_sembast_synced/src/api/synced_source_api.dart';
-import 'package:tekaly_sembast_synced/src/firebase/firebase.dart';
-import 'package:tekaly_sembast_synced/src/firebase/firebase_sim.dart';
 import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekaly_sembast_synced/synced_source.dart';
 import 'package:test/test.dart';
 
 import 'synced_source_test_common.dart';
-
-/// Creates a [SyncedSourceApi] backed by a fully in-memory simulated backend
-/// (in-memory Firestore + in-memory http server), isolated from other
-/// sources by using [target] both as sync target and as a unique function
-/// name so tests can create several independent in-memory sources.
-Future<SyncedSourceApi> newInMemorySyncedSourceApi({
-  required String target,
-}) async {
-  firebaseSimContext = initFirebaseSimMemory();
-  var apiService = SecureApiServiceBase(
-    packageName: 'test.package',
-    isLocal: true,
-    app: 'test_app',
-    appType: 'test_type',
-    functionName: 'test_fn_$target',
-    sembastDatabaseFactory: newDatabaseFactoryMemory(),
-  );
-  await apiService.initClient();
-  return SyncedSourceApi(apiService: apiService, target: target);
-}
 
 void main() {
   Future<SyncedDb> setupBasicDb(SyncedSource source) async {
@@ -63,7 +38,7 @@ void main() {
     await syncedDb.close();
 
     // Import into a fresh (empty) in-memory source.
-    var otherSource = await newInMemorySyncedSourceApi(target: 'import-test');
+    var otherSource = newInMemorySyncedSourceMemory();
     expect((await otherSource.getMetaInfo())?.lastChangeId.v, isNull);
 
     await otherSource.importFromMemory(exportInfo: exportInfo);

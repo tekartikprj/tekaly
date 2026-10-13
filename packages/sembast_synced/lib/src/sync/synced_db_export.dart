@@ -4,7 +4,8 @@ import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/export/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 import 'package:tekartik_app_common_utils/common_utils_import.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
+
+import 'synced_db_import_merge.dart';
 
 /// Synced db export filename
 var syncedDbExportFilename = 'export.jsonl';
@@ -28,10 +29,7 @@ extension SyncedDbExportDbExt on SyncedDb {
     var sdb = await database;
     var lines = await exportDatabaseLines(
       sdb,
-      storeNames: getNonEmptyStoreNames(sdb).toList()
-        ..removeWhere(
-          (element) => [dbSyncRecordStoreRef.name].contains(element),
-        ),
+      storeNames: syncedDbLegacyExportStoreNames(this, sdb),
     );
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member

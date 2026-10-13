@@ -417,7 +417,10 @@ void main() {
       expect(result.list.last.record.v!.key.v, 'key-2');
     });
 
-    test('getSourceRecordList falls back to syncInfo last change id', () async {
+    // Without lastChangeNum, the last returned change is used, not the
+    // source last change (99) that would skip the next changes of a paged
+    // (limited) result.
+    test('getSourceRecordList falls back to the last change id', () async {
       apiService.onSend = (command, request) {
         return ApiGetChangesResponse()
           ..syncInfo.v = (ApiSyncInfo()..lastChangeNum.v = 99)
@@ -430,7 +433,21 @@ void main() {
       };
 
       var result = await source.getSourceRecordList();
-      expect(result.lastChangeId, 99);
+      expect(result.lastChangeId, 5);
+      result = await source.getSourceRecordList(limit: 1);
+      expect(result.lastChangeId, 5);
+    });
+
+    test('getSourceRecordList sends the limit', () async {
+      apiService.onSend = (command, request) {
+        var getRequest = request as ApiGetChangesRequest;
+        expect(getRequest.limit.v, 2);
+        expect(getRequest.afterChangeNum.v, 4);
+        return ApiGetChangesResponse()..changes.v = [];
+      };
+
+      var result = await source.getSourceRecordList(afterChangeId: 4, limit: 2);
+      expect(result.isEmpty, isTrue);
     });
 
     test('getSourceRecordList sets includeDeleted when true', () async {

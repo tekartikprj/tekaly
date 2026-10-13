@@ -68,7 +68,7 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
         ..target.v = target
         ..includeDeleted.setValue(includeDeleted ? true : null)
         ..afterChangeNum.v = afterChangeId
-        ..limit.v,
+        ..limit.v = limit,
     );
     var list = <CvSyncedSourceRecord>[];
     var lastChangeId = apiResponse.lastChangeNum.v;
@@ -76,7 +76,12 @@ class SyncedSourceApi with SyncedSourceDefaultMixin implements SyncedSource {
       list.add(apiChangeToRecord(change));
     }
     if (list.isNotEmpty) {
-      lastChangeId ??= apiResponse.syncInfo.v?.lastChangeNum.v;
+      // The last returned change, so that a limited (paged) result does not
+      // skip the next changes; the source last change only when not paged.
+      lastChangeId ??= list.last.syncChangeId.v;
+      if (limit == null) {
+        lastChangeId ??= apiResponse.syncInfo.v?.lastChangeNum.v;
+      }
     }
     var result = SyncedSourceRecordList(list, lastChangeId);
     return result;

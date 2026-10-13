@@ -1,11 +1,11 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:sembast/sembast_memory.dart';
-import 'package:sembast/utils/database_utils.dart';
 import 'package:tekaly_sembast_synced/src/export/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
 
 import 'synced_db_down_synchronizer.dart';
+import 'synced_db_import_merge.dart';
 
 /// Sync from export
 class SyncedDbSynchronizerFromTekalyExport
@@ -44,8 +44,15 @@ class SyncedDbSynchronizerFromTekalyExport
         newDatabaseFactoryMemory(),
         'export',
       );
-      await databaseMerge(await db.database, sourceDatabase: sourceDb);
-      await sourceDb.close();
+      try {
+        await syncedDbImportSourceDatabase(
+          db,
+          sourceDatabase: sourceDb,
+          exportMeta: newMeta,
+        );
+      } finally {
+        await sourceDb.close();
+      }
     }
   }
 }

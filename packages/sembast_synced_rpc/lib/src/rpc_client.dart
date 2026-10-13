@@ -54,7 +54,7 @@ class _SyncedSourceRpcClient
   Future<void> putRawRecord(CvSyncedSourceRecord record) async {
     await _sendRequest<PutSourceRecordApiResult>(
       (PutSourceRecordApiQuery()..record.v = modelToJsonMap(record)).request(
-        requestPutSourceRecordCommand,
+        requestPutRawRecordCommand,
       ),
     );
   }

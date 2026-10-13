@@ -4,10 +4,10 @@ import 'package:path/path.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:tekaly_sembast_synced/src/sync/synced_db_lib.dart';
-import 'package:tekartik_app_cv_sembast/app_cv_sembast.dart';
 
 import '../export/sembast_import_export.dart';
 import 'import_common.dart';
+import 'synced_db_import_merge.dart';
 
 /// Io export extension for [SyncedDbExportInfo].
 extension SyncedDbExportInfoIoExt on SyncedDbExportInfo {
@@ -57,10 +57,10 @@ extension SyncedDbExportIoExt on SyncedDb {
     var sdb = await database;
     var lines = await sembastToTekalyExportDatabaseLines(
       sdb,
-      storeNames: getNonEmptyStoreNames(sdb).toList()
-        ..removeWhere(
-          (element) => [dbSyncRecordStoreRef.name].contains(element),
-        ),
+      // Synced stores only, like exportInMemory.
+      storeNames: getNonEmptyStoreNames(
+        sdb,
+      ).where((store) => shouldSyncStore(store)).toList(),
     );
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member
@@ -103,10 +103,7 @@ extension SyncedDbExportIoExt on SyncedDb {
     var sdb = await database;
     var lines = await exportDatabaseLines(
       sdb,
-      storeNames: getNonEmptyStoreNames(sdb).toList()
-        ..removeWhere(
-          (element) => [dbSyncRecordStoreRef.name].contains(element),
-        ),
+      storeNames: syncedDbLegacyExportStoreNames(this, sdb),
     );
     return lines;
   }
@@ -129,10 +126,7 @@ extension SyncedDbExportIoExt on SyncedDb {
     var sdb = await database;
     var lines = await exportDatabaseLines(
       sdb,
-      storeNames: getNonEmptyStoreNames(sdb).toList()
-        ..removeWhere(
-          (element) => [dbSyncRecordStoreRef.name].contains(element),
-        ),
+      storeNames: syncedDbLegacyExportStoreNames(this, sdb),
     );
     //print(jsonPretty(map));
     // ignore: invalid_use_of_visible_for_testing_member

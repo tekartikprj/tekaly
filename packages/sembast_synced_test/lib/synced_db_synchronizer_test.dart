@@ -227,50 +227,19 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await syncRecords.delete(db);
       expect(await syncedDb.getSyncRecords(), isEmpty);
 
+      // An untracked record (no sync record) is not synced up.
       var stat = await sync.syncUp();
-      syncRecords = await syncedDb.getSyncRecords();
-      if (syncRecords.isNotEmpty) {
-        var syncRecord = syncRecords.first;
-        expect(syncRecord.syncId.v, isNotNull);
-        expect(syncRecord.syncChangeId.v, isNotNull);
-        expect(syncRecord.syncTimestamp.v, isNotNull);
-        expect(syncRecords.map((r) => r.toMap()), [
-          {
-            'store': 'entity',
-            'key': 'a1',
-            'dirty': false,
-            'deleted': false,
-            'syncTimestamp': syncRecord.syncTimestamp.v,
-            'syncId': syncRecord.syncId.v,
-            'syncChangeId': 1,
-          },
-        ]);
-        expect(stat, SyncedSyncStat(remoteUpdatedCount: 1));
-        var sourceRecord = (await source.getSourceRecord(
+      expect(stat, SyncedSyncStat());
+      expect(await syncedDb.getSyncRecords(), isEmpty);
+      expect(
+        await source.getSourceRecord(
           SyncedDataSourceRef(store: 'entity', key: 'a1'),
-        ))!;
-        expect(
-          sourceRecord,
-          CvSyncedSourceRecord()
-            ..syncId.v = sourceRecord.syncId.v
-            ..syncTimestamp.v = sourceRecord.syncTimestamp.v
-            ..syncChangeId.v = 1
-            ..record.v = (CvSyncedSourceRecordData()
-              ..store.v = dbEntityStoreRef.name
-              ..key.v = 'a1'
-              ..deleted.v = false
-              ..value.v = {'name': 'test1'}),
-        );
-        var sourceMeta = (await source.getMetaInfo())!;
-        expect(sourceMeta.toMap(), {'lastChangeId': 1});
-      }
+        ),
+        isNull,
+      );
       // Sync again
       stat = await sync.syncUp();
       expect(stat, SyncedSyncStat());
-      if (syncRecords.isNotEmpty) {
-        var sourceMeta = (await source.getMetaInfo())!;
-        expect(sourceMeta.toMap(), {'lastChangeId': 1});
-      }
     });
 
     test('syncOneToRemoteBasic', () async {
@@ -570,11 +539,17 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
         await (ref.cv()..counter.v = counter + 1).put(db);
         futures.add(sync.syncUp());
       }
-      var results = await Future.wait(futures);
-      print(results);
+      await Future.wait(futures);
       var record = await ref.get(db);
       var counter = record?.counter.v ?? 0;
       expect(counter, count);
+      // The remote gets the last value.
+      await sync.syncUp();
+      expect(await syncedDb.txnGetDirtySyncRecords(db), isEmpty);
+      var sourceRecord = (await source.getSourceRecord(
+        SyncedDataSourceRef(store: dbEntityStoreRef.name, key: 'counter'),
+      ))!;
+      expect(sourceRecord.record.v!.value.v, {'counter': count});
     });
 
     test('syncUpdateFromRemote', () async {
@@ -701,7 +676,7 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat());
     });
   });
-  group('multi sync', () async {
+  group('multi sync', () {
     late SyncedDbSynchronizer sync;
     late SyncedDbSynchronizer sync2;
     late SyncedSource source;
@@ -779,9 +754,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (record1.cv()..name.v = 'text2bis').put(db2);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
-      // The remote record (change num 1) is newer than the local never
-      // synced record (change num 0): remote wins, the local change is
-      // discarded.
+      // The remote change (change num 2) is newer than the local change (last
+      // synced at change num 1): remote wins, the local change is discarded.
       var stat2 = await sync2.syncUp();
       expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
       await checkNullStat(sync);
@@ -800,9 +774,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (record1.cv()..name.v = 'text2bis').put(db2);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
-      // The remote record (change num 1) is newer than the local never
-      // synced record (change num 0): remote wins, the local change is
-      // discarded.
+      // The remote change (change num 2) is newer than the local change (last
+      // synced at change num 1): remote wins, the local change is discarded.
       var stat2 = await sync2.syncDown();
       expect(stat2, SyncedSyncStat(localUpdatedCount: 1));
       await checkNullStat(sync);
@@ -821,9 +794,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await record1.delete(db2);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
-      // The remote record (change num 1) is newer than the local never
-      // synced record (change num 0): remote wins, the local change is
-      // discarded.
+      // The remote change (change num 2) is newer than the local delete (last
+      // synced at change num 1): remote wins, the record is recreated locally.
       var stat2 = await sync2.syncUp();
       expect(stat2, SyncedSyncStat(localCreatedCount: 1));
       await checkNullStat(sync);
@@ -843,9 +815,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await record1.delete(db2);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteUpdatedCount: 1));
-      // The remote record (change num 1) is newer than the local never
-      // synced record (change num 0): remote wins, the local change is
-      // discarded.
+      // The remote change (change num 2) is newer than the local delete (last
+      // synced at change num 1): remote wins, the record is recreated locally.
       var stat2 = await sync2.syncDown();
       expect(stat2, SyncedSyncStat(localCreatedCount: 1));
       await checkNullStat(sync);
@@ -863,9 +834,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (record1.cv()..name.v = 'text2bis').put(db2);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteDeletedCount: 1));
-      // The remote record (change num 1) is newer than the local never
-      // synced record (change num 0): remote wins, the local change is
-      // discarded.
+      // The remote delete (change num 2) is newer than the local change (last
+      // synced at change num 1): remote wins, the record is deleted locally.
       var stat2 = await sync2.syncUp();
       expect(stat2, SyncedSyncStat(localDeletedCount: 1));
       await checkNullStat(sync);
@@ -884,9 +854,8 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       await (record1.cv()..name.v = 'text2bis').put(db2);
       var stat1 = await sync.sync();
       expect(stat1, SyncedSyncStat(remoteDeletedCount: 1));
-      // The remote record (change num 1) is newer than the local never
-      // synced record (change num 0): remote wins, the local change is
-      // discarded.
+      // The remote delete (change num 2) is newer than the local change (last
+      // synced at change num 1): remote wins, the record is deleted locally.
       var stat2 = await sync2.syncDown();
       expect(stat2, SyncedSyncStat(localDeletedCount: 1));
       await checkNullStat(sync);

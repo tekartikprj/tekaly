@@ -31,6 +31,12 @@ class _SyncedSourceRpcService extends RpcServiceBase {
           var record = query.record.v!.jsonToModel<CvSyncedSourceRecord>();
           record = await rpcServer.delegate.putSourceRecord(record);
           return (PutSourceRecordApiResult()..record.v = record.toJsonMap());
+        case requestPutRawRecordCommand:
+          var query = methodCall.cv<PutSourceRecordApiQuery>();
+          var record = query.record.v!.jsonToModel<CvSyncedSourceRecord>();
+          // ignore: invalid_use_of_visible_for_testing_member
+          await rpcServer.delegate.putRawRecord(record);
+          return PutSourceRecordApiResult();
         case requestGetSourceRecordCommand:
           var query = methodCall.cv<GetSourceRecordApiQuery>();
           var sourceRecordRef = SyncedDataSourceRef(
