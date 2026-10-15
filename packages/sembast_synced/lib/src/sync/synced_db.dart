@@ -290,9 +290,57 @@ abstract class SyncedDb implements SyncedDbCommon {
   @visibleForTesting
   late bool trackChangesDisabled;
 
-  /// Close
+  /// Close database.
+  ///
+  /// Close (and await) its synchronizer first, a sync uses the database.
+  ///
+  /// A database opened twice shares its connection (sembast), closing one
+  /// instance closes the other: an instance of the same name opened while
+  /// this one (or its `AutoSynchronizedFirestoreSyncedDb`) closes waits for
+  /// it. With your own synchronizer, await its close and this one before
+  /// opening the database again.
   @override
   Future<void> close();
+}
+
+/// The closes in progress, by database factory and name.
+final _pendingCloses = Expando<Map<String, Future<void>>>();
+
+/// Track [close], the close of the database [name] of [factory]: opening it
+/// again waits for it, see [syncedDbWaitPendingClose]. Returns [close].
+///
+/// A database opened while a previous instance is still closing (its
+/// synchronizer waiting for the running sync) would share its connection,
+/// closed by the pending close.
+Future<void> syncedDbTrackClose(
+  DatabaseFactory factory,
+  String name,
+  Future<void> close,
+) {
+  var pendingCloses = _pendingCloses[factory] ??= <String, Future<void>>{};
+  var previous = pendingCloses[name];
+  // Done once this close and the previous ones are, never failing (the
+  // closer gets the error).
+  late Future<void> pending;
+  pending = Future.wait<void>([close.catchError((Object _) {}), ?previous])
+      .then((_) {
+        if (identical(pendingCloses[name], pending)) {
+          pendingCloses.remove(name);
+        }
+      });
+  pendingCloses[name] = pending;
+  return close;
+}
+
+/// Wait for the pending close of the database [name] of [factory], if any.
+Future<void> syncedDbWaitPendingClose(
+  DatabaseFactory factory,
+  String name,
+) async {
+  var pending = _pendingCloses[factory]?[name];
+  if (pending != null) {
+    await pending;
+  }
 }
 
 /// Synced db extension
@@ -478,6 +526,8 @@ class _SyncedDbInMemory extends _SyncedDbImpl {
 class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
   String name;
 
+  final DatabaseFactory? _openFactory;
+
   final Database? openedDatabase;
 
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
@@ -489,10 +539,28 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
 
     required super.options,
     String? name,
-  }) : name = name ?? SyncedDb.nameDefault {
+  }) : name = name ?? SyncedDb.nameDefault,
+       _openFactory = openedDatabase == null ? databaseFactory : null {
     if (databaseFactory != null) {
       this.databaseFactory = databaseFactory;
     }
+  }
+
+  Future<void>? _closeFuture;
+
+  @override
+  Future<void> close() {
+    var factory = _openFactory;
+    if (factory == null) {
+      return super.close();
+    }
+    return _closeFuture ??= syncedDbTrackClose(factory, name, super.close());
+  }
+
+  Future<Database> _openDatabase() async {
+    // A previous instance still closing would close this one.
+    await syncedDbWaitPendingClose(databaseFactory, name);
+    return await databaseFactory.openDatabase(name);
   }
 
   @override
@@ -507,7 +575,7 @@ class _SyncedDbImpl extends SyncedDbBase implements SyncedDb {
   @override
   late final rawDatabase = openedDatabase != null
       ? Future.value(openedDatabase)
-      : databaseFactory.openDatabase(name);
+      : _openDatabase();
 }
 
 /// Sync record from

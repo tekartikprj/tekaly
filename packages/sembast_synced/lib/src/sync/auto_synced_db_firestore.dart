@@ -3,6 +3,8 @@ import 'package:tekaly_synced_db_common/synced_db_common_firestore.dart';
 // ignore: depend_on_referenced_packages
 import 'package:tekartik_common_utils/common_utils_import.dart';
 
+import 'synced_db.dart' show syncedDbTrackClose;
+
 /// Synced source firestore
 class AutoSynchronizedFirestoreSyncedDbOptions
     extends AutoSynchronizedFirestoreOptionsCommon
@@ -76,6 +78,17 @@ class _AutoSynchronizedFirestoreSyncedDb
   final AutoSynchronizedFirestoreSyncedDbOptions options;
 
   _AutoSynchronizedFirestoreSyncedDb({required this.options});
+
+  Future<void>? _closeFuture;
+
+  /// Close the synchronizer (once the running sync is done) then the
+  /// database. Opening the same database meanwhile waits for it.
+  @override
+  Future<void> close() => _closeFuture ??= syncedDbTrackClose(
+    options.databaseFactory,
+    options.sembastDbName,
+    super.close(),
+  );
 
   @override
   Future<SyncedDb> openSyncedDb() async {

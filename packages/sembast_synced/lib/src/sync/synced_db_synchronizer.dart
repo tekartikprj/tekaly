@@ -44,14 +44,20 @@ class SyncedDbSynchronizer
     super.retryOptions,
   });
 
-  /// Needed for autoSync.
-  /// Wait for last sync to terminate.
+  /// Close synchronizer.
+  ///
+  /// Stops the automatic synchronization and waits for the running sync and
+  /// the one queued behind it: the database can be closed once done, not
+  /// before. Safe to call twice.
   @override
   Future<void> close() async {
     cancelAutoSync();
     await syncLock.synchronized(() {
       closeCommon();
     });
+    // A sync requested while one was running runs after it, using the
+    // database: wait for it too. Its error was reported (onSyncError) or
+    // thrown to its caller.
     try {
       await closeSingleFlight();
     } catch (e, st) {
@@ -62,9 +68,13 @@ class SyncedDbSynchronizer
     }
   }
 
-  /// Trigger a lazy sync
+  /// Trigger a lazy sync, nothing is done once closed.
   @override
   FutureOr<SyncedSyncStat> lazySync() {
+    if (closed) {
+      // The sync would throw (the single flight is closed).
+      return SyncedSyncStat(notExecuted: true);
+    }
     return sync();
   }
 
