@@ -288,8 +288,53 @@ abstract class SyncedSdb implements SyncedDbCommon {
   bool get trackChangesDisabled;
 
   /// Close database.
+  ///
+  /// Close (and await) its synchronizer first, a sync uses the database.
+  ///
+  /// A database opened twice shares its connection (sembast, sqflite), closing
+  /// one instance closes the other: an instance of the same name opened while
+  /// this one (or its `AutoSynchronizedFirestoreSyncedSdb`) closes waits for
+  /// it. With your own synchronizer, await its close and this one before
+  /// opening the database again.
   @override
   Future<void> close();
+}
+
+/// The closes in progress, by database factory and name.
+final _pendingCloses = Expando<Map<String, Future<void>>>();
+
+/// Track [close], the close of the database [name] of [factory]: opening it
+/// again waits for it, see [syncedSdbWaitPendingClose]. Returns [close].
+///
+/// A database opened while a previous instance is still closing (its
+/// synchronizer waiting for the running sync) would share its connection,
+/// closed by the pending close.
+Future<void> syncedSdbTrackClose(
+  SdbFactory factory,
+  String name,
+  Future<void> close,
+) {
+  var pendingCloses = _pendingCloses[factory] ??= <String, Future<void>>{};
+  var previous = pendingCloses[name];
+  // Done once this close and the previous ones are, never failing (the
+  // closer gets the error).
+  late Future<void> pending;
+  pending = Future.wait<void>([close.catchError((Object _) {}), ?previous])
+      .then((_) {
+        if (identical(pendingCloses[name], pending)) {
+          pendingCloses.remove(name);
+        }
+      });
+  pendingCloses[name] = pending;
+  return close;
+}
+
+/// Wait for the pending close of the database [name] of [factory], if any.
+Future<void> syncedSdbWaitPendingClose(SdbFactory factory, String name) async {
+  var pending = _pendingCloses[factory]?[name];
+  if (pending != null) {
+    await pending;
+  }
 }
 
 /// True if the records of [store] are synchronized in [db] (not a system nor
@@ -546,6 +591,8 @@ final syncedSdbMetaSchema = SdbDatabaseSchema(
 class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
   String name;
 
+  final SdbFactory? _openFactory;
+
   final SdbDatabase? openedDatabase;
 
   //static DatabaseFactory get inMemoryDatabaseFactory => SqfliteLogget newDatabaseFactoryMemory();
@@ -555,13 +602,27 @@ class _SyncedSdbImpl extends SyncedSdbBase implements SyncedSdb {
     this.openedDatabase,
     required super.options,
     String? name,
-  }) : name = name ?? SyncedSdb.nameDefault {
+  }) : name = name ?? SyncedSdb.nameDefault,
+       _openFactory = openedDatabase == null ? databaseFactory : null {
     if (databaseFactory != null) {
       this.databaseFactory = databaseFactory;
     }
   }
 
+  Future<void>? _closeFuture;
+
+  @override
+  Future<void> close() {
+    var factory = _openFactory;
+    if (factory == null) {
+      return super.close();
+    }
+    return _closeFuture ??= syncedSdbTrackClose(factory, name, super.close());
+  }
+
   Future<SdbDatabase> _openDatabase() async {
+    // A previous instance still closing would close this one.
+    await syncedSdbWaitPendingClose(databaseFactory, name);
     if (debugSyncedSync) {
       _log(
         'opening database ${await databaseFactory.getDatabaseFullPath(name)}',
