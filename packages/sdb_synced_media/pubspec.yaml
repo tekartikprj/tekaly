@@ -1,0 +1,58 @@
+name: tekaly_sdb_synced_media
+description: Media files synchronized next to a synced sdb, kept in a local file system cache (all, lru or none) and stored remotely (Firebase Storage).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  cv: ">=1.1.12"
+  fs_shim: ">=2.5.7"
+  idb_shim: ">=2.9.9"
+  meta: ">=1.18.0"
+  path: ">=1.9.1"
+  synchronized: ">=3.4.2"
+  uuid: ">=4.6.0"
+  tekaly_sdb_synced:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/sdb_synced
+  tekaly_synced_db_common:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/synced_db_common
+  tekartik_app_cv_sdb:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      path: app_cv_sdb
+  tekartik_app_media:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      path: app_media
+  tekartik_app_text:
+    git:
+      url: https://github.com/tekartik/app_common_utils.dart
+      path: app_text
+  tekartik_common_utils:
+    git:
+      url: https://github.com/tekartik/common_utils.dart
+  tekartik_firebase_storage:
+    git:
+      url: https://github.com/tekartik/firebase_storage.dart
+      path: storage
+    version: '>=0.8.0'
+
+dev_dependencies:
+  lints: ">=6.1.0"
+  test: ">=1.31.0"
+  tekartik_firebase_local:
+    git:
+      url: https://github.com/tekartik/firebase.dart
+      path: firebase_local
+  tekartik_firebase_storage_fs:
+    git:
+      url: https://github.com/tekartik/firebase_storage.dart
+      path: storage_fs
+    version: '>=0.4.0'
+resolution: workspace
