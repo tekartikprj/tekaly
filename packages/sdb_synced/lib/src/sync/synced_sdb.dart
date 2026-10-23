@@ -464,16 +464,12 @@ extension SyncedSdbExtension on SyncedSdb {
   Future<SdbSyncRecord?> getSyncRecordAny(
     SdbClient client,
     SdbRecordRef record,
-  ) async {
-    // !! very slow
-    return await sdbSyncRecordStoreRef.findRecord(
-      client,
-
-      filter: SdbFilter.and([
-        SdbFilter.equals(dbSyncRecordModel.store.k, record.store.name),
-        SdbFilter.equals(dbSyncRecordModel.key.k, record.key),
-      ]),
-    );
+  ) {
+    // Through the index: a scan made every local write slower as the
+    // database grows.
+    return sdbSyncRecordByStoreAndKeyIndexRef
+        .record(record.store.name, record.key as String)
+        .getObject(client);
   }
 
   /// Get sync meta info.
