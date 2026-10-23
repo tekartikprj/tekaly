@@ -32,7 +32,9 @@ class SyncedSdbSynchronizer
     super.writeSource,
     super.autoSync = false,
     super.retryOptions,
-  });
+  }) {
+    sharedSyncLockName = syncedSdbSharedSyncLockName(db);
+  }
 
   late final _lazyLauncher = LazyRunner<SyncedSyncStat>(
     action: (count) async {

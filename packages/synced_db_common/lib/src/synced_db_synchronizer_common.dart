@@ -9,6 +9,7 @@ import 'model/db_sync_common.dart';
 import 'model/source_meta_info.dart';
 import 'model/source_record.dart';
 import 'synced_db_common_types.dart';
+import 'synced_db_shared_lock.dart';
 import 'synced_db_sync_status.dart';
 import 'synced_db_synchronizer_retry.dart';
 import 'synced_source.dart';
@@ -175,6 +176,26 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Sync lock
   final syncLock = Lock();
+
+  /// The name of a lock held during each sync, shared with the browser tabs
+  /// (same origin) synchronizing the same local database, null for none.
+  ///
+  /// The tabs share their IndexedDB database: a tab notified of the changes
+  /// another tab is pushing would push the same dirty records again (the
+  /// source transactions conflicting). With it the second tab waits, then
+  /// finds the records pushed. See [syncedDbSharedLock].
+  String? sharedSyncLockName;
+
+  /// Run [action] holding [syncLock], then the shared lock if any.
+  Future<T> _syncLocked<T>(Future<T> Function() action) {
+    return syncLock.synchronized(() {
+      var name = sharedSyncLockName;
+      if (name == null) {
+        return action();
+      }
+      return syncedDbSharedLock(name, action);
+    });
+  }
 
   /// Constructor.
   ///
@@ -615,7 +636,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Sync down
   Future<SyncedSyncStat> syncDown() async {
-    return syncLock.synchronized(() {
+    return _syncLocked(() {
       return doSyncDown();
     });
   }
@@ -625,7 +646,7 @@ abstract class SyncedDbSynchronizerCommon {
 
   /// Sync dirty records up
   Future<SyncedSyncStat> syncUp({bool fullSync = false}) async {
-    return syncLock.synchronized(() {
+    return _syncLocked(() {
       return doSyncUp(fullSync: fullSync);
     });
   }
@@ -668,7 +689,7 @@ abstract class SyncedDbSynchronizerCommon {
   }
 
   late final _singleFlight = SingleFlight<SyncedSyncStat>(() async {
-    return await syncLock.synchronized(() async {
+    return await _syncLocked(() async {
       _syncing = true;
       _notifySyncStatus();
       try {

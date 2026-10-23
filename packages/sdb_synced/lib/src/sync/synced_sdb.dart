@@ -337,6 +337,20 @@ Future<void> syncedSdbWaitPendingClose(SdbFactory factory, String name) async {
   }
 }
 
+/// The name of the lock shared by the browser tabs synchronizing [db], see
+/// `SyncedDbSynchronizerCommon.sharedSyncLockName`: its factory and name, on
+/// the browser IndexedDB (sandboxed or not) only, the one the tabs share.
+/// None for a database opened by the caller.
+String? syncedSdbSharedSyncLockName(SyncedSdb db) {
+  if (db is _SyncedSdbImpl) {
+    var factory = db._openFactory;
+    if (factory != null && factory.name.contains('idb-$idbFactoryNameNative')) {
+      return 'tekaly_synced_sdb:${factory.name}:${db.name}';
+    }
+  }
+  return null;
+}
+
 /// True if the records of [store] are synchronized in [db] (not a system nor
 /// a local store, and part of its schema), once its database is opened.
 bool syncedSdbShouldSyncStore(SyncedSdb db, String store) =>
