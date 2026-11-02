@@ -1,4 +1,5 @@
 import 'package:tekaly_sdb_synced/synced_sdb.dart';
+import 'package:tekaly_sdb_synced_test/synced_sdb_partition_test.dart';
 import 'package:tekaly_sdb_synced_test/synced_sdb_synchronizer_test.dart';
 import 'package:tekaly_sdb_synced_test/synced_sdb_test_common.dart';
 import 'package:tekaly_synced_db_common_test/synced_source_firestore_test_common.dart';
@@ -15,5 +16,8 @@ void main() {
     }
 
     allSyncedDbTests(setupContext);
+    syncedSdbPartitionTests(
+      () async => newInMemorySyncedSourceFirestore().withPartition,
+    );
   });
 }

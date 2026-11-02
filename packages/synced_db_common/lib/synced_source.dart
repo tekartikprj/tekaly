@@ -9,3 +9,4 @@ export 'src/synced_source_failure.dart'
         SyncedSourceFailureException,
         SyncedSourceOperation;
 export 'src/synced_source_memory.dart' show SyncedSourceMemory;
+export 'src/synced_source_partition.dart' show SyncedSourcePartition;

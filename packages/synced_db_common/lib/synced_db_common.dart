@@ -23,3 +23,4 @@ export 'src/synced_source_export_import.dart';
 export 'src/synced_source_failure.dart';
 export 'src/synced_source_memory.dart';
 export 'src/synced_source_memory_compat.dart';
+export 'src/synced_source_partition.dart';

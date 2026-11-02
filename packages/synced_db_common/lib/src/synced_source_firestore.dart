@@ -77,6 +77,10 @@ class SyncedSourceFirestore
   /// True when used without auth during development
   final bool noAuth;
 
+  /// The partition of the records (a user id field), if any: only the
+  /// records of its value are read, a deleted record keeps its field.
+  final SyncedSourcePartition? partition;
+
   @override
   Future<void> close() async {}
 
@@ -87,6 +91,7 @@ class SyncedSourceFirestore
     /// Document path
     required this.rootPath,
     this.noAuth = false,
+    this.partition,
   }) {
     initBuilders();
 
@@ -94,6 +99,15 @@ class SyncedSourceFirestore
     metaCollection = firestore.collection(getPath(metaCollectionId));
     metaInfoReference = metaCollection.doc(metaInfoDocumentId);
   }
+
+  /// The same source (same firestore and root path) with [partition].
+  SyncedSourceFirestore withPartition(SyncedSourcePartition? partition) =>
+      SyncedSourceFirestore(
+        firestore: firestore,
+        rootPath: rootPath,
+        noAuth: noAuth,
+        partition: partition,
+      );
 
   /// Get path
   String getPath(String path) {
@@ -172,8 +186,6 @@ class SyncedSourceFirestore
         syncId: existing.syncId.v,
       );
     }
-    var map = _prepareRecordMap(record);
-
     // Warning native transaction does not work in non authenticated mode
     // and even rest auth (not service account), in which case a write batch
     // is used instead.
@@ -194,6 +206,10 @@ class SyncedSourceFirestore
           );
         }
       }
+      // A deleted record keeps the partition field of the existing one.
+      var map = _prepareRecordMap(
+        partition?.recordToPut(record, existing) ?? record,
+      );
       // increment change id
       var lastChangeId = (meta?.lastChangeId.v ?? 0) + 1;
 
@@ -345,7 +361,15 @@ class SyncedSourceFirestore
     bool? includeDeleted,
   }) async {
     includeDeleted ??= false;
-    var query = dataCollection.orderBy(syncChangeIdKey);
+    fb.Query query = dataCollection;
+    var partition = this.partition;
+    if (partition != null && partition.isFiltered) {
+      query = query.where(
+        '$recordFieldKey.$recordValueFieldKey.${partition.field}',
+        isEqualTo: partition.value,
+      );
+    }
+    query = query.orderBy(syncChangeIdKey);
     // devPrint('dataCollaction $dataCollection');
     // devPrint('rootPath $rootPath');
     if (afterChangeId != null) {

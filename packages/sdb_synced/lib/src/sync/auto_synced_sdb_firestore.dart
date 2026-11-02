@@ -27,6 +27,7 @@ class AutoSynchronizedFirestoreSyncedSdbOptions
     required this.dbName,
     super.readOnly = false,
     super.retryOptions,
+    super.partition,
 
     /// Default ok for tests only
     super.rootDocumentPath = 'test/local',

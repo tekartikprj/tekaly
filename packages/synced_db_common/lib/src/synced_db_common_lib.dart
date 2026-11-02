@@ -17,3 +17,4 @@ export 'synced_source_firestore.dart';
 export 'synced_source_firestore_converter.dart';
 export 'synced_source_memory.dart';
 export 'synced_source_memory_compat.dart';
+export 'synced_source_partition.dart';

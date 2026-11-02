@@ -7,6 +7,7 @@ import 'synced_db_synchronizer_common.dart';
 import 'synced_db_synchronizer_retry.dart';
 import 'synced_source.dart';
 import 'synced_source_firestore.dart';
+import 'synced_source_partition.dart';
 
 /// Options of an automatically synchronized firestore synced db, common to
 /// the sembast and sdb implementations.
@@ -27,12 +28,17 @@ abstract class AutoSynchronizedFirestoreOptionsCommon {
   /// once it is done, 15s doubled on each failure up to 1 minute.
   final SyncedDbSynchronizerRetryOptions retryOptions;
 
+  /// The partition of the records (a user id field), if any: only the
+  /// records of its value are synchronized down, see [SyncedSourcePartition].
+  final SyncedSourcePartition? partition;
+
   /// Firestore defaults to [Firestore.instance].
   AutoSynchronizedFirestoreOptionsCommon({
     Firestore? firestore,
     required this.rootDocumentPath,
     required this.readOnly,
     SyncedDbSynchronizerRetryOptions? retryOptions,
+    this.partition,
   }) : firestore = firestore ?? Firestore.instance,
        retryOptions = retryOptions ?? const SyncedDbSynchronizerRetryOptions();
 }
@@ -120,6 +126,7 @@ abstract class AutoSynchronizedFirestoreSyncedDbBase<
     var source = SyncedSourceFirestore(
       firestore: options.firestore,
       rootPath: options.rootDocumentPath,
+      partition: options.partition,
     );
     synchronizer = newSynchronizer(
       syncedDb,

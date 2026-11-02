@@ -16,6 +16,12 @@ void main() {
     );
     strictSyncedSourceTest(setupNewInMemorySyncedSourceMemory);
   });
+  group('synced_source_memory_partition', () {
+    runSyncedSourcePartitionTest(() async {
+      var source = SyncedSourceMemory();
+      return source.withPartition;
+    });
+  });
 
   group('synced_source_sembast_test', () {
     late SyncedSourceMemory source;

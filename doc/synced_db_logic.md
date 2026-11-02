@@ -247,6 +247,32 @@ at the record level by the dirty flag and the change num comparison.
   - `db.onDirty()`: triggers a sync when a local record becomes dirty.
 - `close()` cancels the subscriptions and waits for a pending sync to finish.
 
+## Partitioned source (download only your records)
+
+A source can be split by a field of the record value (a user id, a person
+id...): `SyncedSourcePartition(field: 'userId', value: userId)`, passed to
+`SyncedSourceFirestore(partition:)`, `SyncedSourceMemory(partition:)` (or
+`withPartition` on an existing one, same records) and
+`AutoSynchronizedFirestore*Options(partition:)`.
+
+- A source with a `value` only reads the records whose `value[field]` equals
+  it (`getSourceRecordList`; on Firestore a `where` on `record.value.<field>`).
+  Without a `value` (an admin) it reads everything.
+- A deleted record keeps the `field` of the record it replaces (its value is
+  `{field: value}`, `deleted: true`), so that the clients of its partition see
+  the delete. Every source writing to the location must name the same `field`;
+  a source without partition writes the usual tombstone (no value).
+- The change id cursor works as before: a partition client resumes after the
+  last change id of *its* records. The source meta info is still shared: every
+  write of any client wakes every auto synced client, whose sync down then
+  finds nothing to read (one query).
+- A download optimization, not a security rule: a client may still read any
+  record. Constrain the query in the security rules if needed.
+- On Firestore, reading a partition needs a composite index on the `data`
+  collection: `record.value.<field>` ascending, `syncChangeId` ascending.
+- A record moved to another partition (its `field` changed) is not removed
+  from the clients of the former partition: they keep their last copy.
+
 ## Statistics
 
 Each sync returns a `SyncedSyncStat` with `local/remote` `created/updated/deleted`

@@ -46,6 +46,16 @@ change log a local database synchronizes with.
 * Use `SyncedSourceMemory` in tests and as a reference implementation. Use
   `SyncedSourceFirestore(firestore:, rootPath:)` for firestore (`data` and
   `meta/info` under `rootPath`).
+* Partition: `SyncedSourcePartition(field: 'userId', value: userId)` on
+  `SyncedSourceFirestore(partition:)` / `SyncedSourceMemory(partition:)` (or
+  `withPartition`, same location) reads only the records whose
+  `value[field] == value`; without `value` it reads everything. A deleted
+  record keeps `{field: ...}` as its value so that its partition sees the
+  delete: every writer of the location must name the same field. Firestore
+  needs a composite index (`record.value.<field>`, `syncChangeId`). A
+  download optimization, not a security rule; a record moved to another
+  partition stays on the clients of the former one. See
+  `doc/synced_db_logic.md` (repository root).
 * Export format: `source.exportInMemory()` gives a `SyncedDbExportInfo`
   (`metaInfo` + `data` lines) identical to what a synced sembast or sdb
   database exports; `source.importFromMemory(exportInfo:)` pushes every record

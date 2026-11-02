@@ -29,6 +29,7 @@ class AutoSynchronizedFirestoreSyncedDbOptions
     this.sembastDbName = 'synced.db',
     super.readOnly = false,
     super.retryOptions,
+    super.partition,
 
     /// Default ok for tests only
     super.rootDocumentPath = 'test/local',

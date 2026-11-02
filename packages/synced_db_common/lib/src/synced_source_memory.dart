@@ -8,17 +8,42 @@ import 'synced_db_common_lib.dart';
 
 typedef _Key = (String store, String key);
 
+/// The data of a memory source, shared by its partitions.
+class _SyncedSourceMemoryData {
+  final lock = Lock();
+  CvMetaInfo? metaInfo;
+  final sourceRecordsBySyncId = <String, CvSyncedSourceRecord>{};
+  final sourceRecordsByStoreAndKey = <_Key, CvSyncedSourceRecord>{};
+}
+
 class SyncedSourceMemory
     with SyncedSourceDefaultMixin, SyncedSourceFailureMixin
     implements SyncedSource {
-  final _lock = Lock();
-  CvMetaInfo? _metaInfo;
-  final _sourceRecordsBySyncId = <String, CvSyncedSourceRecord>{};
-  final _sourceRecordsByStoreAndKey = <_Key, CvSyncedSourceRecord>{};
+  final _SyncedSourceMemoryData _data;
 
-  SyncedSourceMemory() {
+  /// The partition of the records (a user id field), if any: only the
+  /// records of its value are read, a deleted record keeps its field.
+  final SyncedSourcePartition? partition;
+
+  Lock get _lock => _data.lock;
+  CvMetaInfo? get _metaInfo => _data.metaInfo;
+  set _metaInfo(CvMetaInfo? metaInfo) => _data.metaInfo = metaInfo;
+  Map<String, CvSyncedSourceRecord> get _sourceRecordsBySyncId =>
+      _data.sourceRecordsBySyncId;
+  Map<_Key, CvSyncedSourceRecord> get _sourceRecordsByStoreAndKey =>
+      _data.sourceRecordsByStoreAndKey;
+
+  SyncedSourceMemory({SyncedSourcePartition? partition})
+    : this._(_SyncedSourceMemoryData(), partition);
+
+  SyncedSourceMemory._(this._data, this.partition) {
     initBuilders();
   }
+
+  /// The same source (same records) with [partition], the clients of one
+  /// location reading different partitions.
+  SyncedSourceMemory withPartition(SyncedSourcePartition? partition) =>
+      SyncedSourceMemory._(_data, partition);
   @override
   Future<void> close() async {}
 
@@ -106,9 +131,9 @@ class SyncedSourceMemory
       } else {
         syncId = existing.syncId.v!;
       }
-      // Make a copy
+      // Make a copy, a deleted record keeping the partition field.
       var newRecord = CvSyncedSourceRecord()
-        ..copyFrom(record)
+        ..copyFrom(partition?.recordToPut(record, existing) ?? record)
         ..syncId.v = syncId
         ..syncTimestamp.v = SyncedDbTimestamp.now()
         ..syncChangeId.v = lastChangeId;
@@ -144,6 +169,11 @@ class SyncedSourceMemory
       // included: a list of deleted records only still moves the cursor.
       int? lastChangeId;
       for (var record in sorterSourceRecords) {
+        // Like a firestore query on the partition: the other records are
+        // not read at all.
+        if (!(partition?.matches(record) ?? true)) {
+          continue;
+        }
         if (record.syncChangeId.v! > afterChangeId!) {
           lastChangeId = record.syncChangeId.v;
           var add = true;

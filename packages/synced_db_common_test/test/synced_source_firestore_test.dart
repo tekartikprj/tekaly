@@ -14,12 +14,48 @@ void main() {
       return newInMemorySyncedSourceFirestore();
     });
   });
+  group('synced_source_firestore_partition', () {
+    runSyncedSourcePartitionTest(() async {
+      var source = newInMemorySyncedSourceFirestore();
+      return source.withPartition;
+    });
+  });
   group('synced_source_firestore_test', () {
     late SyncedSourceFirestore source;
     late fb.Firestore firestore;
     setUp(() {
       source = newInMemorySyncedSourceFirestore();
       firestore = source.firestore;
+    });
+    test('deleted record format with partition', () async {
+      source = source.withPartition(
+        const SyncedSourcePartition(field: 'userId'),
+      );
+      await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          ..record.v = (CvSyncedSourceRecordData()
+            ..store.v = 'test'
+            ..value.v = {'userId': 'u1', 'int': 1}
+            ..key.v = '1'),
+      );
+      await source.putSourceRecord(
+        CvSyncedSourceRecord()
+          ..record.v = (CvSyncedSourceRecordData()
+            ..store.v = 'test'
+            ..deleted.v = true
+            ..key.v = '1'),
+      );
+      var map = (await firestore.doc('data/test|1').get()).data;
+      expect(map, {
+        'record': {
+          'store': 'test',
+          'key': '1',
+          'value': {'userId': 'u1'},
+          'deleted': true,
+        },
+        'syncTimestamp': map[syncTimestampKey],
+        'syncChangeId': 2,
+      });
     });
     test('putRecord format', () async {
       var sourceRecord = (await source.putSourceRecord(

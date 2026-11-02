@@ -367,3 +367,132 @@ void runSyncedSourceTest(
     await subscription.cancel();
   }, skip: skipRealTimeChanges);
 }
+
+/// Partitioned sources of one location: [createPartitionedSource] creates a
+/// new location and returns its source for a given partition.
+void runSyncedSourcePartitionTest(
+  Future<SyncedSource Function(SyncedSourcePartition? partition)> Function()
+  createPartitionedSource,
+) {
+  const field = 'userId';
+  late SyncedSource Function(SyncedSourcePartition? partition) sourceOf;
+  late SyncedSource writer;
+  setUp(() async {
+    sourceOf = await createPartitionedSource();
+    writer = sourceOf(const SyncedSourcePartition(field: field));
+  });
+  SyncedSource readerOf(String userId) =>
+      sourceOf(SyncedSourcePartition(field: field, value: userId));
+
+  Future<CvSyncedSourceRecord> put(
+    SyncedSource source,
+    String key, {
+    Map<String, Object?>? value,
+    String store = 'test',
+    bool deleted = false,
+  }) => source.putSourceRecord(
+    CvSyncedSourceRecord()
+      ..record.v = (CvSyncedSourceRecordData()
+        ..store.v = store
+        ..key.v = key
+        ..value.v = value
+        ..deleted.v = deleted),
+  );
+
+  List<String> keysOf(SyncedSourceRecordList list) =>
+      list.list.map((record) => record.recordKey).toList();
+
+  test('read a partition', () async {
+    await put(writer, 'a', value: {field: 'u1', 'meal': 'm1'});
+    await put(writer, 'b', value: {field: 'u2'});
+    await put(writer, 'c', value: {'meal': 'm1'});
+    var d = await put(writer, 'd', store: 'other', value: {field: 'u1'});
+
+    var list = await readerOf('u1').getSourceRecordList();
+    expect(keysOf(list), ['a', 'd']);
+    expect(list.lastChangeId, d.syncChangeId.v);
+    expect(list.list.first.record.v!.value.v, {field: 'u1', 'meal': 'm1'});
+    list = await readerOf('u1').getSourceRecordList(afterChangeId: 1);
+    expect(keysOf(list), ['d']);
+    list = await readerOf(
+      'u1',
+    ).getSourceRecordList(afterChangeId: d.syncChangeId.v);
+    expect(list.list, isEmpty);
+    expect(list.lastChangeId, isNull);
+    expect(keysOf(await readerOf('u2').getSourceRecordList()), ['b']);
+    expect(await readerOf('u3').getSourceRecordList().then(keysOf), isEmpty);
+
+    // No value: every record.
+    expect(keysOf(await writer.getSourceRecordList()), ['a', 'b', 'c', 'd']);
+    expect(keysOf(await sourceOf(null).getSourceRecordList()), [
+      'a',
+      'b',
+      'c',
+      'd',
+    ]);
+  });
+
+  test('a deleted record keeps its partition field', () async {
+    await put(writer, 'a', value: {field: 'u1', 'meal': 'm1'});
+    await put(writer, 'b', value: {field: 'u2'});
+    var deleted = await put(writer, 'a', deleted: true);
+    expect(deleted.isDeleted, isTrue);
+    expect(deleted.record.v!.deleted.v, isTrue);
+    expect(deleted.record.v!.value.v, {field: 'u1'});
+    var read = await writer.getSourceRecord(
+      SyncedDataSourceRef(store: 'test', key: 'a'),
+    );
+    expect(read!.isDeleted, isTrue);
+    expect(read.record.v!.value.v, {field: 'u1'});
+
+    var reader = readerOf('u1');
+    var list = await reader.getSourceRecordList(includeDeleted: true);
+    expect(keysOf(list), ['a']);
+    expect(list.list.first.isDeleted, isTrue);
+    expect(list.lastChangeId, deleted.syncChangeId.v);
+    // Skipped but still moving the cursor.
+    list = await reader.getSourceRecordList();
+    expect(list.list, isEmpty);
+    expect(list.lastChangeId, deleted.syncChangeId.v);
+    expect(
+      keysOf(await readerOf('u2').getSourceRecordList(includeDeleted: true)),
+      ['b'],
+    );
+
+    // Deleted again (by a partition reader): still in the partition.
+    deleted = await put(reader, 'a', deleted: true);
+    expect(deleted.record.v!.value.v, {field: 'u1'});
+    expect(keysOf(await reader.getSourceRecordList(includeDeleted: true)), [
+      'a',
+    ]);
+  });
+
+  test('a deleted record without partition', () async {
+    // A record with no partition field, deleted: nothing to keep.
+    await put(writer, 'c', value: {'meal': 'm1'});
+    var deleted = await put(writer, 'c', deleted: true);
+    expect(deleted.isDeleted, isTrue);
+    expect(deleted.record.v!.value.v, isNull);
+
+    // A source without partition does not keep the field.
+    await put(writer, 'a', value: {field: 'u1'});
+    deleted = await put(sourceOf(null), 'a', deleted: true);
+    expect(deleted.record.v!.value.v, isNull);
+    expect(
+      keysOf(await readerOf('u1').getSourceRecordList(includeDeleted: true)),
+      isEmpty,
+    );
+  });
+
+  test('a record moved to another partition', () async {
+    await put(writer, 'a', value: {field: 'u1'});
+    var moved = await put(writer, 'a', value: {field: 'u2'});
+    expect(
+      keysOf(await readerOf('u1').getSourceRecordList(includeDeleted: true)),
+      isEmpty,
+    );
+    var list = await readerOf('u2').getSourceRecordList();
+    expect(keysOf(list), ['a']);
+    expect(list.lastChangeId, moved.syncChangeId.v);
+  });
+}

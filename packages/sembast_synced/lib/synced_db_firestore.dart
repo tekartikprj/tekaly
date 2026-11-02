@@ -3,5 +3,8 @@ export 'src/sync/auto_synced_db_firestore.dart'
         AutoSynchronizedFirestoreSyncedDb,
         AutoSynchronizedFirestoreSyncedDbOptions;
 export 'src/sync/synced_db_lib.dart'
-    show SyncedSourceFirestore, SyncedSourceOfflineException;
+    show
+        SyncedSourceFirestore,
+        SyncedSourceOfflineException,
+        SyncedSourcePartition;
 export 'synced_db.dart';
