@@ -42,6 +42,11 @@ change log a local database synchronizes with.
   `putSourceRecordsLimit`, consecutive change ids, one meta update): the
   synchronizer then pushes in batches. `SyncedSourceFirestore` does (400 a
   batch).
+* `synchronizer.addBeforeSyncUpAction(action)` (returns its remover) runs
+  `action` before each push, holding the sync lock: what it writes locally
+  goes up with that push (errors ignored, keep it short). The media
+  synchronizer uploads the new contents there
+  (`SyncedMediaSdbSynchronizer.uploadBeforeSyncUp`).
 * `getSourceRecordList(afterChangeId:, limit:, includeDeleted:)` returns
   records with `syncChangeId > afterChangeId` ordered by change id;
   `SyncedSourceRecordList.lastChangeId` is the last change id *read* (deleted

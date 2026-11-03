@@ -131,6 +131,13 @@ a simple ordered range query.
 
 `doSyncUp`:
 
+0. Run the actions added by `addBeforeSyncUpAction` (in order, their errors
+   ignored), so that what they write locally goes up with this push: the
+   media synchronizer uploads the new media contents there
+   (`SyncedMediaSdbSynchronizer.uploadBeforeSyncUp`, at most 10 s), and a
+   new media record is pushed once, already uploaded, instead of twice. They
+   also run before the local wins pushed at the end of the sync down (a
+   first full sync meets the records added since its sync up).
 1. Collect dirty sync records (`txnGetDirtySyncRecords`) and build the source
    records to push (`_txnGetDirtySyncSourceRecord`). This step also repairs
    inconsistencies: deleted flag set but data still present (delete the data),

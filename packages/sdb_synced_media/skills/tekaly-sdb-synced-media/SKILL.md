@@ -37,6 +37,13 @@ last access.
   `startAutoSync(dbSynchronizer.onSynced())` runs it after each database sync
   (that is when new/deleted records of other clients arrive); `lazySync()`
   coalesces calls and never throws; `close()` before closing the database.
+* `uploadBeforeSyncUp(dbSynchronizer, timeout:)` (call it next to
+  `startAutoSync`): the new contents are uploaded before each push of the
+  database (waiting at most `timeout`, 10 s), so a new media record goes up
+  once, already uploaded, instead of twice (not uploaded, then uploaded),
+  and other clients never see a record whose content is missing. A slower
+  upload or an upload error never blocks the push: the record then goes up
+  twice, as without it.
 * Read contents with `synchronizer.readMediaBytes(id)` (local, or from the
   source then kept per cache mode) or `getCachedMediaFile(id)` (local file or
   null); with an `lru` or `none` cache, never rely on
@@ -114,6 +121,7 @@ Future<void> main() async {
     ),
   );
   mediaSynchronizer.startAutoSync(dbSynchronizer.onSynced());
+  mediaSynchronizer.uploadBeforeSyncUp(dbSynchronizer);
 
   var mediaId = await mediaDb.addMediaFile(
     file: SyncedMediaFile.from(filename: 'photo.jpg'),

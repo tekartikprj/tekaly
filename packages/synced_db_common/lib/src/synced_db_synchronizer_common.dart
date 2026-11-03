@@ -186,6 +186,40 @@ abstract class SyncedDbSynchronizerCommon {
   /// finds the records pushed. See [syncedDbSharedLock].
   String? sharedSyncLockName;
 
+  final _beforeSyncUpActions = <Future<void> Function()>[];
+
+  /// Adds [action], run before each push of the local changes (sync up),
+  /// holding the sync lock, never by a read-only synchronizer: what it
+  /// writes locally is pushed by the same sync. For example the upload of
+  /// the contents of new media records, so that a record is pushed once,
+  /// already uploaded (`SyncedMediaSdbSynchronizer.uploadBeforeSyncUp`).
+  ///
+  /// The push waits for [action], keep it short. An error of [action] is
+  /// ignored (logged with [debugSyncedSync]), the push goes on.
+  ///
+  /// Returns a function removing it.
+  void Function() addBeforeSyncUpAction(Future<void> Function() action) {
+    _beforeSyncUpActions.add(action);
+    return () => _beforeSyncUpActions.remove(action);
+  }
+
+  /// Runs the actions added by [addBeforeSyncUpAction], in order, called by
+  /// the implementations before reading the local changes to push ([doSyncUp]
+  /// and the local wins of [doSyncDown]).
+  @protected
+  Future<void> runBeforeSyncUpActions() async {
+    for (var action in List.of(_beforeSyncUpActions)) {
+      try {
+        await action();
+      } catch (e) {
+        if (debugSyncedSync) {
+          // ignore: avoid_print
+          print('before sync up action error $e');
+        }
+      }
+    }
+  }
+
   /// Run [action] holding [syncLock], then the shared lock if any.
   Future<T> _syncLocked<T>(Future<T> Function() action) {
     return syncLock.synchronized(() {

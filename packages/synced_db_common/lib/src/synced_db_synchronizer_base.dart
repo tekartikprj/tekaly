@@ -335,6 +335,7 @@ abstract class SyncedDbSynchronizerBase<
       return stat;
     }
 
+    await runBeforeSyncUpActions();
     var dirtySourceRecords = await getLocalDirtySourceRecords();
     if (dirtySourceRecords.isNotEmpty) {
       if (debugSyncedSync) {
@@ -787,6 +788,9 @@ abstract class SyncedDbSynchronizerBase<
     /// Push up the locally dirty records for which local wins (they stay
     /// dirty for a read-only synchronizer).
     if (conflictSyncRecordIds.isNotEmpty && !isReadOnly) {
+      // A push too: what changed locally since the sync up (a first full
+      // sync meets the records added meanwhile).
+      await runBeforeSyncUpActions();
       var conflictDirtySourceRecords = await _getLocalDirtySourceRecordsByIds(
         conflictSyncRecordIds,
       );

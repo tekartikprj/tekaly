@@ -41,9 +41,11 @@ class SyncedMediaSdbSynchronizer {
 
   final _lock = Lock(reentrant: true);
   final _trimLock = Lock();
+  final _uploadLock = Lock();
   final _downloads = <String, Future<Uint8List>>{};
   final _urls = <String, Uri?>{};
   StreamSubscription<Object?>? _autoSyncSubscription;
+  void Function()? _removeBeforeSyncUpAction;
   var _closed = false;
 
   /// Synchronizes [db] with [source].
@@ -205,47 +207,94 @@ class SyncedMediaSdbSynchronizer {
     return stat;
   }
 
-  /// Uploads the local contents, deletes the deleted ones from the source.
-  Future<SyncedSyncStat> syncUp() async {
-    var remoteCreated = 0;
-    for (var fileId in await db.fileIdsToUpload()) {
-      if (_closed) {
-        break;
-      }
-      var fileRecord = await db.getMediaFileRecord(fileId);
-      if (fileRecord != null) {
-        try {
-          var bytes = await db.readMediaFileBytes(fileId);
-          await source.addMediaFile(
-            file: fileRecord.toMediaFile(),
-            bytes: bytes,
-          );
-          String? url;
-          if (storeUrl) {
-            try {
-              url = (await source.getMediaUrl(fileRecord.fileRef))?.toString();
-            } catch (e) {
-              _log('no url for $fileId: $e');
-            }
-          }
-          await db.markDownloadedAndUploaded(
-            fileId,
-            size: bytes.length,
-            url: url,
-          );
+  /// Uploads the local contents not uploaded yet, returns their count.
+  ///
+  /// Shared by [syncUp] and the push of the database ([uploadBeforeSyncUp]),
+  /// one at a time.
+  Future<int> _uploadContents() {
+    return _uploadLock.synchronized(() async {
+      var remoteCreated = 0;
+      for (var fileId in await db.fileIdsToUpload()) {
+        if (_closed) {
+          break;
+        }
+        if (await _uploadContent(fileId)) {
           remoteCreated++;
-        } on FileSystemException catch (e, st) {
-          _log('ignoring error $e');
-          if (debugSyncedMedia) {
-            _log(st);
-          }
-          // Not found locally, re-download
-          if (fileRecord.isUploaded && !fileRecord.isDeleted) {
-            await db.updateStatus(fileId, local: false, remote: true);
-          }
         }
       }
+      return remoteCreated;
+    });
+  }
+
+  Future<bool> _uploadContent(String fileId) async {
+    var fileRecord = await db.getMediaFileRecord(fileId);
+    if (fileRecord == null) {
+      return false;
     }
+    try {
+      var bytes = await db.readMediaFileBytes(fileId);
+      await source.addMediaFile(file: fileRecord.toMediaFile(), bytes: bytes);
+      String? url;
+      if (storeUrl) {
+        try {
+          url = (await source.getMediaUrl(fileRecord.fileRef))?.toString();
+        } catch (e) {
+          _log('no url for $fileId: $e');
+        }
+      }
+      await db.markDownloadedAndUploaded(fileId, size: bytes.length, url: url);
+      return true;
+    } on FileSystemException catch (e, st) {
+      _log('ignoring error $e');
+      if (debugSyncedMedia) {
+        _log(st);
+      }
+      // Not found locally, re-download
+      if (fileRecord.isUploaded && !fileRecord.isDeleted) {
+        await db.updateStatus(fileId, local: false, remote: true);
+      }
+      return false;
+    }
+  }
+
+  /// Uploads the new local contents before each push of [dbSynchronizer],
+  /// the synchronizer of the database holding the media records, so that a
+  /// new media record is pushed once, already uploaded, instead of twice
+  /// (not uploaded, then uploaded after the next media sync), and reaches
+  /// the other clients with its content readable.
+  ///
+  /// The push waits at most [timeout] for the uploads (slow network, big
+  /// contents), then goes on: a content uploaded later gets its record
+  /// pushed again by the next synchronization, as without it. An upload
+  /// error never fails the push (the media sync retries it).
+  ///
+  /// Call it once, next to [startAutoSync]; [close] removes it.
+  void uploadBeforeSyncUp(
+    SyncedDbSynchronizerCommon dbSynchronizer, {
+    Duration timeout = const Duration(seconds: 10),
+  }) {
+    _removeBeforeSyncUpAction?.call();
+    _removeBeforeSyncUpAction = dbSynchronizer.addBeforeSyncUpAction(() async {
+      if (_closed) {
+        return;
+      }
+      try {
+        var count = await _uploadContents().timeout(timeout);
+        if (debugSyncedMedia && count > 0) {
+          _log('uploaded $count before the push');
+        }
+      } on TimeoutException {
+        // Still running, its records are pushed by the next sync
+        _log('uploads longer than $timeout, pushing without them');
+      } catch (e) {
+        _log('upload before the push failed: $e');
+      }
+    });
+  }
+
+  /// Uploads the local contents, deletes the deleted ones from the source.
+  Future<SyncedSyncStat> syncUp() async {
+    var remoteCreated = await _uploadContents();
     var remoteDeleted = 0;
     for (var fileId in await db.fileIdsToDeleteRemotely()) {
       if (_closed) {
@@ -591,14 +640,18 @@ class SyncedMediaSdbSynchronizer {
   /// Local cache stat.
   Future<SyncedMediaCacheStat> getCacheStat() => db.getCacheStat();
 
-  /// Stops the auto sync, waits for the current synchronization.
+  /// Stops the auto sync (and the uploads before the database pushes), waits
+  /// for the current synchronization.
   Future<void> close() async {
     _closed = true;
+    _removeBeforeSyncUpAction?.call();
+    _removeBeforeSyncUpAction = null;
     await _autoSyncSubscription?.cancel();
     _autoSyncSubscription = null;
     try {
       await _lazySyncFuture;
     } catch (_) {}
     await _lock.synchronized(() {});
+    await _uploadLock.synchronized(() {});
   }
 }

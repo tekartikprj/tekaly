@@ -62,6 +62,9 @@ var mediaSynchronizer = SyncedMediaSdbSynchronizer(
 );
 // Media sync after each database sync (new/deleted records, uploads).
 mediaSynchronizer.startAutoSync(dbSynchronizer.onSynced());
+// New contents uploaded before each database push: a new media record goes
+// up once, already uploaded (the push waits 10 s at most).
+mediaSynchronizer.uploadBeforeSyncUp(dbSynchronizer);
 
 var mediaId = await mediaDb.addMediaFile(
   file: SyncedMediaFile.from(filename: 'photo.jpg'),
