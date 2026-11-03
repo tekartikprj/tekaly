@@ -334,8 +334,10 @@ void syncTests(Future<SyncSdbTestsContext> Function() setupContext) {
       var recordSyncTimestampString = sourceRecord.syncTimestamp.v!
           .toIso8601String();
       var lastTimestampString = metaInfo.lastTimestamp.v!.toIso8601String();
-      expect(await sdbExportDatabaseLines(await syncedSdb.database), [
-        {'sembast_export': 1, 'version': 1},
+      var exportLines = await sdbExportDatabaseLines(await syncedSdb.database);
+      // Newer idb_shim versions add 'sdb_export': 1 to the header.
+      expect(exportLines.first, containsPair('sembast_export', 1));
+      expect(exportLines.skip(1).toList(), [
         {'store': '_main'},
         [
           'store_entity',
