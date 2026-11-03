@@ -85,5 +85,86 @@ void main() {
         'syncChangeId': 1,
       });
     });
+
+    CvSyncedSourceRecord newRecord(
+      String key, {
+      Map<String, Object?>? value,
+      bool deleted = false,
+    }) => CvSyncedSourceRecord()
+      ..record.v = (CvSyncedSourceRecordData()
+        ..store.v = 'test'
+        ..key.v = key
+        ..value.setValue(value)
+        ..deleted.setValue(deleted ? true : null));
+
+    test('putSourceRecords: one batch, consecutive change ids', () async {
+      await source.putSourceRecord(newRecord('0', value: {'int': 0}));
+      var records = await source.putSourceRecords([
+        newRecord('1', value: {'int': 1}),
+        newRecord('0', value: {'int': 2}),
+        newRecord('2', value: {'int': 3}),
+      ]);
+      expect(records.map((record) => record.syncId.v), [
+        'test|1',
+        'test|0',
+        'test|2',
+      ]);
+      expect(records.map((record) => record.syncChangeId.v), [2, 3, 4]);
+      expect(records.map((record) => record.record.v!.value.v), [
+        {'int': 1},
+        {'int': 2},
+        {'int': 3},
+      ]);
+      expect(records.first.syncTimestamp.v, isNotNull);
+      expect((await firestore.doc('meta/info').get()).data, {
+        'lastChangeId': 4,
+      });
+      expect(await source.putSourceRecords([]), isEmpty);
+      expect(
+        () => source.putSourceRecords([
+          for (var i = 0; i <= source.putSourceRecordsLimit; i++)
+            newRecord('$i'),
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('putSourceRecords: a delete keeps the partition field', () async {
+      source = source.withPartition(
+        const SyncedSourcePartition(field: 'userId'),
+      );
+      await source.putSourceRecords([
+        newRecord('1', value: {'userId': 'u1', 'int': 1}),
+      ]);
+      await source.putSourceRecords([newRecord('1', deleted: true)]);
+      var map = (await firestore.doc('data/test|1').get()).data;
+      expect(map['record'], {
+        'store': 'test',
+        'key': '1',
+        'value': {'userId': 'u1'},
+        'deleted': true,
+      });
+    });
+
+    test('getSourceRecords', () async {
+      await source.putSourceRecord(newRecord('1', value: {'int': 1}));
+      // A record under another sync id than store|key: found by its key.
+      await source.putRawRecord(
+        newRecord('2', value: {'int': 2})
+          ..syncId.v = 'other_id'
+          ..syncChangeId.v = 2,
+      );
+      var records = await source.getSourceRecords([
+        SyncedDataSourceRef(store: 'test', key: '1'),
+        SyncedDataSourceRef(store: 'test', key: '2'),
+        SyncedDataSourceRef(store: 'test', key: '3'),
+      ]);
+      expect(records.map((record) => record?.syncId.v), [
+        'test|1',
+        'other_id',
+        null,
+      ]);
+      expect(await source.getSourceRecords([]), isEmpty);
+    });
   });
 }

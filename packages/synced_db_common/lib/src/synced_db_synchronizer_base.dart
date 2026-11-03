@@ -365,11 +365,20 @@ abstract class SyncedDbSynchronizerBase<
       // Read-only: local changes stay dirty.
       return;
     }
+    // A source that can reads the remote records of a chunk at once and puts
+    // its records in one batch (a chunk is then a batch).
+    var readSource = this.readSource;
+    var batchRead = readSource is SyncedSourceBatchRead ? readSource : null;
+    var batchWrite = writeSource is SyncedSourceBatchWrite ? writeSource : null;
+    var chunkSize = stepLimitUp ?? batchWrite?.putSourceRecordsLimit ?? 10;
+    if (batchWrite != null && chunkSize > batchWrite.putSourceRecordsLimit) {
+      chunkSize = batchWrite.putSourceRecordsLimit;
+    }
     // Loop until no pushed record gets changed locally during the push
     while (dirtySourceRecords.isNotEmpty) {
       /// Sync record ids of records changed locally during putSourceRecord
       var changedSyncRecordIds = <int>[];
-      for (var chunk in listChunk(dirtySourceRecords, stepLimitUp ?? 10)) {
+      for (var chunk in listChunk(dirtySourceRecords, chunkSize)) {
         /// Records actually sent to the source
         var sentList = <TSyncSourceRecord>[];
 
@@ -379,15 +388,28 @@ abstract class SyncedDbSynchronizerBase<
         /// Remote records winning over the local dirty change (their change
         /// num is strictly greater), to apply locally instead of pushing.
         var remoteWinList = <TSyncSourceRecord>[];
-        for (var syncSourceRecord in chunk) {
+
+        /// The remote records of the chunk, read at once when the source can.
+        var remoteRecords = batchRead == null
+            ? null
+            : await batchRead.getSourceRecords([
+                for (var syncSourceRecord in chunk)
+                  syncSourceRecord.sourceRecord!.ref,
+              ]);
+
+        /// The records to put in one batch, when the source can.
+        var batchList = <CvSyncedSourceRecord>[];
+        for (var (index, syncSourceRecord) in chunk.indexed) {
           var syncRecord = _syncRecordOf(syncSourceRecord);
 
           /// Remote wins if the remote change num is strictly greater than
           /// the last change num seen locally: read the remote record first.
           var localChangeNum = syncRecord.syncChangeId.v ?? 0;
-          var remoteRecord = await readSource.getSourceRecord(
-            syncSourceRecord.sourceRecord!.ref,
-          );
+          var remoteRecord = remoteRecords != null
+              ? remoteRecords[index]
+              : await readSource.getSourceRecord(
+                  syncSourceRecord.sourceRecord!.ref,
+                );
           var remoteChangeNum = remoteRecord?.syncChangeId.v ?? 0;
           if (remoteRecord != null && remoteChangeNum > localChangeNum) {
             if (debugSyncedSync) {
@@ -400,12 +422,24 @@ abstract class SyncedDbSynchronizerBase<
             continue;
           }
           sentList.add(syncSourceRecord);
+          if (batchWrite != null) {
+            batchList.add(syncSourceRecord.sourceRecord!);
+            continue;
+          }
           list.add(
             _newSyncSourceRecord(
               await writeSource.putSourceRecord(syncSourceRecord.sourceRecord!),
               syncRecord,
             ),
           );
+        }
+        if (batchWrite != null && batchList.isNotEmpty) {
+          var putRecords = await batchWrite.putSourceRecords(batchList);
+          for (var (index, putRecord) in putRecords.indexed) {
+            list.add(
+              _newSyncSourceRecord(putRecord, _syncRecordOf(sentList[index])),
+            );
+          }
         }
 
         await localSyncTransaction((txn) async {

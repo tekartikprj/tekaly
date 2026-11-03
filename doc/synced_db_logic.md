@@ -46,6 +46,12 @@ with no sync intelligence. It only guarantees:
 - `getMetaInfo()` / `putMetaInfo()`: a single meta record (see below).
 - `onMetaInfo()`: stream of meta changes (native on firestore via snapshots,
   polling otherwise) — used for auto-sync.
+- Optional batches: a source implementing `SyncedSourceBatchRead`
+  (`getSourceRecords(refs)`, the records of several refs at once) and
+  `SyncedSourceBatchWrite` (`putSourceRecords(records)`, up to
+  `putSourceRecordsLimit`, one transaction with consecutive change ids and one
+  meta update) is used by sync up in batches (below). Firestore implements
+  both (400 records a batch: Firestore takes 500 writes in a transaction).
 
 Implementations: firestore (`synced_source_firestore.dart`), memory, sembast,
 export (read-only export files).
@@ -129,7 +135,8 @@ a simple ordered range query.
    records to push (`_txnGetDirtySyncSourceRecord`). This step also repairs
    inconsistencies: deleted flag set but data still present (delete the data),
    data missing but deleted flag not set (set the flag).
-2. For each chunk (`stepLimitUp`, default 10), for each record:
+2. For each chunk (`stepLimitUp`, default 10; with a batch write source, its
+   `putSourceRecordsLimit`, and never more), for each record:
    - **Read the remote record first** (`source.getSourceRecord`) and compare its
      change num (`syncChangeId`, historical name kept for compatibility) with
      the one last seen locally (the sync record's `syncChangeId`, 0 if never
@@ -139,6 +146,15 @@ a simple ordered range query.
      change was made on top of the latest remote version: call
      `source.putSourceRecord`. The **response** carries the authoritative
      `syncId`, `syncChangeId` and `syncTimestamp`.
+   - With a batch source, the remote records of the chunk are read at once
+     (`getSourceRecords`) and the records to push are put at once
+     (`putSourceRecords`): a few round trips and one meta update per chunk
+     instead of several round trips and one meta update per record. On
+     Firestore a record costs 2 document reads, 3 when new (the check, the
+     read back of its server timestamp) and 1 write, plus 1 read and 1 write
+     of `meta/info` per batch, against 5 reads (7 when new) and 2 writes one
+     by one. A batch does not check that a record without sync id is new (the
+     check above just read it).
 3. In a local `syncTransaction`:
    - For each record where remote won: apply the remote record locally
      (write/delete the data record, save the remote sync info in the sync
@@ -285,8 +301,8 @@ counts (`local*` = applied locally by sync down, `remote*` = pushed by sync up).
   concurrent edits on different fields of the same record lose one side.
 - A remote change with a newer change num silently discards local dirty changes.
 - Sync up performs one `getSourceRecord` + one `putSourceRecord` round-trip per
-  record (chunking only batches the local transaction, not the source
-  reads/writes).
+  record on a source without batches (chunking then only batches the local
+  transaction); a batch source (Firestore) reads and puts a chunk at once.
 - The source keeps a tombstone forever for every deleted record (until a version
   bump / `minIncrementalChangeId` purge).
 - `syncChangeId` allocation serializes all writers through the source meta record

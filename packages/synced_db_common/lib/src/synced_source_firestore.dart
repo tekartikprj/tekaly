@@ -37,7 +37,7 @@ bool _isFromCache(fb.DocumentSnapshot snapshot) {
 /// Synced source firestore
 class SyncedSourceFirestore
     with SyncedSourceDefaultMixin
-    implements SyncedSource {
+    implements SyncedSource, SyncedSourceBatchRead, SyncedSourceBatchWrite {
   /// Enforced synchronizer version, if any
   int? _version;
 
@@ -227,6 +227,75 @@ class SyncedSourceFirestore
     return (await getSourceRecord(ref))!;
   }
 
+  /// Firestore takes 500 writes in a transaction: the records and the meta
+  /// info.
+  @override
+  int get putSourceRecordsLimit => 400;
+
+  /// Puts [records] in one transaction with one meta info write, under their
+  /// sync id (`store|key` for a new one). Unlike [putSourceRecord], it does
+  /// not check that a record without sync id is new: the synchronizer read
+  /// the remote records just before ([getSourceRecords]).
+  @override
+  Future<List<CvSyncedSourceRecord>> putSourceRecords(
+    List<CvSyncedSourceRecord> records,
+  ) async {
+    if (records.isEmpty) {
+      return [];
+    }
+    if (records.length > putSourceRecordsLimit) {
+      throw ArgumentError.value(
+        records.length,
+        'records',
+        'more than $putSourceRecordsLimit',
+      );
+    }
+    var docs = <fb.DocumentReference>[];
+    for (var record in records) {
+      fixAndCheckPutSyncedRecord(record);
+      docs.add(dataCollection.doc(record.syncId.v ?? _generateSyncId(record)));
+    }
+    // A deleted record keeps the partition field of the existing one.
+    var existingByIndex = <int, CvSyncedSourceRecord?>{};
+    if (partition != null) {
+      var deletedIndexes = [
+        for (var (index, record) in records.indexed)
+          if (record.isDeleted) index,
+      ];
+      if (deletedIndexes.isNotEmpty) {
+        var snapshots = await firestore.getAll([
+          for (var index in deletedIndexes) docs[index],
+        ]);
+        for (var (i, index) in deletedIndexes.indexed) {
+          existingByIndex[index] = sourceRecordFromSnapshot(snapshots[i]);
+        }
+      }
+    }
+    var maps = [
+      for (var (index, record) in records.indexed)
+        _prepareRecordMap(
+          partition?.recordToPut(record, existingByIndex[index]) ?? record,
+        ),
+    ];
+    await firestore.runTransactionSupport((txn) async {
+      var meta = await txnGetMetaInfo(txn);
+      // Consecutive change ids, the whole documents replaced (see
+      // putSourceRecord).
+      var lastChangeId = meta?.lastChangeId.v ?? 0;
+      for (var (index, map) in maps.indexed) {
+        txn.set(docs[index], {...map, syncChangeIdKey: ++lastChangeId});
+      }
+      txn.set(metaInfoReference, {
+        metaLastChangeIdKey: lastChangeId,
+      }, fb.SetOptions(merge: true));
+    });
+    // Read back, for their server timestamp.
+    var snapshots = await firestore.getAll(docs);
+    return [
+      for (var snapshot in snapshots) sourceRecordFromSnapshot(snapshot)!,
+    ];
+  }
+
   /// The meta info, from the server: throws [SyncedSourceOfflineException]
   /// when the client answers from its cache (offline), so that a sync down
   /// fails (and is retried) rather than trusting it.
@@ -324,7 +393,14 @@ class SyncedSourceFirestore
         print('getSourceRecord Invalid record $record for ref $sourceRef');
       }
     }
+    return _querySourceRecord(sourceRef);
+  }
 
+  /// The record of [sourceRef] looked for by its store and key: one written
+  /// under another sync id than `store|key` (before [version2]).
+  Future<CvSyncedSourceRecord?> _querySourceRecord(
+    SyncedDataSourceRef sourceRef,
+  ) async {
     var querySnapshot = await dataCollection
         .where(
           '$recordFieldKey.$recordStoreFieldKey',
@@ -337,6 +413,38 @@ class SyncedSourceFirestore
       return sourceRecordFromSnapshot(querySnapshot.docs.first);
     }
     return null;
+  }
+
+  /// The records of [sourceRefs] as [getSourceRecord] finds each: by sync id
+  /// all at once, then the ones missing by store and key, in parallel.
+  @override
+  Future<List<CvSyncedSourceRecord?>> getSourceRecords(
+    List<SyncedDataSourceRef> sourceRefs,
+  ) async {
+    if (sourceRefs.isEmpty) {
+      return [];
+    }
+    var snapshots = await firestore.getAll([
+      for (var sourceRef in sourceRefs)
+        dataCollection.doc(refSyncId(sourceRef)),
+    ]);
+    var records = <CvSyncedSourceRecord?>[
+      for (var (index, sourceRef) in sourceRefs.indexed)
+        if (sourceRecordFromSnapshot(snapshots[index]) case var record?
+            when record.recordStore == sourceRef.store &&
+                record.recordKey == sourceRef.key)
+          record
+        else
+          null,
+    ];
+    await Future.wait([
+      for (var (index, sourceRef) in sourceRefs.indexed)
+        if (records[index] == null)
+          _querySourceRecord(
+            sourceRef,
+          ).then((record) => records[index] = record),
+    ]);
+    return records;
   }
 
   /// Txn get source record by id

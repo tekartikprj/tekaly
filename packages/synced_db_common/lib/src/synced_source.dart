@@ -297,6 +297,32 @@ abstract class SyncedSourceWrite {
   Future<void> close();
 }
 
+/// A read side that gets several records at once ([getSourceRecords]): one
+/// round trip for a batch. The synchronizer uses it, when the source has it,
+/// to check a batch of local changes against the remote records.
+abstract class SyncedSourceBatchRead implements SyncedSourceRead {
+  /// The records of [sourceRefs], in the same order, null when missing.
+  Future<List<CvSyncedSourceRecord?>> getSourceRecords(
+    List<SyncedDataSourceRef> sourceRefs,
+  );
+}
+
+/// A write side that puts several records at once ([putSourceRecords]): one
+/// transaction and one meta info change for a batch, instead of one each.
+/// The synchronizer uses it, when the source has it, to push the local
+/// changes in batches of [putSourceRecordsLimit].
+abstract class SyncedSourceBatchWrite implements SyncedSourceWrite {
+  /// The most records [putSourceRecords] takes at once.
+  int get putSourceRecordsLimit;
+
+  /// Puts [records] as [putSourceRecord] puts each, at once (at most
+  /// [putSourceRecordsLimit]): consecutive change ids, one meta info change.
+  /// Returns the put records, in the same order.
+  Future<List<CvSyncedSourceRecord>> putSourceRecords(
+    List<CvSyncedSourceRecord> records,
+  );
+}
+
 /// Read-write synced source.
 abstract class SyncedSource implements SyncedSourceRead, SyncedSourceWrite {}
 

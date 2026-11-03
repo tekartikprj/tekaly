@@ -36,6 +36,12 @@ change log a local database synchronizes with.
   `getMetaInfo`, `getSourceRecord`, `getSourceRecordList`, `putSourceRecord`
   (and `onMetaInfo` when real time changes are available, the default polls
   every hour).
+* A source that can read and write several records at once also implements
+  `SyncedSourceBatchRead` (`getSourceRecords(refs)`) and
+  `SyncedSourceBatchWrite` (`putSourceRecords(records)`, at most
+  `putSourceRecordsLimit`, consecutive change ids, one meta update): the
+  synchronizer then pushes in batches. `SyncedSourceFirestore` does (400 a
+  batch).
 * `getSourceRecordList(afterChangeId:, limit:, includeDeleted:)` returns
   records with `syncChangeId > afterChangeId` ordered by change id;
   `SyncedSourceRecordList.lastChangeId` is the last change id *read* (deleted
