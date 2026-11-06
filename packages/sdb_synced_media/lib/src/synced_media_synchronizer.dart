@@ -39,6 +39,13 @@ class SyncedMediaSdbSynchronizer {
   /// anyone reading the record).
   final bool storeUrl;
 
+  /// Leaves the remote deletions to [deleteRemote]: [syncUp] (and so
+  /// [sync] and the auto sync) uploads but deletes nothing from the
+  /// source. A content deleted locally then stays readable remotely (by its
+  /// url) until the app deletes it, for example once nothing it published
+  /// refers to it anymore.
+  final bool deferRemoteDelete;
+
   final _lock = Lock(reentrant: true);
   final _trimLock = Lock();
   final _uploadLock = Lock();
@@ -54,6 +61,7 @@ class SyncedMediaSdbSynchronizer {
     required this.source,
     this.cacheOptions = const SyncedMediaCacheOptions.all(),
     this.storeUrl = false,
+    this.deferRemoteDelete = false,
   });
 
   SyncedMediaSdbStores get _stores => db.stores;
@@ -292,9 +300,26 @@ class SyncedMediaSdbSynchronizer {
     });
   }
 
-  /// Uploads the local contents, deletes the deleted ones from the source.
+  /// Uploads the local contents, deletes the deleted ones from the source
+  /// (unless [deferRemoteDelete], see [deleteRemote]).
   Future<SyncedSyncStat> syncUp() async {
-    var remoteCreated = await _uploadContents();
+    var stat = SyncedSyncStat(remoteCreatedCount: await _uploadContents());
+    if (!deferRemoteDelete) {
+      stat.add(await _deleteRemoteContents());
+    }
+    return stat;
+  }
+
+  /// Deletes from the source the contents deleted locally, then purges
+  /// their records: what [syncUp] does unless [deferRemoteDelete].
+  Future<SyncedSyncStat> deleteRemote() async {
+    if (_closed) {
+      return SyncedSyncStat(notExecuted: true);
+    }
+    return await _lock.synchronized(_deleteRemoteContents);
+  }
+
+  Future<SyncedSyncStat> _deleteRemoteContents() async {
     var remoteDeleted = 0;
     for (var fileId in await db.fileIdsToDeleteRemotely()) {
       if (_closed) {
@@ -318,10 +343,7 @@ class SyncedMediaSdbSynchronizer {
       }
       await db.purge(fileId);
     }
-    return SyncedSyncStat(
-      remoteCreatedCount: remoteCreated,
-      remoteDeletedCount: remoteDeleted,
-    );
+    return SyncedSyncStat(remoteDeletedCount: remoteDeleted);
   }
 
   Future<bool> _deleteRemote(String fileId) async {

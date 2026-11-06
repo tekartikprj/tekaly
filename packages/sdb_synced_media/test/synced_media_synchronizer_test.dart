@@ -79,6 +79,29 @@ void main() {
       isFalse,
     );
   });
+  test('add/delete, remote delete deferred', () async {
+    var deferred = SyncedMediaSdbSynchronizer(
+      db: db,
+      source: source,
+      deferRemoteDelete: true,
+    );
+    try {
+      var id = await addTextFile();
+      expect(await deferred.sync(), SyncedSyncStat(remoteCreatedCount: 1));
+      await db.deleteMediaFile(id);
+      // Still there remotely after a sync.
+      expect(await deferred.sync(), SyncedSyncStat());
+      expect(await existsRemotely(id), isTrue);
+      expect(
+        await deferred.deleteRemote(),
+        SyncedSyncStat(remoteDeletedCount: 1),
+      );
+      expect(await db.getMediaFileRecord(id), isNull);
+      expect(await deferred.deleteRemote(), SyncedSyncStat());
+    } finally {
+      await deferred.close();
+    }
+  });
   test('add/delete before upload', () async {
     var id = await addTextFile();
     await db.deleteMediaFile(id);
