@@ -13,7 +13,7 @@ class DownloadSample {
   /// filename.
   final String? mimeType;
 
-  /// True when the content is a png or a jpeg, `downloadImage` can be used.
+  /// True for a png or a jpeg: the playground shows a preview of it.
   final bool isImage;
 
   /// True when the content size is driven by the playground size field.
@@ -184,7 +184,7 @@ final downloadSamples = <DownloadSample>[
   DownloadSample(
     label: 'Svg',
 
-    /// An image, but not one `DownloadImageInfo` knows about (png or jpeg)
+    /// An image `downloadImage` types as `image/svg+xml`, with no preview
     filename: 'icon.svg',
     build: (_) => utf8.encode(
       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">'

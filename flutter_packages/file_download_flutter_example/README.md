@@ -26,9 +26,11 @@ flutter test            # widget tests driving the in memory file picker
   lazy buttons in each browser. When it is blocked, generate the content
   *before* the tap, or keep an anchor around and feed it with
   `anchorSelectorSetDownloadFileInfo()` (`tekaly_file_download_web`).
-* **`downloadFile` vs `downloadImage`**: `DownloadImageInfo` only knows png and
-  jpeg (anything else ends up as `image/jpg`), `DownloadFileInfo` deduces the
-  mime type from the extension or takes the one you give it.
+* **`downloadFile` vs `downloadImage`**: both deduce the mime type from the
+  file extension (`filenameMimeType`: png, jpeg, gif, webp, svg, ico...,
+  `application/octet-stream` for an unknown one); only `DownloadFileInfo`
+  also takes an explicit `mimeType` (the `mimeType` field, ignored by the
+  `downloadImage` buttons).
 * **Where it lands**: the browser download on the web, a save dialog through
   `tekaly_file_picker_flutter` elsewhere, with the picker currently in use.
 * **A log** of every call, with the generation time and the total duration, and
