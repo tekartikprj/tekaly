@@ -14,6 +14,11 @@ TekalyFilePicker get _filePicker =>
 ///
 /// On the web the browser downloads it (`tekaly_file_download_web`), elsewhere
 /// the user is asked where to save it (`tekaly_file_picker_flutter`).
+///
+/// Completes once done or cancelled: a cancelled dialog is not an error, and
+/// nothing tells where the file went (use `tekalyFilePicker.saveFile()` for
+/// the saved uri). On the web the global `tekalyFilePicker` is not used, so a
+/// `TekalyFilePickerMemory` only records the downloads of a VM test.
 Future<void> downloadFile(fdw.DownloadFileInfo fileInfo) async {
   if (kIsWeb) {
     await fdw.downloadFile(fileInfo);

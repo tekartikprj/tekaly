@@ -64,7 +64,12 @@ dialog asks the user where to put them (`tekaly_file_picker_flutter`).
 * Testing: set the global `tekalyFilePicker` to a `TekalyFilePickerMemory`
   (`package:tekaly_file_picker/file_picker_memory.dart`) and assert on
   `filePicker.saveRequests`; `filePicker.cancelled = true` simulates a user
-  dismissing the dialog, which must not throw.
+  dismissing the dialog, which must not throw. VM tests only: on the web
+  `downloadFile` goes straight to the browser, the memory picker records
+  nothing.
+* macOS: saving needs the `com.apple.security.files.user-selected.read-write`
+  entitlement (`macos/Runner/*.entitlements`); the other platforms need no
+  setup.
 
 ## Examples
 

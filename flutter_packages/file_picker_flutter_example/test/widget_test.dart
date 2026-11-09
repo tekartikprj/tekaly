@@ -46,6 +46,29 @@ void main() {
     expect(find.text('clip.mp4'), findsNothing);
   });
 
+  testWidgets('a new pick does not show what was read of the previous one', (
+    tester,
+  ) async {
+    await pumpPlayground(tester);
+    Finder readAsBytesField() =>
+        find.textContaining('readAsBytes()', findRichText: true);
+
+    await tester.tap(find.text('pickFile'));
+    await tester.pumpAndSettle();
+    expect(find.text('red.png'), findsOneWidget);
+    await tester.tap(find.text('readAsBytes'));
+    await tester.pumpAndSettle();
+    expect(readAsBytesField(), findsOneWidget);
+
+    /// json,txt: notes.txt, never read
+    await tester.tap(find.text('custom'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('pickFile'));
+    await tester.pumpAndSettle();
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(readAsBytesField(), findsNothing);
+  });
+
   testWidgets('a cancelled dialog picks nothing', (tester) async {
     await pumpPlayground(tester);
 

@@ -326,7 +326,10 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
             'and an empty list for pickFiles.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-        for (var file in _files) PickedFileTile(file: file),
+        // Keyed by file: a new pick must not keep what was read of the
+        // previous one.
+        for (var file in _files)
+          PickedFileTile(key: ObjectKey(file), file: file),
         if (_kind == FilePickerKind.memory) ...[
           const Divider(height: 32),
           _buildTitle('Recorded requests'),

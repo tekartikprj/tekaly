@@ -20,7 +20,9 @@ flutter test            # widget tests driving the in memory picker
   `audio`, `custom`), `allowedExtensions`, `dialogTitle` and
   `initialDirectory`.
 * **Actions**: `pickFile()`, `pickFiles()`, `pickDirectoryPath()`, and the
-  `ArgumentError` you get when `custom` is used without extension.
+  `ArgumentError` you get when `custom` is used without extension. On the web
+  `pickDirectoryPath()` shows an `UnsupportedError` (file_picker has no
+  directory picker there).
 * **Result**: `name`, `extension`, `path` (null on the web), `uri`, `length()`,
   the concrete `runtimeType` (`TekalyPickedFilePlatformFile`,
   `TekalyPickedFileXFile` on linux, `TekalyPickedFileMemory` for the mock),
