@@ -216,10 +216,11 @@ class TekalyMediaCacheOptions {
   /// The media fetcher
   TekalyMediaFetcher? mediaFetcher;
 
-  /// The first auto clean duration
+  /// The delay of the first auto clean, once the database is opened (5
+  /// seconds by default).
   Duration? firstAutoCleanDuration;
 
-  /// The next auto clean duration
+  /// The delay between two auto cleans (15 seconds by default).
   Duration? nextAutoCleanDuration;
 
   /// Media cache options
@@ -230,9 +231,18 @@ class TekalyMediaCacheOptions {
   });
 }
 
-/// Media cache
+/// A local cache of remote media keyed by [TekalyMediaKey]: the bytes are
+/// files of [mediaDirectory], their info ([TekalyMediaInfo]) records of a
+/// sembast database (`tekaly_media_cache.db`) in [rootDirectory].
+///
+/// Create one per cache folder, keep it and [close] it when done.
 abstract class TekalyMediaCache {
-  /// Create a new media cache
+  /// Create a new media cache in [rootDirectory] (the current directory by
+  /// default), its database opened with [databaseFactory].
+  ///
+  /// Give [databaseFactory] and [rootDirectory] the same absolute folder.
+  /// Media are fetched over http unless [options] gives a
+  /// [TekalyMediaCacheOptions.mediaFetcher]; [clean] runs automatically.
   factory TekalyMediaCache({
     required DatabaseFactory databaseFactory,
     Directory? rootDirectory,
@@ -247,7 +257,8 @@ abstract class TekalyMediaCache {
     );
   }
 
-  /// Get the media content
+  /// Get the media content, null when not cached (or when its file is gone:
+  /// the record is then dropped).
   Future<TekalyMediaContent?> getMedia(TekalyMediaKey key);
 
   /// Get the media info
@@ -256,10 +267,11 @@ abstract class TekalyMediaCache {
   /// Get all  media info
   Future<List<TekalyMediaInfo>> getAllMediaInfos();
 
-  /// Check if the media is cached
+  /// Check if the media is cached (its record only, the file is not read).
   Future<bool> isMediaCached(TekalyMediaKey key);
 
-  /// get the media content by stream
+  /// The media content: the cached one first, then each time it is cached
+  /// again.
   Stream<TekalyMediaContent> onMedia(TekalyMediaKey key);
 
   /// Fetch the media (not cached)
@@ -277,10 +289,11 @@ abstract class TekalyMediaCache {
   /// The media directory of the cache
   Directory get mediaDirectory;
 
-  /// To call regularly, call automatically otherwise
+  /// Removes the files without record and the records without file; called
+  /// automatically (see [TekalyMediaCacheOptions]).
   Future<void> clean();
 
-  /// Clear the cache, file system and database
+  /// Clear the cache, file system and database; the cache stays usable.
   Future<void> clear();
 
   /// Dump the database
@@ -429,6 +442,8 @@ class _TekalyMediaCache implements TekalyMediaCache {
       } finally {
         _clearingOrClosing = false;
       }
+      // The cache stays usable: clean it automatically again.
+      scheduleAutoClean();
     });
   }
 

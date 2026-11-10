@@ -9,8 +9,8 @@ description: >-
 # Local media cache (tekaly_media_cache)
 
 `TekalyMediaCache` stores media bytes as files under a root directory
-(`fs_shim`) and their info (name, mime type, size, last access) in a sembast
-database, keyed by a `TekalyMediaKey`.
+(`fs_shim`) and their info (name, mime type, size, caching time) in a
+sembast database of the same directory, keyed by a `TekalyMediaKey`.
 
 ## Guidelines
 
@@ -19,7 +19,10 @@ database, keyed by a `TekalyMediaKey`.
   a sembast `DatabaseFactory` (`getDatabaseFactory(rootPath:)` from
   `tekartik_app_sembast` or `tekartik_app_flutter_sembast`) and a `fs_shim`
   `Directory` dedicated to the cache (it holds the database and a media
-  folder). `close()` it when done.
+  folder). Give both the same absolute folder: a relative `rootPath` is
+  resolved under the factory's own databases folder, not under the current
+  directory. `close()` it when done. Tests: `newDatabaseFactoryMemory()`
+  (sembast) and `newFileSystemMemory().directory('/cache')` (fs_shim).
 * Identify a media with `TekalyMediaKey.name('stable-id')` and describe where
   it comes from with `TekalyMediaSourceInfo.parse(key, url, name:, type:)`
   (`name` is the media name, defaults to the url last segment; `type` the
@@ -36,9 +39,13 @@ database, keyed by a `TekalyMediaKey`.
 * Provide a `TekalyMediaFetcher` in `TekalyMediaCacheOptions(mediaFetcher:)`
   when downloads need authentication, an asset bundle or a custom client.
 * Cleaning: `deleteMedia(key)`, `deleteOldMedias(keepCount:)` (keeps the 100
-  most recently cached by default), `clean()` (scheduled automatically after
-  `firstAutoCleanDuration` then every `nextAutoCleanDuration`), `clear()`
-  wipes everything.
+  most recently cached by default), `clean()` (removes the files without
+  record and the records without file; scheduled automatically after
+  `firstAutoCleanDuration`, 5 s, then every `nextAutoCleanDuration`, 15 s),
+  `clear()` wipes everything (the cache stays usable, the automatic clean
+  goes on since 2026-11-10).
+* `isMediaCached(key)` only checks the record; `getMedia(key)` returns null
+  and drops the record when the file is gone (`onMedia` gets an error).
 * `initSession()` gives a `TekalyMediaCacheSession` to remember the source
   info of the keys used on a screen (`addSource` / `getSource`).
 * `debugTekalyMediaCache = true` logs the cache activity.
@@ -51,7 +58,8 @@ import 'package:tekaly_media_cache/media_cache.dart';
 import 'package:tekartik_app_sembast/sembast.dart';
 
 Future<void> main() async {
-  var dir = Directory('.local/media_cache');
+  // Absolute: the database factory and the cache share the folder.
+  var dir = Directory('.local/media_cache').absolute;
   var mediaCache = TekalyMediaCache(
     databaseFactory: getDatabaseFactory(rootPath: dir.path),
     rootDirectory: dir,
@@ -61,7 +69,7 @@ Future<void> main() async {
   );
 
   var key = TekalyMediaKey.name('logo');
-  mediaCache.onMedia(key).listen((content) {
+  var subscription = mediaCache.onMedia(key).listen((content) {
     print('${content.info.name}: ${content.bytes.length} byte(s)');
   });
 
@@ -79,6 +87,7 @@ Future<void> main() async {
   print(content?.info.type);
 
   await mediaCache.deleteOldMedias(keepCount: 50);
+  await subscription.cancel();
   await mediaCache.close();
 }
 ```

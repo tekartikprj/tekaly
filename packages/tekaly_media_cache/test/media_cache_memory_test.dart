@@ -127,6 +127,27 @@ void main() {
       expect(timers.where((timer) => timer.isActive), isEmpty);
     });
 
+    test('auto clean goes on after clear', () async {
+      var cache = _newCache(
+        options: TekalyMediaCacheOptions(
+          firstAutoCleanDuration: const Duration(milliseconds: 20),
+          nextAutoCleanDuration: const Duration(milliseconds: 20),
+        ),
+      );
+      await cache.database;
+      await cache.clear();
+      var count = cache.cleanCount;
+      // Timers fire late on a slow runner: poll, 5 seconds at most.
+      var sw = Stopwatch()..start();
+      while (cache.cleanCount <= count) {
+        if (sw.elapsed > const Duration(seconds: 5)) {
+          fail('no auto clean after clear (cleanCount $count)');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+      await cache.close();
+    }, timeout: const Timeout(Duration(seconds: 30)));
+
     test('open failure', () async {
       var uncaughtErrors = <Object>[];
       await runZonedGuarded(() async {
