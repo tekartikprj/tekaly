@@ -160,6 +160,38 @@ void main() {
       });
     });
 
+    test(
+      'a later truncation below an earlier one keeps the full sync',
+      () async {
+        for (var i = 1; i <= 3; i++) {
+          await coll.setDoc('k$i', DbTest()..title.v = 't$i');
+        }
+        await synchronizer.sync();
+        await coll.setDoc('k1', DbTest()..title.v = 't1b'); // 4
+        await coll.setDoc('k4', DbTest()..title.v = 't4'); // 5
+
+        var rebuilder = SyncedFsChangeLogRebuilder(
+          firestore: firestore,
+          path: 'test',
+        );
+        // Entries 1 to 4 dropped, then a lower value: nothing more to drop.
+        await rebuilder.truncateChangeLog(beforeChangeId: 5);
+        await rebuilder.truncateChangeLog(beforeChangeId: 2);
+        expect((await coll.getMetaInfo())!.minIncrementalChangeId.v, 5);
+
+        // The mirror (at 3) lost entry 4: it must resynchronize.
+        var result = await synchronizer.sync();
+        expect(result.fullSync, isTrue);
+        expect(await storeContent(db), {
+          'k1': {'title': 't1b'},
+          'k2': {'title': 't2'},
+          'k3': {'title': 't3'},
+          'k4': {'title': 't4'},
+        });
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
+
     test('change log without data fetches the snapshot', () async {
       var noData = SyncedFsCollection(
         firestore: firestore,

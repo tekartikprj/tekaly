@@ -26,6 +26,10 @@ last access.
   builders. Spread `syncedMediaSdbStoresDefault.schemaStores` (or your own
   `SyncedMediaSdbStores(mediaStoreName: ...)`) in the `SdbDatabaseSchema` of
   the synced sdb, next to `syncedSdbMetaSchema.stores`.
+* The `fs` is an `fs_shim` file system sandboxed to the media folder:
+  `fileSystemDefault.sandbox(path: ...)` (io on the VM and Flutter native,
+  IndexedDB on the web; an absolute folder on Flutter mobile, e.g. the
+  application support directory), `newFileSystemMemory()` in tests.
 * `SyncedMediaSdb(fs:, database: await syncedSdb.database)` is local only:
   `addMediaFile(file: SyncedMediaFile.from(filename:), bytes:)` writes the
   content and the records (uploaded on the next sync), `deleteMediaFile(id)`
@@ -71,6 +75,12 @@ last access.
   accessCheck:, maxSize:)` answers `handle(command, request)` when
   `handles(command)`. `SyncedMediaApiClientLocal(service:)` runs it in
   process. Contents travel base64 in json: keep them small or use urls.
+* Errors: each content is tried on its own; one the source refuses for good
+  (api `maxSize`, `accessCheck`) does not block the other uploads, remote
+  deletions or the downloads of `sync()`: the first error is thrown at the
+  end (logged by `lazySync()`/auto sync) and the refused content is tried
+  again by every sync. `SyncedMediaSourceStorage.deleteMediaFile` ignores
+  every error (a denied delete leaves the content in the bucket).
 * Media paths come from synced records: they are validated
   (`syncedMediaIsValidPath`, relative without `..`), invalid ones are
   rejected (fs, Storage, api) or skipped (synchronizer).
@@ -140,6 +150,9 @@ Future<void> main() async {
   await syncedSdb.close();
 }
 ```
+
+A complete run with two clients, in memory, is `example/main.dart` of the
+package.
 
 Firebase Storage source with a public url:
 

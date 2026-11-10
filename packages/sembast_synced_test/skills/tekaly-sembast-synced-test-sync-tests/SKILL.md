@@ -8,6 +8,10 @@ description: >-
 
 # Synced sembast database test suites (tekaly_sembast_synced_test)
 
+Legacy: the sembast synced database has an sdb twin, new code uses
+`tekaly_sdb_synced` and tests it with `tekaly_sdb_synced_test`
+(`allSyncedDbTests`).
+
 ## Guidelines
 
 * Add `tekaly_sembast_synced_test` to `dev_dependencies` (it depends on
@@ -28,7 +32,11 @@ description: >-
 * Put `concurrency: 1` in `dart_test.yaml` when the source is a shared
   in-process server (api, rpc).
 * For the pure source suites (`runSyncedSourceTest`,
-  `strictSyncedSourceTest`) see `tekaly_synced_db_common_test`.
+  `strictSyncedSourceTest`) see `tekaly_synced_db_common_test`; this
+  package runs them on the sembast source and on the api source
+  (`SyncedSourceApi`, with `skipRealTimeChanges` and
+  `skipRecordWithoutValue`: the api has no deleted flag, a record without
+  value comes back deleted).
 
 ## Examples
 

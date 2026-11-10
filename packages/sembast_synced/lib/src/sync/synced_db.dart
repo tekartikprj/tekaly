@@ -145,8 +145,21 @@ abstract class SyncedDbBase with SyncedDbMixin {
 
   /// Opened once: the change listeners are added once, and a [close] during
   /// the open closes it once open.
+  ///
+  /// Once open, a new future in the caller's zone: a completed future kept
+  /// here would call back in the zone of the first call (a database opened
+  /// in `tester.runAsync` would never complete an await in the fake async
+  /// zone of a widget test).
   @override
-  late final Future<Database> database = () async {
+  Future<Database> get database {
+    var database = _database;
+    if (database != null) {
+      return Future<Database>.value(database);
+    }
+    return _databaseOpen;
+  }
+
+  late final Future<Database> _databaseOpen = () async {
     _databaseRequested = true;
     return _database ??= (await rawDatabase.then((db) {
       // Setup triggers

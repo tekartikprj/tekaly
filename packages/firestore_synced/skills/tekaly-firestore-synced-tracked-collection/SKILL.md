@@ -41,20 +41,30 @@ per page. Deletions are soft (tombstones).
 * Never hard delete a tracked document; a hard deletion is only healed by the
   trigger, which writes a tombstone entry.
 * Options: `SyncedFsCollectionOptions(writeChangeLog: false)` when the
-  trigger feeds the log, `changeLogIncludesData: false` to keep the log small
-  (consumers then fetch snapshots).
+  trigger feeds the log (each write still allocates the change id and
+  writes the meta; the triggers append the entries in their own order, so a
+  consumer can move past an entry that comes later and never read it: keep
+  the default for mirrored collections), `changeLogIncludesData: false` to
+  keep the log small (consumers then fetch snapshots).
 * For writes going around the helper, deploy an `onWrite` trigger on
   `item/{docId}` calling `SyncedFsCollectionTrigger(firestore:, path:
   'item').onDocumentSnapshotWrite(before:, after:)` (or
-  `onDocumentWrite(docId:, before:, after:)`); it is idempotent.
+  `onDocumentWrite(docId:, before:, after:)`); a retried delivery adds
+  nothing, except for a hard deletion (one more tombstone entry, harmless).
 * Schedule `SyncedFsChangeLogRebuilder(firestore:, path:).reconcile(since:)`
   (cheap, walks recent updates) and run `stampMissingChangeIds()` once when
   enabling the helpers on an existing collection; `rebuild(sinceChangeId:)`
   recovers a compacted log on demand. Both take a `limit` and report
   `complete: false` when they stop on it: resume from the returned
-  `lastChangeId`.
-* `truncateChangeLog(beforeChangeId:)` forces consumers below to resync;
-  `bumpVersion()` forces every consumer to resync.
+  `lastChangeId`. A complete `rebuild(sinceChangeId: X)` moves the resume
+  point of the next `rebuild()` past the documents below X (walk everything
+  with `sinceChangeId: 0`).
+* An entry added by `rebuild`/`reconcile` (`addedCount > 0`) keeps the
+  change id of its document: consumers already past it never read it; call
+  `bumpVersion()` afterwards to make them resync.
+* `truncateChangeLog(beforeChangeId:)` forces consumers below to resync
+  (`minIncrementalChangeId` never goes down); `bumpVersion()` forces every
+  consumer to resync.
 * Consumers read through `SyncedFsFirestoreSource(firestore:, path:)`
   (`getChangeList(afterChangeId:)`, `getSnapshot()`); `coll.source` gives the
   same source. Use `tekaly-firestore-synced-sdb-mirror` for a local sdb copy.
@@ -82,7 +92,7 @@ Future<void> write(Firestore firestore) async {
   await coll.setDoc('k1', DbItem()..title.v = 'hello');
   var id = await coll.addDoc(DbItem()..title.v = 'added');
   await coll.deleteDoc(id); // tombstone
-  print((await coll.getDoc('k1'))?.title.v);
+  print((await coll.getDoc('k1')).title.v);
 }
 ```
 
@@ -90,6 +100,7 @@ Future<void> write(Firestore firestore) async {
 
 ```dart
 import 'package:tekaly_firestore_synced/synced_firestore_trigger.dart';
+import 'package:tekartik_app_cv_firestore/app_cv_firestore.dart';
 
 Future<void> onItemWrite(
   Firestore firestore,

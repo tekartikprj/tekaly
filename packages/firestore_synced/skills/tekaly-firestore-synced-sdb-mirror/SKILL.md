@@ -33,7 +33,13 @@ description: >-
   `synced` map stripped; applying a change is an idempotent put or delete.
 * A change that cannot be applied goes to the dead letter queue instead of
   failing the sync: inspect with `getDeadLetters()`, replay with
-  `retryDeadLetters()`.
+  `retryDeadLetters()` (a dead letter stays listed after a later change of
+  the document applied, until the retry).
+* `sync()` is not locked: never run two at once on one store.
+* The mirror reads the changes after the change id it reached: an entry
+  appended later below it (a trigger fed log, `writeChangeLog: false`, or
+  a rebuild) is never read; the writer side then calls `bumpVersion()`,
+  which makes the next `sync()` a full one.
 * Firestore values are converted with `firestoreMapToSdb` (timestamps become
   `SdbTimestamp`, blobs `SdbBlob`); only sdb supported types are stored.
 * Prefer firestore's own offline persistence when the app talks to firestore
@@ -43,6 +49,7 @@ description: >-
 
 ```dart
 import 'package:tekaly_firestore_synced/synced_firestore_sdb.dart';
+import 'package:tekartik_app_cv_firestore/app_cv_firestore.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
 final itemStoreRef = SdbStoreRef<String, SdbModel>('item');

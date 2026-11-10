@@ -3,6 +3,8 @@ import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 void initFsBuilders() {
   cvAddConstructors([FsApp.new, FsAppInfo.new, FsNoNameAppInfo.new]);
   cvAddConstructors([CvAppInfoSub1.new, CvAppInfoSub2.new]);
+  // No type name for the explorer, the constructors are needed anyway.
+  cvAddConstructors([CvAppInfoNoNameSub1.new, CvAppInfoNoNameSub2.new]);
 }
 
 class FsApp extends CvFirestoreDocumentBase {

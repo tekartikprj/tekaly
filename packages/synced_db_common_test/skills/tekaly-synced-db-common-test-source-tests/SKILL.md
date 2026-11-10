@@ -17,7 +17,9 @@ description: >-
   lists (`getAllSourceRecordList` going on past a page of deleted records),
   meta info (`putMetaInfo` keeps the fields it does not set, as a Firestore
   merge) and `onMetaInfo`. Pass `skipRealTimeChanges: true` when the
-  source polls (no real time meta info stream).
+  source polls (no real time meta info stream), `skipRecordWithoutValue:
+  true` when a live record without value cannot cross it (the api source of
+  `tekaly_sembast_synced`: no data means deleted).
 * A behaviour shared by the sources gets its test here, in the suite, so
   that every registered source runs it; a source that cannot pass it skips
   it with a reason.

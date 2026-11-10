@@ -71,11 +71,21 @@ void strictSyncedSourceTest(
   });
 }
 
+/// The tests every [SyncedSource] passes, on a new source from
+/// [createSyncedSource] for each test.
+///
+/// [skipRealTimeChanges] skips the real time `onMetaInfo` test (a source
+/// polling its meta info). [skipRecordWithoutValue] skips the test of
+/// records written without a value, for a source that cannot hold one: the
+/// api of `tekaly_sembast_synced` sends no data for a deleted record, so a
+/// live record without value comes back deleted.
 void runSyncedSourceTest(
   Future<SyncedSource> Function() createSyncedSource, {
   bool? skipRealTimeChanges,
+  bool? skipRecordWithoutValue,
 }) {
   skipRealTimeChanges ??= false;
+  skipRecordWithoutValue ??= false;
   late SyncedSource source;
   setUp(() async {
     source = await createSyncedSource();
@@ -137,7 +147,7 @@ void runSyncedSourceTest(
       'syncChangeId': 3,
       'record': {'store': 'test2', 'key': '2', 'deleted': false},
     });
-  });
+  }, skip: skipRecordWithoutValue ? 'no record without value' : false);
   test('an update drops the fields no longer in the value', () async {
     var record = await source.putSourceRecord(
       CvSyncedSourceRecord()

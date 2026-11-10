@@ -94,6 +94,14 @@ class SyncedFsChangeLogRebuilder {
   /// [limit] bounds the number of documents walked, the result then reports
   /// `complete: false` and the run must be resumed with the returned
   /// `lastChangeId`.
+  ///
+  /// A complete run moves the resume point to the last change id of the
+  /// collection, whatever [sinceChangeId]: the documents at or below an
+  /// explicit [sinceChangeId] are not walked again by the next `rebuild()`.
+  ///
+  /// An added entry (`addedCount > 0`) has the change id of its document: a
+  /// consumer that already synchronized past it does not read it, call
+  /// [bumpVersion] to make every consumer resynchronize.
   Future<SyncedFsRebuildResult> rebuild({
     int? sinceChangeId,
     int? limit,
@@ -147,7 +155,11 @@ class SyncedFsChangeLogRebuilder {
   ///
   /// Cheaper than a full [rebuild] and meant to run from a cron a bit more
   /// often than the trigger failure window. When neither [sinceTimestamp] nor
-  /// [since] is given, the previous reconciliation time is used.
+  /// [since] is given, the previous reconciliation time is used; a complete
+  /// run records its start time, whatever [since] was.
+  ///
+  /// As for [rebuild], an added entry is not read by a consumer already past
+  /// its change id ([bumpVersion] forces a resynchronization).
   Future<SyncedFsRebuildResult> reconcile({
     Timestamp? sinceTimestamp,
     Duration? since,
@@ -300,6 +312,9 @@ class SyncedFsChangeLogRebuilder {
   /// Drop the change log entries strictly before [beforeChangeId] and mark the
   /// collection so that consumers below it do a full resynchronization.
   ///
+  /// `minIncrementalChangeId` never goes down: a [beforeChangeId] below the
+  /// current one (an earlier truncation, a tombstone purge) keeps it.
+  ///
   /// Returns the number of deleted entries.
   Future<int> truncateChangeLog({required int beforeChangeId}) async {
     var deleted = 0;
@@ -318,7 +333,13 @@ class SyncedFsChangeLogRebuilder {
         deleted++;
       }
     }
-    await _updateMeta((meta) => meta.minIncrementalChangeId.v = beforeChangeId);
+    await _updateMeta((meta) {
+      var current = meta.minIncrementalChangeId.v ?? 0;
+      // Never lower it: the entries below the current value are gone too.
+      if (beforeChangeId > current) {
+        meta.minIncrementalChangeId.v = beforeChangeId;
+      }
+    });
     return deleted;
   }
 

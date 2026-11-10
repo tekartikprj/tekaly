@@ -6,7 +6,7 @@ so a behaviour fixed in one is checked in all of them. Also in memory sources
 for tests. Pure Dart.
 
 Registered today by the memory sources and the Firestore source (here), the
-sembast source (`tekaly_sembast_synced_test`) and the rpc source
+sembast and api sources (`tekaly_sembast_synced_test`) and the rpc source
 (`tekaly_sembast_synced_rpc`).
 
 ## Getting started
@@ -40,12 +40,14 @@ void main() {
 
 ## The suites
 
-- `runSyncedSourceTest(createSource, {skipRealTimeChanges})`: put and get
-  (change ids, sync ids, every value type, an update dropping fields),
-  record lists and paging past pages of deleted records, the meta info (a
-  `putMetaInfo` keeps the fields it does not set, `minIncrementalChangeId`
-  never goes back), `onMetaInfo`. `skipRealTimeChanges: true` for a source
-  whose `onMetaInfo` polls.
+- `runSyncedSourceTest(createSource, {skipRealTimeChanges,
+  skipRecordWithoutValue})`: put and get (change ids, sync ids, every value
+  type, an update dropping fields), record lists and paging past pages of
+  deleted records, the meta info (a `putMetaInfo` keeps the fields it does
+  not set, `minIncrementalChangeId` never goes back), `onMetaInfo`.
+  `skipRealTimeChanges: true` for a source whose `onMetaInfo` polls,
+  `skipRecordWithoutValue: true` for a source that cannot hold a live
+  record without value (the api source: no data means deleted).
 - `strictSyncedSourceTest(createSource)`: the `<store>|<key>` sync id and the
   stored record format (memory, Firestore, sembast sources).
 - `runSyncedSourcePartitionTest(createPartitionedSource)`: a source read by

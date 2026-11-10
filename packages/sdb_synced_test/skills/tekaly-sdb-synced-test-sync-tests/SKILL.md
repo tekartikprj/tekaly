@@ -23,6 +23,14 @@ description: >-
   made memory version.
 * The suites use `sdbEntityStoreRef` / `DbEntity` (`name`, `timestamp`,
   `counter`): your source must accept the `entity` store.
+* `syncedSdbPartitionTests(createPartitionedSource)` (from
+  `synced_sdb_partition_test.dart`) runs the partition tests (a source read
+  by a user id field).
+* Registered here on the memory and Firestore sources only; the source
+  suites themselves (`runSyncedSourceTest`) are in
+  `tekaly_synced_db_common_test`.
+* Keep `concurrency: 1` in `dart_test.yaml` for a source that is a shared in
+  process server.
 * `exampleTimestamp1()` (from
   `package:tekaly_synced_db_common_test/synced_db_common_test_utils.dart`)
   gives a web safe timestamp for your own tests.

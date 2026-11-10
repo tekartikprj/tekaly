@@ -19,6 +19,27 @@ void _log(Object? message) {
   print('[synced_media] $message');
 }
 
+/// The first error of a loop that goes on past its failing items: one
+/// content the source refuses for good must not block the others.
+class _FirstError {
+  Object? _error;
+  StackTrace? _stackTrace;
+
+  void add(Object error, StackTrace stackTrace) {
+    if (_error == null) {
+      _error = error;
+      _stackTrace = stackTrace;
+    }
+  }
+
+  void throwIfAny() {
+    var error = _error;
+    if (error != null) {
+      Error.throwWithStackTrace(error, _stackTrace!);
+    }
+  }
+}
+
 /// Synchronizes the contents of a [SyncedMediaSdb] with a [SyncedMediaSource]
 /// and reads them through the local cache ([cacheOptions]).
 ///
@@ -218,16 +239,22 @@ class SyncedMediaSdbSynchronizer {
   /// Uploads the local contents not uploaded yet, returns their count.
   ///
   /// Shared by [syncUp] and the push of the database ([uploadBeforeSyncUp]),
-  /// one at a time.
-  Future<int> _uploadContents() {
+  /// one at a time. A failing upload is added to [errors] and the next
+  /// content is uploaded.
+  Future<int> _uploadContents(_FirstError errors) {
     return _uploadLock.synchronized(() async {
       var remoteCreated = 0;
       for (var fileId in await db.fileIdsToUpload()) {
         if (_closed) {
           break;
         }
-        if (await _uploadContent(fileId)) {
-          remoteCreated++;
+        try {
+          if (await _uploadContent(fileId)) {
+            remoteCreated++;
+          }
+        } catch (e, st) {
+          _log('upload $fileId failed: $e');
+          errors.add(e, st);
         }
       }
       return remoteCreated;
@@ -287,10 +314,12 @@ class SyncedMediaSdbSynchronizer {
         return;
       }
       try {
-        var count = await _uploadContents().timeout(timeout);
+        var errors = _FirstError();
+        var count = await _uploadContents(errors).timeout(timeout);
         if (debugSyncedMedia && count > 0) {
           _log('uploaded $count before the push');
         }
+        errors.throwIfAny();
       } on TimeoutException {
         // Still running, its records are pushed by the next sync
         _log('uploads longer than $timeout, pushing without them');
@@ -302,46 +331,77 @@ class SyncedMediaSdbSynchronizer {
 
   /// Uploads the local contents, deletes the deleted ones from the source
   /// (unless [deferRemoteDelete], see [deleteRemote]).
+  ///
+  /// Each content is tried: one the source refuses (too big, access denied)
+  /// does not block the others; the first error is thrown at the end and
+  /// the refused content is tried again by the next call.
   Future<SyncedSyncStat> syncUp() async {
-    var stat = SyncedSyncStat(remoteCreatedCount: await _uploadContents());
+    var errors = _FirstError();
+    var stat = await _syncUp(errors);
+    errors.throwIfAny();
+    return stat;
+  }
+
+  Future<SyncedSyncStat> _syncUp(_FirstError errors) async {
+    var stat = SyncedSyncStat(
+      remoteCreatedCount: await _uploadContents(errors),
+    );
     if (!deferRemoteDelete) {
-      stat.add(await _deleteRemoteContents());
+      stat.add(await _deleteRemoteContents(errors));
     }
     return stat;
   }
 
   /// Deletes from the source the contents deleted locally, then purges
   /// their records: what [syncUp] does unless [deferRemoteDelete].
+  ///
+  /// A failing deletion keeps its record (tried again by the next call)
+  /// and does not stop the others; the first error is thrown at the end.
   Future<SyncedSyncStat> deleteRemote() async {
     if (_closed) {
       return SyncedSyncStat(notExecuted: true);
     }
-    return await _lock.synchronized(_deleteRemoteContents);
+    return await _lock.synchronized(() async {
+      var errors = _FirstError();
+      var stat = await _deleteRemoteContents(errors);
+      errors.throwIfAny();
+      return stat;
+    });
   }
 
-  Future<SyncedSyncStat> _deleteRemoteContents() async {
+  Future<SyncedSyncStat> _deleteRemoteContents(_FirstError errors) async {
     var remoteDeleted = 0;
     for (var fileId in await db.fileIdsToDeleteRemotely()) {
       if (_closed) {
         break;
       }
-      if (await _deleteRemote(fileId)) {
-        remoteDeleted++;
+      try {
+        if (await _deleteRemote(fileId)) {
+          remoteDeleted++;
+        }
+        await db.purge(fileId);
+      } catch (e, st) {
+        _log('remote delete of $fileId failed: $e');
+        errors.add(e, st);
       }
-      await db.purge(fileId);
     }
     // Deleted before being uploaded (or its upload not known yet)
     for (var fileId in await db.fileIdsToPurge()) {
       if (_closed) {
         break;
       }
-      var fileRecord = await db.getMediaFileRecord(fileId);
-      if (fileRecord?.isUploaded ?? false) {
-        if (await _deleteRemote(fileId)) {
-          remoteDeleted++;
+      try {
+        var fileRecord = await db.getMediaFileRecord(fileId);
+        if (fileRecord?.isUploaded ?? false) {
+          if (await _deleteRemote(fileId)) {
+            remoteDeleted++;
+          }
         }
+        await db.purge(fileId);
+      } catch (e, st) {
+        _log('remote delete of $fileId failed: $e');
+        errors.add(e, st);
       }
-      await db.purge(fileId);
     }
     return SyncedSyncStat(remoteDeletedCount: remoteDeleted);
   }
@@ -454,6 +514,10 @@ class SyncedMediaSdbSynchronizer {
   }
 
   /// Synchronizes the contents (reconcile, up, down) then trims the cache.
+  ///
+  /// The download runs even when an upload or a remote deletion failed
+  /// (each content is tried, see [syncUp]): the first error is thrown once
+  /// done, a download error first.
   Future<SyncedSyncStat> sync() async {
     if (_closed) {
       return SyncedSyncStat(notExecuted: true);
@@ -462,8 +526,9 @@ class SyncedMediaSdbSynchronizer {
       if (_closed) {
         return SyncedSyncStat(notExecuted: true);
       }
+      var errors = _FirstError();
       var stat = await reconcile();
-      stat.add(await syncUp());
+      stat.add(await _syncUp(errors));
       try {
         stat.add(await syncDown());
       } finally {
@@ -472,6 +537,7 @@ class SyncedMediaSdbSynchronizer {
       if (debugSyncedMedia) {
         _log('sync: $stat');
       }
+      errors.throwIfAny();
       return stat;
     });
   }

@@ -1,4 +1,4 @@
-## sdb_synced_media
+# tekaly_sdb_synced_media
 
 Media files (images, audio, any bytes) synchronized next to a synced sdb
 (`tekaly_sdb_synced`):
@@ -16,16 +16,33 @@ Extracted from the festenao media sync (`FestenaoMediaSdb`,
 names, record fields and content paths are the same, so existing festenao
 databases and buckets can switch to it without migration.
 
-## Setup
+## Getting started
 
-`pubspec.yaml`:
+A git package (not on pub.dev):
 
 ```yaml
+dependencies:
   tekaly_sdb_synced_media:
     git:
       url: https://github.com/tekartikprj/tekaly
       path: packages/sdb_synced_media
 ```
+
+[example/main.dart](example/main.dart) runs two clients in memory: one adds
+a media, the other reads it (`dart run example/main.dart`).
+
+Pure Dart: io, web and Flutter. What each needs:
+
+- a `SyncedSdb` holding the media stores (any sdb factory of idb_shim);
+- an `fs_shim` file system for the local contents, sandboxed to a folder of
+  its own (the media paths are relative to it):
+  `fileSystemDefault.sandbox(path: ...)` (`package:fs_shim/fs_shim.dart`:
+  io on the VM and Flutter native, IndexedDB on the web). On Flutter mobile,
+  give it an absolute folder (the application documents or support
+  directory): a relative one resolves against the process folder, not
+  writable there. `newFileSystemMemory()` in tests;
+- a `SyncedMediaSource`: Firebase Storage (`synced_media_storage.dart`),
+  your api, or `SyncedMediaSourceMemory` in tests.
 
 ## Usage
 
@@ -184,3 +201,25 @@ Anyone reading the record can then read the content.
 Differences with the festenao version: the status keeps the local path, size
 and last access (cleanup of purged records on other clients, lru); a media
 deleted before its upload is purged; `uploaded` is only written once.
+
+Errors: each content is tried on its own. A content the source refuses for
+good (above the api `maxSize`, denied by `accessCheck`) does not block the
+others: `syncUp()` uploads and deletes the rest, `sync()` still downloads,
+then the first error is thrown (`lazySync()` and the auto sync log it); the
+refused content stays to upload and is tried again by each sync. A failing
+download is handled the same way by `syncDown()`.
+
+## Pitfalls
+
+- `SyncedMediaSdb.readMediaFileBytes` reads the local content only: with an
+  `lru` or `none` cache read through the synchronizer (`readMediaBytes`).
+- `SyncedMediaSourceStorage.deleteMediaFile` ignores every error (not only a
+  missing file): with rules denying the delete, the record is purged and the
+  content stays in the bucket.
+- `deleteMediaFile(id, purge: true)` deletes the records only: an uploaded
+  content stays in the source.
+- A content lost locally before its upload (cleared app data) stays to
+  upload: each sync logs it, the other clients get a record without content.
+- `close()` the synchronizer before closing the database.
+
+Package skill (for AI coding agents, `skills/`): `tekaly-sdb-synced-media`.

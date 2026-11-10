@@ -9,9 +9,11 @@ const _deepEquality = DeepCollectionEquality();
 /// Appends entries to the immutable change log, allocating modification
 /// numbers when a document was written without one.
 ///
-/// Every operation is idempotent: appending the same change id twice writes
-/// the same document, so a cloud function retried at least once (the firestore
-/// trigger delivery guarantee) never duplicates an entry.
+/// Appending the same change id twice writes the same document, so a cloud
+/// function retried (the firestore trigger delivery is at least once) does not
+/// duplicate the entry of a write. A hard deletion has no change id to reuse:
+/// each delivery of its trigger appends one more tombstone entry (harmless,
+/// the document is deleted twice).
 class SyncedFsChangeWriter {
   /// Firestore instance, usually the admin one on the server side.
   final Firestore firestore;

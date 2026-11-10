@@ -16,6 +16,12 @@ class SyncedFsCollectionOptions {
   /// Set it to false when the change log is fed by a cloud function trigger
   /// only (see `SyncedFsCollectionTrigger`). Ignored when [collectionChanges]
   /// is true (no change log at all).
+  ///
+  /// The modification number and the meta are still written by each write;
+  /// the triggers append the entries in the order they run, not in the
+  /// write order: a consumer reading the change log meanwhile can move past
+  /// an entry that comes later, and never read it. Keep it true for a
+  /// collection mirrored by consumers.
   final bool writeChangeLog;
 
   /// When true (default), the change log entries embed the document content so

@@ -10,6 +10,68 @@ that other writers (apps, admin scripts, cloud functions) keep writing to. The
 package adds the bookkeeping that makes such a collection incrementally
 consumable, plus a local mirror that consumes it.
 
+## Getting started
+
+A git package (not on pub.dev):
+
+```yaml
+dependencies:
+  tekaly_firestore_synced:
+    git:
+      url: https://github.com/tekartikprj/tekaly
+      path: packages/firestore_synced
+```
+
+Write through `SyncedFsCollection`, mirror with `SyncedFsSdbSynchronizer`
+(the whole program, in memory, is [example/main.dart](example/main.dart)):
+
+```dart
+import 'package:tekaly_firestore_synced/synced_firestore_sdb.dart';
+import 'package:tekartik_app_cv_firestore/app_cv_firestore.dart';
+import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
+
+class DbItem extends CvFirestoreDocumentBase {
+  final title = CvField<String>('title');
+
+  @override
+  CvFields get fields => [title];
+}
+
+final itemStoreRef = SdbStoreRef<String, SdbModel>('item');
+
+Future<void> syncItems(Firestore firestore, SdbFactory factory) async {
+  cvAddConstructors([DbItem.new]);
+  var items = SyncedFsCollection(
+    firestore: firestore,
+    collection: CvCollectionReference<DbItem>('item'),
+  );
+  await items.setDoc('k1', DbItem()..title.v = 'hello');
+
+  var db = await factory.openDatabase(
+    'app.db',
+    options: SdbOpenDatabaseOptions(
+      version: 1,
+      schema: SdbDatabaseSchema(
+        stores: [itemStoreRef.schema(), ...syncedFsSdbSchema.stores],
+      ),
+    ),
+  );
+  var mirror = SyncedFsSdbSynchronizer(
+    source: items.source,
+    database: db,
+    store: itemStoreRef,
+  );
+  print(await mirror.sync()); // full: true, applied: 1
+}
+```
+
+Pure Dart, on every platform with a tekartik `Firestore` (Flutter client
+sdk, rest, admin sdk on node or io, `firestore_sembast` in memory for tests)
+and an sdb factory (idb_shim: IndexedDB on the web, sqlite or sembast on io,
+`newSdbFactoryMemory()` in tests). The trigger and rebuild helpers
+(`synced_firestore_trigger.dart`) are for the server side (cloud function,
+admin script) but have no server only import.
+
 ## Design
 
 ### Every document carries a modification number
@@ -73,7 +135,10 @@ page. Tombstones pile up in the collection: purge the old ones with
 | Tombstone purge | old tombstones (`collectionChanges`) | `SyncedFsChangeLogRebuilder.purgeTombstones` |
 
 All of them converge on the same immutable entry, so running several of them,
-or the same one twice, is harmless.
+or the same one twice, is harmless for the log itself (a retried trigger of a
+hard deletion appends one tombstone entry per delivery, harmless too). For
+the consumers, see the pitfalls below: an entry that arrives late, below the
+change id a consumer already reached, is not read by it.
 
 ### Consumers
 
@@ -246,24 +311,46 @@ and `local_fs_sync_dlq`.
 - **The meta document is a write hotspot.** Allocating a monotonic modification
   number means one write per collection write on `<collection>_meta/info`,
   bounded by firestore's ~1 write/second per document. Fine for content managed
-  by a few writers, not for a high write-rate collection — for those, drop the
-  inline path (`writeChangeLog: false`, let the trigger allocate) and lean on
-  `reconcile`, or shard the collection.
+  by a few writers, not for a high write-rate collection: shard the
+  collection. `writeChangeLog: false` does not help there: the helper still
+  allocates the number and writes the meta in each write transaction, only
+  the change log entry moves to the trigger.
 - **Soft deletions keep tombstones around.** They are what makes deletions
   syncable. Truncating the change log does not remove them;
   `purgeTombstones(before:)` does, consumers synchronized below the highest
   purged modification number then resynchronize.
 - **Change log storage.** Entries embedding the document content double the
   storage of the collection over time. Use `changeLogIncludesData: false` and/or
-  `truncateChangeLog` to keep it bounded.
+  `truncateChangeLog` to keep it bounded (`minIncrementalChangeId` never goes
+  down: a lower `beforeChangeId` than an earlier truncation keeps it).
 
-## Setup
+## Pitfalls
 
-`pubspec.yaml`:
+- **Late entries are missed by consumers already past them.** A consumer reads
+  the changes *after* the change id it reached. An entry appended later with a
+  lower change id is never read by it: with `writeChangeLog: false` the
+  trigger appends the entries in the order the triggers run (not the write
+  order), and `rebuild` / `reconcile` / a late trigger append a missing entry
+  at the document's change id. So: keep the default (the entry written in
+  the document's transaction) or `collectionChanges: true` for collections
+  mirrored by consumers, and after a `rebuild` or a `reconcile` that added
+  entries (`addedCount > 0`), call `bumpVersion()` so that every mirror
+  resynchronizes.
+- **`rebuild(sinceChangeId: X)` moves the resume point.** Once complete, the
+  next `rebuild()` resumes from the last change id of the collection, even
+  though the documents at or below X were not walked. Use
+  `rebuild(sinceChangeId: 0)` to walk everything; resume an incomplete run
+  (`complete: false`) with `sinceChangeId: result.lastChangeId`. Same for
+  `reconcile(since: ...)` and the next `reconcile()`.
+- **Documents without a modification number are invisible** to `rebuild`,
+  `getSnapshot()` and the collection changes (firestore leaves out the
+  documents missing the ordered field): run `stampMissingChangeIds()` once
+  when enabling the helpers on an existing collection.
+- **Never hard delete a tracked document** around the helpers: only the
+  trigger sees it (a tombstone entry); a rebuild cannot recover it.
+- **`sync()` of one mirror is not locked**: do not run two at once on the
+  same store (await the running one).
 
-```yaml
-  tekaly_firestore_synced:
-    git:
-      url: https://github.com/tekartikprj/tekaly
-      path: packages/firestore_synced
-```
+Package skills (for AI coding agents, `skills/`):
+`tekaly-firestore-synced-tracked-collection`,
+`tekaly-firestore-synced-sdb-mirror`.

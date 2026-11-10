@@ -160,8 +160,22 @@ abstract class SyncedSdbBase with SyncedSdbMixin {
   /// True once [database] was requested (it might still be opening).
   var _databaseRequested = false;
 
+  /// The database, opened on the first call.
+  ///
+  /// Once open, a new future in the caller's zone: a completed future kept
+  /// here would call back in the zone of the first call (a database opened
+  /// in `tester.runAsync` would never complete an await in the fake async
+  /// zone of a widget test).
   @override
-  late final database = () async {
+  Future<SdbDatabase> get database {
+    var database = _database;
+    if (database != null) {
+      return Future<SdbDatabase>.value(database);
+    }
+    return _databaseOpen;
+  }
+
+  late final _databaseOpen = () async {
     _databaseRequested = true;
     return _database ??= (await rawDatabase.then((db) {
       var syncedStoreNames = Set.of(db.storeNames);
