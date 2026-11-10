@@ -639,6 +639,47 @@ void syncTests(Future<SyncTestsContext> Function() setupContext) {
       expect(stat, SyncedSyncStat(localUpdatedCount: 1));
     });
 
+    test(
+      'minIncrementalChangeId full sync keeps the unchanged records',
+      () async {
+        Future<void> putRemote(String key) async {
+          await source.putSourceRecord(
+            CvSyncedSourceRecord()
+              ..record.v = (CvSyncedSourceRecordData()
+                ..store.v = dbEntityStoreRef.name
+                ..key.v = key
+                ..value.v = {'name': key}),
+          );
+        }
+
+        await putRemote('a1');
+        await putRemote('a2');
+        var stat = await sync.syncDown();
+        expect(stat, SyncedSyncStat(localCreatedCount: 2));
+        expect(await syncedDb.getSyncMetaInfoLastChangeId(), 2);
+
+        // The source purged its history up to change 3: a client at change 2
+        // cannot sync incrementally, it must read every record again.
+        await putRemote('a3');
+        await source.putMetaInfo(
+          CvMetaInfo()
+            ..copyFrom((await source.getMetaInfo())!)
+            ..minIncrementalChangeId.v = 3,
+        );
+        stat = await sync.syncDown();
+        var db = await syncedDb.database;
+        expect(
+          [
+            for (var key in ['a1', 'a2', 'a3'])
+              (await dbEntityStoreRef.record(key).get(db))?.name.v,
+          ],
+          ['a1', 'a2', 'a3'],
+        );
+        expect(stat, SyncedSyncStat(localCreatedCount: 1));
+        expect(await syncedDb.getSyncMetaInfoLastChangeId(), 3);
+      },
+    );
+
     test('syncOneToRemoteThenAnotherOne', () async {
       // debugSyncedSync = devWarning(true);
       var db = await syncedDb.database;

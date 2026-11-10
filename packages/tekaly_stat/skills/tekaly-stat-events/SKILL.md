@@ -24,7 +24,10 @@ description: >-
   maxTimestamp:, descending:, maxCount:))`: `minTimestamp` is inclusive,
   `maxTimestamp` exclusive, results are ordered by timestamp (ascending by
   default), `maxCount` defaults to 100. Page with
-  `query.withCursor(result.nextCursor!)` while `nextCursor` is not null.
+  `query.withCursor(result.nextCursor!)` until a page holds fewer events
+  than `maxCount`: `nextCursor` is never null once a page was read (an
+  empty page gives back the cursor it was asked with), a loop waiting for a
+  null cursor never ends.
 * `getEvent(id)` reads one event; saved events compare by id, an unsaved
   event (no id yet) only equals itself.
 * In tests, use an in memory firestore (`newFirestoreServiceMemory()` from
@@ -37,7 +40,7 @@ description: >-
 import 'package:tekaly_stat/stat_firebase.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart';
 
-Future<void> main(Firestore firestore) async {
+Future<void> recordAndList(Firestore firestore) async {
   StatClient client = StatClientFirebase(
     storage: StatStorageFirebase(
       options: StatStorageOptionsFirebase(
@@ -54,22 +57,23 @@ Future<void> main(Firestore firestore) async {
   print(event.id);
 
   // Events of the last day, newest first, page by page
+  const maxCount = 100;
   var query = StatEventListQuery(
     name: 'page_view',
     minTimestamp: DateTime.now().subtract(const Duration(days: 1)),
     descending: true,
-    maxCount: 100,
+    maxCount: maxCount,
   );
   while (true) {
     var result = await client.getEventList(query);
     for (var event in result.events) {
       print('${event.timestamp} ${event.dataAsMap['page']}');
     }
-    var nextCursor = result.nextCursor;
-    if (nextCursor == null) {
+    // The last page is the short one (nextCursor is never null).
+    if (result.events.length < maxCount) {
       break;
     }
-    query = query.withCursor(nextCursor);
+    query = query.withCursor(result.nextCursor!);
   }
   await client.close();
 }

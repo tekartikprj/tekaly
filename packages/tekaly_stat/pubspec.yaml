@@ -1,5 +1,5 @@
 name: tekaly_stat
-description: A starting point for Dart libraries or applications.
+description: Application stat events (page views, actions) stored in Firestore, listed by name and time range.
 version: 1.0.0
 publish_to: none
 

@@ -7,7 +7,11 @@ class StatEventListResult {
   /// event list
   final List<StatEvent> events;
 
-  /// Next cursor
+  /// The cursor of the next page ([StatEventListQuery.withCursor]).
+  ///
+  /// Never null once a page was read (an empty page gives back the cursor
+  /// of its query): the last page is the one holding fewer [events] than
+  /// the `maxCount` asked.
   final Object? nextCursor;
 
   /// Creates a [StatEventListResult] with [events] list and optional [nextCursor].

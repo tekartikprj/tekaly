@@ -624,6 +624,9 @@ abstract class SyncedDbSynchronizerBase<
 
     if (needReFetch) {
       fullSync = true;
+      // A full sync deletes every local record it does not read: read them
+      // all, not only the ones after the local cursor.
+      fetchLastChangeId = 0;
     }
 
     SyncedSourceRecordList dirtyRemoteSourceRecords;

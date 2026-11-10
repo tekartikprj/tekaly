@@ -54,6 +54,10 @@ change log a local database synchronizes with.
   to page through everything.
 * `putMetaInfo` must reject a `minIncrementalChangeId` lower than the existing
   one (throw `StateError`). Bump `version` to force every client to resync.
+  A client whose last change id is below `minIncrementalChangeId` (the
+  source purged its history, its tombstones) or that synced another
+  `version` does a full sync: it reads every record from change 0 and
+  deletes the local records the source does not have.
 * Use `SyncedSourceMemory` in tests and as a reference implementation. Use
   `SyncedSourceFirestore(firestore:, rootPath:)` for firestore (`data` and
   `meta/info` under `rootPath`).
@@ -91,8 +95,9 @@ change log a local database synchronizes with.
 * `debugSyncedDbSynchronizer = true` prints the synchronization steps (dev
   only, `@doNotSubmit`).
 * Extend `SyncedDbSynchronizerCommon` only when writing a new local database
-  implementation; applications use `SyncedDbSynchronizer` (sembast) or
-  `SyncedSdbSynchronizer` (sdb).
+  implementation; applications use `SyncedSdbSynchronizer`
+  (`tekaly_sdb_synced`, sdb: every new code); `SyncedDbSynchronizer`
+  (`tekaly_sembast_synced`) is the legacy sembast one.
 
 ## Examples
 
@@ -186,7 +191,9 @@ Future<void> testRetry(SyncedDbSynchronizerCommon Function(SyncedSource) open) a
   var source = SyncedSourceMemory();
   // The source is down when the database opens.
   source.failureControl.fail();
-  var synchronizer = open(source); // built with autoSync: true
+  // Built with autoSync: true and short retries, for example
+  // SyncedDbSynchronizerRetryOptions(firstSyncDelay: Duration(milliseconds: 20)).
+  var synchronizer = open(source);
   await Future<void>.delayed(const Duration(seconds: 1));
   print(synchronizer.isFirstSyncDone); // false, but it keeps retrying
   print(synchronizer.consecutiveSyncFailureCount); // > 1
