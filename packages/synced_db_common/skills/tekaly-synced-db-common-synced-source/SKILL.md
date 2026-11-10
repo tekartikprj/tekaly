@@ -53,7 +53,9 @@ change log a local database synchronizes with.
   included) so the caller can resume. Use `getAllSourceRecordList` (extension)
   to page through everything.
 * `putMetaInfo` must reject a `minIncrementalChangeId` lower than the existing
-  one (throw `StateError`). Bump `version` to force every client to resync.
+  one (throw `StateError`), and merges: the fields it is not given are kept
+  (every source, the shared suite checks it). Bump `version` to force every
+  client to resync.
   A client whose last change id is below `minIncrementalChangeId` (the
   source purged its history, its tombstones) or that synced another
   `version` does a full sync: it reads every record from change 0 and

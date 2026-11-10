@@ -31,6 +31,10 @@ documents (`CvFirestoreDocument`), on top of `tekartik_firebase_firestore` and
       version: '>=0.1.0'
   ```
 
+* The examples import the Material widgets from
+  `package:material_ui/material_ui.dart` (add `material_ui: ">=1.5.0"` to the
+  app dependencies) rather than `package:flutter/material.dart`, deprecated
+  on the Flutter beta channel.
 * A single import is enough:
   `package:tekaly_firestore_explorer/firestore_explorer.dart`. It re-exports
   `package:cv/cv.dart`, `package:tekartik_app_cv_firestore/app_cv_firestore.dart`
@@ -58,6 +62,9 @@ documents (`CvFirestoreDocument`), on top of `tekartik_firebase_firestore` and
   * `documentViewReferenceMap[MyDoc] = [FieldReference(['name'])]` adds field
     values under each item of the document list screen; `FieldReference` takes
     the path of the field inside the model (a list of keys/indexes).
+* Tapping a field or a list item value copies it to the clipboard; the
+  document screen can also copy the whole document and paste it in an edit
+  screen (an in app clipboard), and delete it after a confirmation.
 * Navigate with the `goTo*` helpers, which push a `MaterialPageRoute` and
   initialize the explorer for you:
   * `goToFsDocumentRootScreen(context, firestore:)` — the root of the database,
@@ -75,8 +82,11 @@ documents (`CvFirestoreDocument`), on top of `tekartik_firebase_firestore` and
   docRef:))`. Those controllers are typed on the document
   (`FsDocumentViewController<MyDoc>`), expose `stream` (live document),
   `docRef`, `delete()` and must be `close()`d in `dispose()`.
-  `FsDocumentEditController` adds `editedDocument` and `futureEditedDocument`
-  (the in-progress copy) plus `fieldsEditViews(doc)`.
+  `FsDocumentEditController` adds `futureEditedDocument` / `editedDocument`
+  (the document read once from the database, a new model for a new
+  document, changed in place by the edit widgets) plus `fieldsEditViews(doc)`;
+  writing it back is up to the owner (`docRef.set(firestore,
+  controller.editedDocument)`, which replaces the whole document).
 * Keep the explorer behind a debug/admin gate: it exposes every field of every
   document and lets the user edit and delete them, and the screens are
   deliberately plain (no design, experimental API that can change).
@@ -96,7 +106,7 @@ Startup: register the models, declare the schema, open the explorer from a
 debug menu.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 
 class App extends CvFirestoreDocumentBase {
@@ -145,7 +155,7 @@ A filtered list screen, with the `name` field shown under each item, and a
 direct jump to one document or to its edit screen.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 
 class App extends CvFirestoreDocumentBase {
@@ -182,7 +192,7 @@ Future<void> showApp(
 Embedding one document inside an existing screen, with an explicit controller.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tekaly_firestore_explorer/firestore_explorer.dart';
 
 class App extends CvFirestoreDocumentBase {

@@ -130,7 +130,11 @@ extension SyncedSdbExportExt on SyncedSdb {
     return sdbExportLinesToJsonlString(exportInfo.data);
   }
 
-  /// Import database from a JSON Lines string.
+  /// Import database from a JSON Lines string (see [exportToJsonlString]).
+  ///
+  /// Like [SyncedSdbImportExt.importFromMemory], nothing is imported unless
+  /// the export `lastChangeId` is above the local one or its source version
+  /// differs: export a synced database.
   Future<void> importFromJsonlString(String jsonl) async {
     var lines = const LineSplitter()
         .convert(jsonl)

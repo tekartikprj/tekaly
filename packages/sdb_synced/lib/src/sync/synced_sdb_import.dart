@@ -187,6 +187,13 @@ class SyncedSdbSynchronizerFromTekalyExport
 /// Import helper.
 extension SyncedSdbImportExt on SyncedSdb {
   /// Fetch and import (tekaly format).
+  ///
+  /// The export is a snapshot: the synced stores get its records (the ones
+  /// it does not hold are deleted, local and system stores are left alone)
+  /// and the sync meta its `lastChangeId`. It is fetched and imported only
+  /// when its `lastChangeId` is above the local one or its source version
+  /// differs, nothing happens otherwise (the export of a never synced
+  /// database, `lastChangeId` 0, is never imported).
   Future<void> fetchAndImport({
     /// Only sync if fetch export does not return null.
     required SyncedDbSynchronizerFetchExport fetchExport,
@@ -202,7 +209,9 @@ extension SyncedSdbImportExt on SyncedSdb {
     await synchronizer.sync();
   }
 
-  /// Imports a database snapshot exported with [SyncedSdbExportExt.exportInMemory].
+  /// Imports a database snapshot exported with
+  /// [SyncedSdbExportExt.exportInMemory], see [fetchAndImport] for when it is
+  /// applied.
   Future<void> importFromMemory({
     /// Export info to import.
     required SyncedDbExportInfo exportInfo,

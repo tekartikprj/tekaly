@@ -91,6 +91,7 @@ Future<void> restore(SyncedDb syncedDb, SyncedDbExportInfo exportInfo) =>
 ### Flutter assets import
 
 ```dart
+import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekaly_sembast_synced/synced_db_asset.dart';
 import 'package:tekartik_app_common_utils/asset/asset_bundle.dart';
 
@@ -106,6 +107,7 @@ Future<void> importFromAssets(SyncedDb syncedDb, TkAssetBundle assetBundle) =>
 ### Firebase storage export (server side)
 
 ```dart
+import 'package:tekaly_sembast_synced/synced_db.dart';
 import 'package:tekaly_sembast_synced/synced_db_storage.dart';
 import 'package:tekartik_firebase_storage/storage.dart';
 

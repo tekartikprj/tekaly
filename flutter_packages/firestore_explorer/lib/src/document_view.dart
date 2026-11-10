@@ -173,7 +173,8 @@ mixin DocumentValueViewStateMixin<T extends StatefulWidget> on State<T> {
                 title: Text(name),
                 subtitle: subtitle != null ? Text(subtitle) : null,
                 onTap: () {
-                  Clipboard.setData(ClipboardData(text: subtitle ?? ''));
+                  // A list item shows its value as the title.
+                  Clipboard.setData(ClipboardData(text: subtitle ?? name));
                   ScaffoldMessenger.of(context)
                       .showSnackBar(const SnackBar(content: Text('Copied')));
                 },

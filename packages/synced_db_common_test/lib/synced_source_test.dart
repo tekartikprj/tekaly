@@ -305,6 +305,33 @@ void runSyncedSourceTest(
       record2.syncId.v,
     ]);
   });
+  test('getAllSourceRecordList pages of deleted records', () async {
+    // The source may be shared by the tests: read after its current state.
+    var afterChangeId = (await source.getMetaInfo())?.lastChangeId.v ?? 0;
+    Future<CvSyncedSourceRecord> put(String key, {bool deleted = false}) =>
+        source.putSourceRecord(
+          CvSyncedSourceRecord()
+            ..record.v = (CvSyncedSourceRecordData()
+              ..store.v = 'paging'
+              ..key.v = key
+              ..deleted.v = deleted
+              // Kept on delete, like a partition field.
+              ..value.v = {'name': key}),
+        );
+    await put('r1');
+    await put('r2');
+    await put('r1', deleted: true);
+    await put('r2', deleted: true);
+    await put('r3');
+    var last = await put('r4');
+    // A page of 2 can hold only deleted records: the cursor still moves on.
+    var list = await source.getAllSourceRecordList(
+      afterChangeId: afterChangeId,
+      stepLimit: 2,
+    );
+    expect(list.list.map((record) => record.recordKey), ['r3', 'r4']);
+    expect(list.lastChangeId, last.syncChangeId.v);
+  }, timeout: const Timeout(Duration(seconds: 30)));
   test('metaInfo', () async {
     var info = await source.getMetaInfo();
     var lastChangedId = info?.lastChangeId.v ?? 0;
@@ -333,6 +360,33 @@ void runSyncedSourceTest(
       lastChangedId,
     );
   });
+  test('putMetaInfo keeps the fields it does not set', () async {
+    // A history purge only sets minIncrementalChangeId.
+    var record = await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'meta'
+          ..key.v = '1'
+          ..value.v = {'v': 1}),
+    );
+    var lastChangeId = record.syncChangeId.v!;
+    var info = (await source.putMetaInfo(
+      CvMetaInfo()..minIncrementalChangeId.v = lastChangeId,
+    ))!;
+    expect(info.lastChangeId.v, lastChangeId);
+    info = (await source.getMetaInfo())!;
+    expect(info.lastChangeId.v, lastChangeId);
+    expect(info.minIncrementalChangeId.v, lastChangeId);
+    // The change ids go on.
+    record = await source.putSourceRecord(
+      CvSyncedSourceRecord()
+        ..record.v = (CvSyncedSourceRecordData()
+          ..store.v = 'meta'
+          ..key.v = '2'
+          ..value.v = {'v': 2}),
+    );
+    expect(record.syncChangeId.v, lastChangeId + 1);
+  }, timeout: const Timeout(Duration(seconds: 30)));
   test('onMetaInfo simple', () async {
     var info = await source.getMetaInfo();
     var lastChangeId = info?.lastChangeId.v ?? 0;

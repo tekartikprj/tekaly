@@ -140,25 +140,31 @@ abstract class SyncedDbBase with SyncedDbMixin {
     }
   }
 
-  @override
-  Future<Database> get database async => _database ??= (await rawDatabase.then((
-    db,
-  ) {
-    // Setup triggers
-    for (var store in _syncStores) {
-      store.rawRef.addOnChangesListener(db, onChanges);
-    }
-    if (_syncStores.isEmpty) {
-      var excludedStoreNames = Set.of({...syncedDbSystemStoreNames}).toList();
+  /// True once [database] was requested (it might still be opening).
+  var _databaseRequested = false;
 
-      db.addAllStoresOnChangesListener(
-        onChangesAny,
-        excludedStoreNames: excludedStoreNames,
-        storePredicate: (name) => shouldSyncStore(name),
-      );
-    }
-    return db;
-  }))!;
+  /// Opened once: the change listeners are added once, and a [close] during
+  /// the open closes it once open.
+  @override
+  late final Future<Database> database = () async {
+    _databaseRequested = true;
+    return _database ??= (await rawDatabase.then((db) {
+      // Setup triggers
+      for (var store in _syncStores) {
+        store.rawRef.addOnChangesListener(db, onChanges);
+      }
+      if (_syncStores.isEmpty) {
+        var excludedStoreNames = Set.of({...syncedDbSystemStoreNames}).toList();
+
+        db.addAllStoresOnChangesListener(
+          onChangesAny,
+          excludedStoreNames: excludedStoreNames,
+          storePredicate: (name) => shouldSyncStore(name),
+        );
+      }
+      return db;
+    }))!;
+  }();
 
   @override
   late var dbSyncMetaInfoRef = dbSyncMetaStoreRef.record('info');
@@ -183,10 +189,21 @@ abstract class SyncedDbBase with SyncedDbMixin {
 
   @override
   Future<void> close() async {
-    if (!_closed && _database != null) {
-      _closed = true;
-      await _database?.close();
+    if (_closed || !_databaseRequested) {
+      // Closed already, or never opened.
+      return;
     }
+    _closed = true;
+    if (_database == null) {
+      // Still opening: close it once open
+      try {
+        await database;
+      } catch (_) {
+        // Open failed, nothing to close
+        return;
+      }
+    }
+    await _database?.close();
   }
 }
 

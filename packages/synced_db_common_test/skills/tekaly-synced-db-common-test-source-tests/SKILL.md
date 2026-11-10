@@ -14,12 +14,19 @@ description: >-
 * Run `runSyncedSourceTest(createSource)` from
   `package:tekaly_synced_db_common_test/synced_source_test.dart` against any
   `SyncedSource` implementation: it checks put/get, change id increments, record
-  lists, meta info and `onMetaInfo`. Pass `skipRealTimeChanges: true` when the
+  lists (`getAllSourceRecordList` going on past a page of deleted records),
+  meta info (`putMetaInfo` keeps the fields it does not set, as a Firestore
+  merge) and `onMetaInfo`. Pass `skipRealTimeChanges: true` when the
   source polls (no real time meta info stream).
+* A behaviour shared by the sources gets its test here, in the suite, so
+  that every registered source runs it; a source that cannot pass it skips
+  it with a reason.
 * Also run `strictSyncedSourceTest(createSource)` when the source uses the
   `<store>|<key>` sync id format (memory, firestore, sembast sources do).
 * `createSource` must return a fresh, empty source each time (the suites run
-  `setUp` before every test).
+  `setUp` before every test). The suites do not close the sources of
+  `runSyncedSourceTest`: close them in a `tearDown` of your own when they
+  hold resources.
 * `newInMemorySyncedSourceMemory()` gives a `SyncedSourceMemory`,
   `newInMemorySyncedSourceFirestore()` (from
   `synced_source_firestore_test_common.dart`) a `SyncedSourceFirestore` on an in

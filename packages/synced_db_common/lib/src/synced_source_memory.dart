@@ -85,7 +85,19 @@ class SyncedSourceMemory
           }
         }
       }
-      return _lockedPutMetaInfo(info);
+      // Merged, like Firestore: the fields not set are kept (a history
+      // purge sets minIncrementalChangeId only).
+      var merged = CvMetaInfo()..copyFrom(existing ?? CvMetaInfo());
+      if (info.lastChangeId.hasValue) {
+        merged.lastChangeId.setValue(info.lastChangeId.v);
+      }
+      if (info.minIncrementalChangeId.hasValue) {
+        merged.minIncrementalChangeId.setValue(info.minIncrementalChangeId.v);
+      }
+      if (info.version.hasValue) {
+        merged.version.setValue(info.version.v);
+      }
+      return _lockedPutMetaInfo(merged);
     });
   }
 

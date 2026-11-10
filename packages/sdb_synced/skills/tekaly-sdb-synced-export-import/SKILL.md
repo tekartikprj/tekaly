@@ -18,7 +18,9 @@ an export made by one can be imported by any other.
 
 * Export after a `sync()` so `lastChangeId` is set; an import is applied only
   when the export `lastChangeId` is greater than the local one or the
-  `sourceVersion` differs. An import is a snapshot: records missing from the
+  `sourceVersion` differs, silently skipped otherwise: the export of a never
+  synced database (`lastChangeId` 0) imports nothing, even into an empty
+  one. An import is a snapshot: records missing from the
   export are deleted locally, and so are the records of a synced store the
   export does not list (an export never lists a store without records).
   `local_` and system stores are left alone.
@@ -64,8 +66,9 @@ an export made by one can be imported by any other.
   source version, then change id) and the one the meta points to, and
   returns the deleted ones (`SyncedDbExportFileId` records).
 * Values are json encoded as `{"$timestamp": iso8601}` and
-  `{"$blob": base64}` (`sdbValueToJsonEncodable`), map keys are sorted so the
-  files are stable in git.
+  `{"$blob": base64}` (`syncedDbValueToJsonEncodable` of
+  `tekaly_synced_db_common`), map keys are sorted so the files are stable in
+  git.
 
 ## Examples
 

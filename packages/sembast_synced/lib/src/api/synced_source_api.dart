@@ -170,12 +170,16 @@ CvSyncedSourceRecord apiChangeToRecord(ApiChange change) {
     ..record.v = recordData;
 }
 
+/// The api has no deleted flag: no data means deleted, so a deleted record
+/// keeping a value (a partition field) is sent without it.
 void recordToSyncChange(CvSyncedSourceRecord record, ApiChange change) {
   recordToSyncChangeRef(record, change);
   var recordData = record.record.v!;
   change
     ..changeNum.v = record.syncChangeId.v
-    ..data.v = jsonEncodeSembastValueOrNull(recordData.value.v) as Model?
+    ..data.v = recordData.isDeleted
+        ? null
+        : jsonEncodeSembastValueOrNull(recordData.value.v) as Model?
     ..timestamp.v = record.syncTimestamp.v?.toIso8601String();
 }
 

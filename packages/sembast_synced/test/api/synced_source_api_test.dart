@@ -306,6 +306,23 @@ void main() {
       expect(result.record.v!.key.v, record.record.v!.key.v);
       expect(result.record.v!.value.v, record.record.v!.value.v);
     });
+
+    test('a deleted record keeping a value stays deleted', () {
+      // A partitioned delete keeps the partition field.
+      var record = _newRecord(
+        store: 'store-1',
+        key: 'key-1',
+        value: {'userId': 'u1'},
+        syncChangeId: 3,
+      )..record.v!.deleted.v = true;
+
+      var change = ApiChange();
+      recordToSyncChange(record, change);
+      expect(change.isDeleted, isTrue);
+      var result = apiChangeToRecord(change);
+      expect(result.isDeleted, isTrue);
+      expect(result.record.v!.deleted.v, isTrue);
+    });
   });
 
   group('syncInfoToMeta/metaToSyncInfo', () {

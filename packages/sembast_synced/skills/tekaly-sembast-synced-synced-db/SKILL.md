@@ -16,6 +16,11 @@ description: >-
 abstraction, records and the synchronizer base come from
 `tekaly_synced_db_common`.
 
+New code uses `tekaly_sdb_synced` (`SyncedSdb`, `SyncedSdbSynchronizer`, the
+`tekaly-sdb-synced-synced-sdb` skill): same synchronization and export
+format on an sdb (idb_shim) database. This package serves the existing
+sembast based apps.
+
 ## Guidelines
 
 * Import `package:tekaly_sembast_synced/synced_db.dart` (exports sembast too);
@@ -31,6 +36,11 @@ abstraction, records and the synchronizer base come from
   `_local`. Restrict with `SyncedDbOptions(syncedStoreNames: [...])` or
   `SyncedDbOptions(predicate: (store) => ...)`. Keep purely local data in a
   `local_` store.
+* The records of a store that is not synced are skipped and the sync moves
+  past them: a store added to `syncedStoreNames` (or accepted by a new
+  `predicate`) in an app upgrade does not get the records written before.
+  Bump the source meta `version` with the upgrade: every client then reads
+  the whole source again.
 * Open with `SyncedDb.openDatabase(databaseFactory:, name:, options:)`, wrap an
   already opened database with `SyncedDb.fromOpenedDb(openedDatabase:)`, use
   `SyncedDb.newInMemory()` in tests. Read/write records through

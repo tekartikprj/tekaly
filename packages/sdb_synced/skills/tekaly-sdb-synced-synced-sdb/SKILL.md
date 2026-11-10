@@ -51,6 +51,13 @@ the local database api differs.
   `initialSynchronizationDone()` terminates once the source is reachable
   again instead of waiting forever. `onSyncError()` streams the failures,
   `SyncedDbSynchronizerRetryOptions.noRetry()` disables retrying.
+* Only the stores of the local schema are synced: the records of a store the
+  schema does not know (a newer app version) are skipped and the sync moves
+  past them. When an app upgrade adds a store, the records written there
+  before are therefore not fetched: bump the source meta `version` with the
+  upgrade (`putMetaInfo` of the current meta with `version` + 1, from an
+  admin tool or a function), every client then reads the whole source again
+  (a full sync keeps the local dirty records).
 * Sync record flags are ints (`dirty`, `deleted`: 0/1); use `isDirty` /
   `isDeleted`.
 * Conflict rule: a remote record with a strictly greater change id wins over a
@@ -123,6 +130,7 @@ Future<void> save(SdbDatabase db) async {
 ### Firestore, automatically synchronized, read-only client
 
 ```dart
+import 'package:tekaly_sdb_synced/sdb_scv.dart';
 import 'package:tekaly_sdb_synced/synced_sdb_firestore.dart';
 import 'package:tekartik_firebase_firestore/firestore.dart';
 
