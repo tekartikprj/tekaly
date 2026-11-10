@@ -76,23 +76,33 @@ class _SyncedSourceRpcService extends RpcServiceBase {
           var query = methodCall.cv<GetMetaInfoApiChangedQuery>();
           var currentMetaInfo = query.metaInfo.v;
           var completer = Completer<CvMetaInfo?>();
-          var subscription = rpcServer.delegate.onMetaInfo().listen((event) {
-            // print('server: onMetaInfo $event');
-            if (event == null) {
-              if (currentMetaInfo != null) {
-                if (!completer.isCompleted) {
-                  completer.complete(null);
+          var subscription = rpcServer.delegate.onMetaInfo().listen(
+            (event) {
+              // print('server: onMetaInfo $event');
+              if (event == null) {
+                if (currentMetaInfo != null) {
+                  if (!completer.isCompleted) {
+                    completer.complete(null);
+                  }
+                }
+              } else {
+                var metaInfo = CvMetaInfo()..copyFrom(event);
+                if (metaInfo != currentMetaInfo) {
+                  if (!completer.isCompleted) {
+                    completer.complete(metaInfo);
+                  }
                 }
               }
-            } else {
-              var metaInfo = CvMetaInfo()..copyFrom(event);
-              if (metaInfo != currentMetaInfo) {
-                if (!completer.isCompleted) {
-                  completer.complete(metaInfo);
-                }
+            },
+            // A failing source stream (offline, denied) answers this wait
+            // with its error (the client tries again), it must never be an
+            // uncaught error of the server.
+            onError: (Object error, StackTrace stackTrace) {
+              if (!completer.isCompleted) {
+                completer.completeError(error, stackTrace);
               }
-            }
-          });
+            },
+          );
           try {
             var metaInfo = await completer.future.timeout(
               const Duration(minutes: 1),

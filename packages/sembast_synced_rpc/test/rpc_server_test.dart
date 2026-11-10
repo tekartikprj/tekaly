@@ -24,10 +24,28 @@ class _TestSource extends SyncedSourceMemory {
     return metaInfoDeleted ? null : metaInfo;
   }
 
+  /// Number of the next meta info streams that fail at once.
+  var onMetaInfoFailureCount = 0;
+
   @override
   Stream<CvMetaInfo?> onMetaInfo({Duration? checkDelay}) {
     onMetaInfoCount++;
+    if (onMetaInfoFailureCount > 0) {
+      onMetaInfoFailureCount--;
+      return Stream<CvMetaInfo?>.error(StateError('onMetaInfo failure'));
+    }
     return super.onMetaInfo(checkDelay: const Duration(milliseconds: 20));
+  }
+}
+
+/// Waits (10 s at most) for [condition].
+Future<void> _waitFor(bool Function() condition) async {
+  var stopwatch = Stopwatch()..start();
+  while (!condition()) {
+    if (stopwatch.elapsed > const Duration(seconds: 10)) {
+      throw TimeoutException('condition not met after 10 s');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 10));
   }
 }
 
@@ -104,6 +122,28 @@ void rpcTests(WebSocketChannelFactory factory) {
       expect(events.map((event) => event?.lastChangeId.v), [1, null]);
       await subscription.cancel();
     });
+
+    test('a failing source meta info stream answers the wait', () async {
+      await delegate.putMetaInfo(CvMetaInfo()..lastChangeId.v = 1);
+      // The first wait of the client fails on the server side.
+      delegate.onMetaInfoFailureCount = 1;
+      var events = <int?>[];
+      var subscription = rpcClient.onMetaInfo().listen(
+        (event) => events.add(event?.lastChangeId.v),
+      );
+      try {
+        await _waitFor(() => events.isNotEmpty);
+        expect(events, [1]);
+        await _waitFor(() => delegate.onMetaInfoFailureCount == 0);
+        // Answered with the error (not an uncaught error of the server),
+        // the client waits again and sees the next change.
+        await delegate.putMetaInfo(CvMetaInfo()..lastChangeId.v = 2);
+        await _waitFor(() => events.contains(2));
+        expect(events, [1, 2]);
+      } finally {
+        await subscription.cancel();
+      }
+    }, timeout: const Timeout(Duration(seconds: 30)));
 
     test('close stops the meta info stream', () async {
       var done = Completer<void>();
