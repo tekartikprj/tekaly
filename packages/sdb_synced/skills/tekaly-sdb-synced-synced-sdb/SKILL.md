@@ -4,7 +4,8 @@ description: >-
   Use when opening an sdb (idb_shim) database synchronized with a remote
   source (SyncedSdb, SyncedSdbSynchronizer, AutoSynchronizedFirestoreSyncedSdb)
   with tekaly_sdb_synced: schema with the sync stores, options, firestore auto
-  sync and read-only sync.
+  sync and read-only sync, and the base of an app database class synchronized
+  or local (FirestoreSyncedOrLocalSdb).
 ---
 
 # Synced sdb database (tekaly_sdb_synced)
@@ -65,6 +66,16 @@ the local database api differs.
 * Firestore: `AutoSynchronizedFirestoreSyncedSdb.open(options:
   AutoSynchronizedFirestoreSyncedSdbOptions(syncedSdbOptions:, firestore:,
   databaseFactory:, rootDocumentPath:, dbName:, readOnly:, retryOptions:))`.
+* An app database class (its stores and commands) extends
+  `FirestoreSyncedOrLocalSdb` (`synced_sdb_firestore.dart`):
+  `MyDb(super.db, {super.autoSyncedSdb})`, a synchronized one opened with
+  `FirestoreSyncedOrLocalSdb.openAutoSynchronized(factory:, firestore:,
+  name:, rootDocumentPath:, options:)` (`MyDb(synced.database,
+  autoSyncedSdb: synced)`), a local one with `factory.openDatabase`. It
+  gives `db`, `isSynced`, `synchronize()`, `isFirstSyncDone`,
+  `resynchronize()`, `initialSynchronizationDone()` and `close()`, each a
+  no-op (or done) when local. `isFirstSyncDone` turns true at the end of
+  the first sync down, a moment after `initialSynchronizationDone()`.
 * `SyncedSdbReadMinService.syncedDb(syncedDb:)` /
   `.syncedSource(syncedSource:)` read one record locally or remotely with the
   same api. `mapSdbToSyncedDb` / `mapSyncedDbToSdb` convert values when
