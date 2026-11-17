@@ -6,9 +6,12 @@ import 'package:tekaly_sdb_synced/synced_sdb_internals.dart';
 import 'package:tekaly_synced_db_common/synced_db_common.dart';
 import 'package:tekartik_app_cv_sdb/app_cv_sdb.dart';
 
-/// Decode export data (either a jsonl string or an already decoded list of
-/// lines) into a list of raw export lines.
-Object _decodeTekalyExportAny(Object srcData) {
+/// Decodes the data of a tekaly export (a jsonl string, a json array string
+/// or an already decoded list of lines) into its raw lines, to give to
+/// [parseTekalyExportLines].
+///
+/// Throws a [FormatException] for anything else.
+List<Object?> decodeTekalyExportLines(Object srcData) {
   if (srcData is List) {
     return srcData;
   }
@@ -28,14 +31,27 @@ Object _decodeTekalyExportAny(Object srcData) {
   throw FormatException('invalid export format (${srcData.runtimeType})');
 }
 
-class _ParsedTekalyExport {
-  _ParsedTekalyExport(this.syncMeta, this.stores);
+/// A tekaly export parsed by [parseTekalyExportLines].
+class ParsedTekalyExport {
+  /// A tekaly export parsed by [parseTekalyExportLines].
+  ParsedTekalyExport({required this.syncMeta, required this.stores});
 
+  /// The sync meta line (`lastChangeId`, `lastTimestamp`...), null when the
+  /// export has none.
   final Map<String, Object?>? syncMeta;
+
+  /// The records, by store name then record key, their values back to
+  /// synced db values (`syncedDbValueFromJsonEncodable`: timestamps and
+  /// blobs). A store listed without records is an empty map.
   final Map<String, Map<String, Object?>> stores;
 }
 
-_ParsedTekalyExport _parseTekalyExportLines(List lines) {
+/// Parses the raw lines of a tekaly export ([decodeTekalyExportLines]): the
+/// `tekaly_export` header, the optional sync meta, then the records of each
+/// store.
+///
+/// Throws a [FormatException] when the header is missing.
+ParsedTekalyExport parseTekalyExportLines(List lines) {
   if (lines.isEmpty) {
     throw const FormatException('invalid export format (empty)');
   }
@@ -75,7 +91,7 @@ _ParsedTekalyExport _parseTekalyExportLines(List lines) {
       }
     }
   }
-  return _ParsedTekalyExport(syncMeta, stores);
+  return ParsedTekalyExport(syncMeta: syncMeta, stores: stores);
 }
 
 /// Sync either from a tekaly export.
@@ -119,13 +135,8 @@ class SyncedSdbSynchronizerFromTekalyExport
       }
 
       var data = await fetchExport(newLastChangeId);
-      var lines = _decodeTekalyExportAny(data);
-      if (lines is! List) {
-        throw const FormatException(
-          'invalid export format (expect json lines format .jsonl)',
-        );
-      }
-      var parsed = _parseTekalyExportLines(lines);
+      var lines = decodeTekalyExportLines(data);
+      var parsed = parseTekalyExportLines(lines);
       var rawDb = await db.database;
       // Only the synced stores of this database are imported: the stores of
       // the export unknown to this database (newer schema) and its local or

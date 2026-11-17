@@ -32,7 +32,10 @@ export 'src/sync/synced_sdb_import.dart'
     show
         SyncedSdbImportExt,
         SyncedSdbDownSynchronizer,
-        SyncedSdbSynchronizerFromTekalyExport;
+        SyncedSdbSynchronizerFromTekalyExport,
+        ParsedTekalyExport,
+        decodeTekalyExportLines,
+        parseTekalyExportLines;
 export 'src/sync/synced_sdb_min_service.dart' show SyncedSdbReadMinService;
 export 'src/sync/synced_sdb_synchronizer.dart' show SyncedSdbSynchronizer;
 export 'synced_sdb_internals.dart'
