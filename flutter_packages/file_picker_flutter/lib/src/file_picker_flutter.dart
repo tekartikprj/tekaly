@@ -138,6 +138,10 @@ class TekalyFilePickerFlutter implements TekalyFilePicker {
             dialogTitle: dialogTitle,
             initialDirectory: initialDirectory,
           )
+        // Deprecated in file_picker 13.4.0 for pickDirectory(), which returns
+        // a Uri (content:// on Android) and throws on Android when the pick
+        // fails: kept until pickDirectoryPath has a Uri sibling.
+        // ignore: deprecated_member_use
         : await fp.FilePicker.getDirectoryPath(
             dialogTitle: dialogTitle,
             initialDirectory: initialDirectory,
